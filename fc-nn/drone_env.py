@@ -11,8 +11,8 @@ Observation (12 values, same order as STM32 input vector):
   [3] accel_x / 2g                -> [-1, 1]   2g = normalization range (not chip FS)
   [4] accel_y / 2g
   [5] accel_z / 2g
-  [6] roll_error  / 180.0         -> [-1, 1]   (relative to roll setpoint)
-  [7] pitch_error / 180.0                       (relative to pitch setpoint)
+  [6] roll_error  / 45.0          -> [-1, 1]   (relative to roll setpoint; ±45° maps to ±1)
+  [7] pitch_error / 45.0                        (relative to pitch setpoint)
   [8] altitude_error / ALT_SCALE  -> [-1, 1]  (positive = above target)
   [9] vertical_vel / VVEL_SCALE   -> [-1, 1]  (positive = going up)
   [10] hvel_x / HVEL_SCALE        -> [-1, 1]  lateral velocity X (world frame)
@@ -62,12 +62,12 @@ MAX_GYRO       = 2000.0 * math.pi / 180.0   # 2000 deg/s  -> rad/s (≈34.9)
 GRAVITY        = 9.81
 DT             = 0.00025                     # 4 kHz  (250 µs)
 FRAMESKIP      = 40                          # policy at 100 Hz (40 × 0.25 ms = 10 ms)
-MAX_EP_STEPS   = 500                         # 500 policy steps × 10 ms = 5 s
+MAX_EP_STEPS   = 1000                        # 1000 policy steps × 10 ms = 10 s
 
-# Nominal hover thrust per motor:  m*g / 4 = 0.5*9.81/4 ≈ 1.23 N
-BASE_MASS      = 0.5                         # kg
-MAX_THRUST     = 3.0                         # N per motor (gives ~2.4:1 T/W)
-ARM            = 0.1                         # 10 cm arm
+# Nominal hover thrust per motor:  m*g / 4 = 1.118*9.81/4 ≈ 2.74 N
+BASE_MASS      = 1.118                       # kg  (F450 frame, 1400KV motors, 8045 props)
+MAX_THRUST     = 8.5                         # N per motor (1400KV + 8045 → ~850g thrust)
+ARM            = 0.225                       # 225 mm arm  (F450: 450mm wheelbase / 2)
 
 # Motor spin directions: CCW = -1, CW = +1  (yaw torque sign)
 MOTOR_DIRS     = np.array([-1.0, 1.0, -1.0, 1.0], dtype=np.float64)
@@ -77,6 +77,7 @@ KM_KF_RATIO    = 0.02                       # torque-to-thrust ratio
 ALT_SCALE       = 2.0        # ±2 m altitude error maps to ±1
 VVEL_SCALE      = 5.0        # ±5 m/s vertical velocity maps to ±1
 HVEL_SCALE      = 3.0        # ±3 m/s horizontal velocity maps to ±1
+ANGLE_ERR_SCALE = 45.0       # ±45° attitude error maps to ±1 (STM32: err_deg / 45.0)
 
 # Setpoint limits (used by viewer/controller; training always commands 0)
 MAX_CMD_ANGLE   = 30.0       # degrees – max roll/pitch command
@@ -215,8 +216,10 @@ class QuadrotorEnv(gym.Env):
         self._cmd_yaw_rate  = 0.0
         self._cmd_alt       = TARGET_ALT
 
-        # Optional key callback wired up by viewer.py (keyboard fallback)
-        self._key_callback  = None
+        # When True (training), each episode gets a fresh random setpoint so
+        # the model learns to track arbitrary roll/pitch/alt commands.
+        # Set to False in the viewer so the pilot controls setpoints manually.
+        self._randomize_setpoints = True
 
     # ---- Setpoint API (called by viewer / controller) -------------------
 
@@ -283,6 +286,13 @@ class QuadrotorEnv(gym.Env):
         self._step_count  = 0
         self._prev_action = np.zeros(4, dtype=np.float32)
 
+        # --- Setpoint randomisation (training only) -----------------------
+        if self._randomize_setpoints:
+            self._cmd_roll  = math.radians(float(rng.uniform(-MAX_CMD_ANGLE, MAX_CMD_ANGLE)))
+            self._cmd_pitch = math.radians(float(rng.uniform(-MAX_CMD_ANGLE, MAX_CMD_ANGLE)))
+            self._cmd_alt   = float(rng.uniform(0.6, 1.6))   # 0.6 – 1.6 m
+        # (if False, setpoints keep whatever the viewer last set via set_setpoint())
+
         obs = self._get_obs()
         return obs, {}
 
@@ -309,6 +319,15 @@ class QuadrotorEnv(gym.Env):
         for _ in range(FRAMESKIP):
             mujoco.mj_step(self._model, self._data)
 
+        # --- Mid-episode setpoint variation (training only) ---------------
+        if self._randomize_setpoints and self._step_count % 200 == 0:
+            rng = self.np_random
+            if rng.random() < 0.4:
+                self._cmd_roll  = math.radians(float(rng.uniform(-MAX_CMD_ANGLE, MAX_CMD_ANGLE)))
+                self._cmd_pitch = math.radians(float(rng.uniform(-MAX_CMD_ANGLE, MAX_CMD_ANGLE)))
+            if rng.random() < 0.3:
+                self._cmd_alt = float(rng.uniform(0.6, 1.6))
+
         # --- Observation & reward ----------------------------------------
         obs    = self._get_obs()
         reward = self._compute_reward(action)
@@ -319,7 +338,7 @@ class QuadrotorEnv(gym.Env):
 
         crashed   = pos[2] < CRASH_ALT
         flipped   = abs(roll) > math.pi / 2 or abs(pitch) > math.pi / 2
-        too_far   = abs(pos[2] - TARGET_ALT) > 3.0   # >3m from target alt
+        too_far   = abs(pos[2] - self._cmd_alt) > 3.0   # >3m from cmd alt
         terminated = crashed or flipped or too_far
         truncated  = self._step_count >= self._max_ep_steps
 
@@ -364,8 +383,8 @@ class QuadrotorEnv(gym.Env):
         # Attitude error (roll & pitch, relative to setpoint)
         quat = self._sensor(self._quat_sensor_id, 4)
         roll, pitch, _ = _quat_to_euler(quat)
-        roll_err  = np.float32(np.clip(math.degrees(roll  - self._cmd_roll)  / 180.0, -1.0, 1.0))
-        pitch_err = np.float32(np.clip(math.degrees(pitch - self._cmd_pitch) / 180.0, -1.0, 1.0))
+        roll_err  = np.float32(np.clip(math.degrees(roll  - self._cmd_roll)  / ANGLE_ERR_SCALE, -1.0, 1.0))
+        pitch_err = np.float32(np.clip(math.degrees(pitch - self._cmd_pitch) / ANGLE_ERR_SCALE, -1.0, 1.0))
 
         # Altitude error (positive = above target, relative to setpoint)
         pos = self._sensor(self._pos_sensor_id, 3)
@@ -394,31 +413,32 @@ class QuadrotorEnv(gym.Env):
         ang_vel = self._sensor(self._angvel_sensor_id, 3)
         roll, pitch, _ = _quat_to_euler(quat)
 
-        # --- All terms are dense, continuous, and observable ----------------
+        # Errors relative to pilot setpoints
+        roll_err  = roll  - self._cmd_roll
+        pitch_err = pitch - self._cmd_pitch
+        alt_err   = pos[2] - self._cmd_alt
 
-        # 1. Altitude hold: quadratic, ±2m range, dominates the reward
-        alt_err = pos[2] - self._cmd_alt
-        r_alt = -2.0 * alt_err * alt_err            # -2 at 1m off, -0.02 at 10cm
+        # 1. Tracking: exponential reward, peaks at 1.0 when on-target.
+        #    Softer altitude curve prevents oscillation around setpoint.
+        orient_err_sq = roll_err ** 2 + pitch_err ** 2   # radians²
+        r_track = math.exp(-5.0 * orient_err_sq - 4.0 * alt_err ** 2)
 
-        # 2. Level orientation: quadratic tilt penalty (relative to setpoint)
-        roll_dev  = roll  - self._cmd_roll
-        pitch_dev = pitch - self._cmd_pitch
-        tilt_sq = roll_dev * roll_dev + pitch_dev * pitch_dev   # radians²
-        r_orient = -1.0 * tilt_sq                               # -0.62 at 45°
+        # 2. Velocity damping — heavier on vertical to prevent bounce
+        hvel_sq = vel[0] ** 2 + vel[1] ** 2
+        r_vel = -0.02 * hvel_sq - 0.15 * vel[2] ** 2
 
-        # 3. Velocity penalty: stay still (XY + Z)
-        r_vel = -0.1 * float(np.dot(vel, vel))      # quadratic, much smoother
+        # 3. Angular velocity: penalise spin (heavier to stop yaw drift)
+        r_angvel = -0.02 * float(np.dot(ang_vel, ang_vel))
 
-        # 4. Angular velocity: penalise spin (quadratic)
-        r_angvel = -0.01 * float(np.dot(ang_vel, ang_vel))
+        # 4. Temporal smoothness: penalise rapid *changes* in motor commands
+        #    (NOT variance between motors – that kills attitude correction)
+        action_delta = action - self._prev_action
+        r_smooth = -0.15 * float(np.dot(action_delta, action_delta))
 
-        # 5. Motor smoothness: penalise action variance
-        r_smooth = -0.2 * float(np.var(action))
+        # 5. Small alive bonus
+        r_alive = 0.5
 
-        # 6. Alive bonus: reward for not crashing
-        r_alive = 2.0
-
-        return r_alt + r_orient + r_vel + r_angvel + r_smooth + r_alive
+        return r_track + r_vel + r_angvel + r_smooth + r_alive
 
     # ---- Rendering -------------------------------------------------------
 
@@ -428,7 +448,6 @@ class QuadrotorEnv(gym.Env):
             self._viewer = mujoco.viewer.launch_passive(
                 self._model, self._data,
                 show_left_ui=False, show_right_ui=False,
-                key_callback=self._key_callback,
             )
             self._viewer.cam.azimuth   = 135
             self._viewer.cam.elevation = -25

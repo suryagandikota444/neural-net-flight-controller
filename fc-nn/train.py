@@ -84,7 +84,7 @@ class DroneMetricsCallback(BaseCallback):
                 self._ep_rewards.append(ep["r"])
                 self._ep_lengths.append(ep["l"])
                 # If ep length < MAX_EP_STEPS, it was a crash/termination
-                self._ep_crashes.append(1.0 if ep["l"] < 500 else 0.0)
+                self._ep_crashes.append(1.0 if ep["l"] < 1000 else 0.0)
 
         return True
 

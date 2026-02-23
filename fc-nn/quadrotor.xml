@@ -1,7 +1,7 @@
 <mujoco model="quadrotor_x">
   <!--
     X-frame quadrotor MJCF model for STM32 FC training.
-    Matches real hardware: ~500g, 10cm arms, 5" props.
+    Matches real hardware: F450 frame, 1118g, 225mm arms, 8045 props, 1400KV.
     Motor layout (top-down view, front = +X):
 
           FL(0,CCW)   FR(1,CW)
@@ -50,80 +50,80 @@
       <geom type="sphere" size="0.05" material="target_mat"
             contype="0" conaffinity="0"/>
       <!-- Cross-hair ring -->
-      <geom type="cylinder" size="0.1 0.002" material="target_mat"
+      <geom type="cylinder" size="0.15 0.002" material="target_mat"
             contype="0" conaffinity="0"/>
     </body>
 
-    <!-- ============ QUADROTOR ============ -->
+    <!-- ============ QUADROTOR (F450) ============ -->
     <body name="drone" pos="0 0 1">
       <freejoint name="root"/>
 
-      <!-- Inertial (will be overridden by domain randomisation in Python) -->
-      <inertial pos="0 0 0" mass="0.5"
-                diaginertia="0.0023 0.0023 0.004"/>
+      <!-- Inertial: 1118g F450 with 1400KV motors + 8045 props -->
+      <inertial pos="0 0 0" mass="1.118"
+                diaginertia="0.018 0.018 0.035"/>
 
-      <!-- Central body plate -->
-      <geom name="body_top" type="box" size="0.04 0.04 0.008"
+      <!-- Central body plate (F450 PCB ~15cm across) -->
+      <geom name="body_top" type="box" size="0.07 0.07 0.008"
             pos="0 0 0.008" material="body_mat" mass="0.0"/>
-      <geom name="body_bot" type="box" size="0.04 0.04 0.004"
+      <geom name="body_bot" type="box" size="0.07 0.07 0.004"
             pos="0 0 -0.004" material="body_mat" mass="0.0"/>
 
       <!-- Front-facing LED -->
-      <geom name="led_f" type="box" size="0.005 0.02 0.003"
-            pos="0.045 0 0.008" material="led_front"
+      <geom name="led_f" type="box" size="0.005 0.025 0.003"
+            pos="0.075 0 0.008" material="led_front"
             contype="0" conaffinity="0" mass="0.0"/>
       <!-- Rear LED -->
-      <geom name="led_r" type="box" size="0.005 0.02 0.003"
-            pos="-0.045 0 0.008" material="led_rear"
+      <geom name="led_r" type="box" size="0.005 0.025 0.003"
+            pos="-0.075 0 0.008" material="led_rear"
             contype="0" conaffinity="0" mass="0.0"/>
 
-      <!-- ---- ARM: Front-Left (+X, +Y) ---- -->
-      <geom name="arm_fl" type="capsule" fromto="0.02 0.02 0  0.09 0.09 0"
-            size="0.006" material="arm_mat" mass="0.0"/>
-      <body name="motor_fl" pos="0.1 0.1 0.01">
-        <geom name="motor_fl_can" type="cylinder" size="0.012 0.01"
-              material="motor_mat" mass="0.02"/>
-        <geom name="prop_fl" type="cylinder" size="0.06 0.002"
-              pos="0 0 0.012" material="prop_ccw"
+      <!-- ---- ARM: Front-Left (+X, +Y)  225mm @ 45° → (0.16, 0.16) ---- -->
+      <geom name="arm_fl" type="capsule" fromto="0.03 0.03 0  0.15 0.15 0"
+            size="0.008" material="arm_mat" mass="0.0"/>
+      <body name="motor_fl" pos="0.16 0.16 0.01">
+        <geom name="motor_fl_can" type="cylinder" size="0.014 0.012"
+              material="motor_mat" mass="0.055"/>
+        <geom name="prop_fl" type="cylinder" size="0.102 0.002"
+              pos="0 0 0.014" material="prop_ccw"
               contype="0" conaffinity="0" mass="0.0"/>
         <!-- Thrust (body +Z) -->
-        <site name="thrust_fl" pos="0 0 0.014" size="0.005"/>
+        <site name="thrust_fl" pos="0 0 0.016" size="0.005"/>
       </body>
 
       <!-- ---- ARM: Front-Right (+X, -Y) ---- -->
-      <geom name="arm_fr" type="capsule" fromto="0.02 -0.02 0  0.09 -0.09 0"
-            size="0.006" material="arm_mat" mass="0.0"/>
-      <body name="motor_fr" pos="0.1 -0.1 0.01">
-        <geom name="motor_fr_can" type="cylinder" size="0.012 0.01"
-              material="motor_mat" mass="0.02"/>
-        <geom name="prop_fr" type="cylinder" size="0.06 0.002"
-              pos="0 0 0.012" material="prop_cw"
+      <geom name="arm_fr" type="capsule" fromto="0.03 -0.03 0  0.15 -0.15 0"
+            size="0.008" material="arm_mat" mass="0.0"/>
+      <body name="motor_fr" pos="0.16 -0.16 0.01">
+        <geom name="motor_fr_can" type="cylinder" size="0.014 0.012"
+              material="motor_mat" mass="0.055"/>
+        <geom name="prop_fr" type="cylinder" size="0.102 0.002"
+              pos="0 0 0.014" material="prop_cw"
               contype="0" conaffinity="0" mass="0.0"/>
-        <site name="thrust_fr" pos="0 0 0.014" size="0.005"/>
+        <site name="thrust_fr" pos="0 0 0.016" size="0.005"/>
       </body>
 
       <!-- ---- ARM: Rear-Right (-X, -Y) ---- -->
-      <geom name="arm_rr" type="capsule" fromto="-0.02 -0.02 0  -0.09 -0.09 0"
-            size="0.006" material="arm_mat" mass="0.0"/>
-      <body name="motor_rr" pos="-0.1 -0.1 0.01">
-        <geom name="motor_rr_can" type="cylinder" size="0.012 0.01"
-              material="motor_mat" mass="0.02"/>
-        <geom name="prop_rr" type="cylinder" size="0.06 0.002"
-              pos="0 0 0.012" material="prop_ccw"
+      <geom name="arm_rr" type="capsule" fromto="-0.03 -0.03 0  -0.15 -0.15 0"
+            size="0.008" material="arm_mat" mass="0.0"/>
+      <body name="motor_rr" pos="-0.16 -0.16 0.01">
+        <geom name="motor_rr_can" type="cylinder" size="0.014 0.012"
+              material="motor_mat" mass="0.055"/>
+        <geom name="prop_rr" type="cylinder" size="0.102 0.002"
+              pos="0 0 0.014" material="prop_ccw"
               contype="0" conaffinity="0" mass="0.0"/>
-        <site name="thrust_rr" pos="0 0 0.014" size="0.005"/>
+        <site name="thrust_rr" pos="0 0 0.016" size="0.005"/>
       </body>
 
       <!-- ---- ARM: Rear-Left (-X, +Y) ---- -->
-      <geom name="arm_rl" type="capsule" fromto="-0.02 0.02 0  -0.09 0.09 0"
-            size="0.006" material="arm_mat" mass="0.0"/>
-      <body name="motor_rl" pos="-0.1 0.1 0.01">
-        <geom name="motor_rl_can" type="cylinder" size="0.012 0.01"
-              material="motor_mat" mass="0.02"/>
-        <geom name="prop_rl" type="cylinder" size="0.06 0.002"
-              pos="0 0 0.012" material="prop_cw"
+      <geom name="arm_rl" type="capsule" fromto="-0.03 0.03 0  -0.15 0.15 0"
+            size="0.008" material="arm_mat" mass="0.0"/>
+      <body name="motor_rl" pos="-0.16 0.16 0.01">
+        <geom name="motor_rl_can" type="cylinder" size="0.014 0.012"
+              material="motor_mat" mass="0.055"/>
+        <geom name="prop_rl" type="cylinder" size="0.102 0.002"
+              pos="0 0 0.014" material="prop_cw"
               contype="0" conaffinity="0" mass="0.0"/>
-        <site name="thrust_rl" pos="0 0 0.014" size="0.005"/>
+        <site name="thrust_rl" pos="0 0 0.016" size="0.005"/>
       </body>
 
       <!-- IMU sensor site (centre of body) -->

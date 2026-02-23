@@ -14,12 +14,12 @@ Controller (gamepad / joystick – Mode 2 layout)
   Right stick X  : Roll        (±MAX_CMD_ANGLE deg)
   Right stick Y  : Pitch       (±MAX_CMD_ANGLE deg)
 
-Keyboard fallback (when no gamepad detected – in the MuJoCo window):
-  W / S        : Pitch forward / back
-  A / D        : Roll left / right
-  Q / E        : Yaw left / right
-  R / F        : Altitude up / down
-  (all keys are momentary – release to return to centre)
+Keyboard fallback (when no gamepad detected – active as long as viewer is open):
+  Up / Down    : Pitch forward / back
+  Left / Right : Roll left / right
+  Z / X        : Yaw left / right
+  PgUp / PgDn  : Altitude up / down
+  (all keys are momentary – release to return to centre; alt holds last value)
 
 Controls (MuJoCo viewer window):
   Mouse drag   : orbit / pan
@@ -140,25 +140,16 @@ class JoystickReader:
 
 class KeyboardReader:
     """
-    WASD + QE + RF keyboard control via the MuJoCo viewer key callback.
+    OS-level keyboard reader using pynput.
+    Runs a background listener thread – works regardless of which window
+    has focus, so pressing keys while the MuJoCo viewer is open is captured fine.
 
-    Wire up by passing key_callback to drone_env before the first render:
-        env._key_callback = keyboard.key_callback
+    Uses arrow keys + Z/X/PgUp/PgDn to avoid conflicting with MuJoCo's
+    built-in viewer shortcuts (which consume W/A/S/D/Q/E/R/F etc.).
 
-    GLFW key codes (used by the MuJoCo/GLFW window):
-      W=87 S=83 A=65 D=68   Q=81 E=69   R=82 F=70
+    Up/Down = pitch   Left/Right = roll   Z/X = yaw   PgUp/PgDn = altitude
+    All keys are momentary except altitude (PgUp/PgDn accumulate).
     """
-
-    # GLFW key codes
-    KEY_W = 87;  KEY_S = 83   # pitch
-    KEY_A = 65;  KEY_D = 68   # roll
-    KEY_Q = 81;  KEY_E = 69   # yaw
-    KEY_R = 82;  KEY_F = 70   # altitude
-
-    # GLFW action values
-    GLFW_RELEASE = 0
-    GLFW_PRESS   = 1
-    GLFW_REPEAT  = 2
 
     def __init__(self,
                  max_roll_deg:  float = 20.0,
@@ -166,34 +157,72 @@ class KeyboardReader:
                  max_yaw_dps:   float = 60.0,
                  base_alt:      float = 1.0,
                  alt_step:      float = 0.003):
-        self._held          = set()
-        self.max_roll_deg   = max_roll_deg
-        self.max_pitch_deg  = max_pitch_deg
-        self.max_yaw_dps    = max_yaw_dps
-        self._current_alt   = base_alt
-        self.alt_step       = alt_step
-        print("[keyboard] W/S=pitch  A/D=roll  Q/E=yaw  R/F=alt  (hold key to command)")
+        self.max_roll_deg  = max_roll_deg
+        self.max_pitch_deg = max_pitch_deg
+        self.max_yaw_dps   = max_yaw_dps
+        self._current_alt  = base_alt
+        self.alt_step      = alt_step
+        self._held         = set()   # string tags for currently held keys
 
-    def key_callback(self, keycode, scancode, action, mods):
-        """Pass this to env._key_callback before the first render."""
-        if action in (self.GLFW_PRESS, self.GLFW_REPEAT):
-            self._held.add(keycode)
-        elif action == self.GLFW_RELEASE:
-            self._held.discard(keycode)
+        try:
+            from pynput import keyboard as _kb
+            self._Key = _kb.Key   # keep reference for special-key comparison
+            self._listener = _kb.Listener(
+                on_press=self._on_press,
+                on_release=self._on_release,
+            )
+            self._listener.start()
+            print("[keyboard] Up/Down=pitch  Left/Right=roll  Z/X=yaw  PgUp/PgDn=alt")
+        except Exception as exc:
+            print(f"[keyboard] pynput unavailable ({exc}) – keyboard control disabled.")
+            self._listener = None
+            self._Key = None
+
+    def _tag(self, key) -> str | None:
+        """Return a stable string tag for a key, or None to ignore it."""
+        Key = self._Key
+        if Key is None:
+            return None
+        # Special keys
+        if   key == Key.up:        return 'up'
+        elif key == Key.down:      return 'down'
+        elif key == Key.left:      return 'left'
+        elif key == Key.right:     return 'right'
+        elif key == Key.page_up:   return 'pgup'
+        elif key == Key.page_down: return 'pgdn'
+        # Regular character keys
+        try:
+            c = key.char.lower()
+            if c in ('z', 'x'):
+                return c
+        except AttributeError:
+            pass
+        return None
+
+    def _on_press(self, key):
+        tag = self._tag(key)
+        if tag:
+            self._held.add(tag)
+
+    def _on_release(self, key):
+        tag = self._tag(key)
+        if tag:
+            self._held.discard(tag)
 
     def read(self) -> dict:
         roll_deg  = 0.0
         pitch_deg = 0.0
         yaw_dps   = 0.0
 
-        if self.KEY_A in self._held:  roll_deg  -= self.max_roll_deg
-        if self.KEY_D in self._held:  roll_deg  += self.max_roll_deg
-        if self.KEY_W in self._held:  pitch_deg += self.max_pitch_deg
-        if self.KEY_S in self._held:  pitch_deg -= self.max_pitch_deg
-        if self.KEY_Q in self._held:  yaw_dps   -= self.max_yaw_dps
-        if self.KEY_E in self._held:  yaw_dps   += self.max_yaw_dps
-        if self.KEY_R in self._held:  self._current_alt = min(self._current_alt + self.alt_step, 3.0)
-        if self.KEY_F in self._held:  self._current_alt = max(self._current_alt - self.alt_step, 0.2)
+        held = self._held
+        if 'left'  in held:  roll_deg  -= self.max_roll_deg
+        if 'right' in held:  roll_deg  += self.max_roll_deg
+        if 'up'    in held:  pitch_deg += self.max_pitch_deg
+        if 'down'  in held:  pitch_deg -= self.max_pitch_deg
+        if 'z'     in held:  yaw_dps   -= self.max_yaw_dps
+        if 'x'     in held:  yaw_dps   += self.max_yaw_dps
+        if 'pgup'  in held:  self._current_alt = min(self._current_alt + self.alt_step, 3.0)
+        if 'pgdn'  in held:  self._current_alt = max(self._current_alt - self.alt_step, 0.2)
 
         return dict(
             roll_deg     = roll_deg,
@@ -203,7 +232,8 @@ class KeyboardReader:
         )
 
     def close(self):
-        pass
+        if self._listener is not None:
+            self._listener.stop()
 
 
 def _load_policy(model_path: str | None):
@@ -260,8 +290,15 @@ def run_viewer(model_path=None, record_path=None, max_episodes=0, slow_factor=1.
         active_reader = joy
     else:
         keyboard = KeyboardReader()
-        env._key_callback = keyboard.key_callback
         active_reader = keyboard
+
+    # Viewer controls setpoints manually – disable training randomisation
+    env._randomize_setpoints = False
+    env._max_ep_steps = 2000   # 20 s episodes in viewer
+
+    # Exponential smoothing for setpoints so keyboard steps feel continuous
+    SMOOTH_ALPHA = 0.08   # 0 = no change, 1 = instant; 0.08 ≈ ~80 ms rise
+    smooth_sp = dict(roll_deg=0.0, pitch_deg=0.0, yaw_rate_dps=0.0, alt_m=1.0)
 
     frames = []
     episode  = 0
@@ -275,13 +312,16 @@ def run_viewer(model_path=None, record_path=None, max_episodes=0, slow_factor=1.
             terminated = truncated = False
 
             while not terminated and not truncated:
-                # ---- Read input & push setpoint into env ---------------
-                joy_sp = active_reader.read()
+                # ---- Read input & smooth setpoint into env ------------
+                raw_sp = active_reader.read()
+                for k in smooth_sp:
+                    smooth_sp[k] += SMOOTH_ALPHA * (raw_sp[k] - smooth_sp[k])
+                joy_sp = smooth_sp   # alias for status prints
                 env.set_setpoint(
-                    roll_deg     = joy_sp["roll_deg"],
-                    pitch_deg    = joy_sp["pitch_deg"],
-                    yaw_rate_dps = joy_sp["yaw_rate_dps"],
-                    alt_m        = joy_sp["alt_m"],
+                    roll_deg     = smooth_sp["roll_deg"],
+                    pitch_deg    = smooth_sp["pitch_deg"],
+                    yaw_rate_dps = smooth_sp["yaw_rate_dps"],
+                    alt_m        = smooth_sp["alt_m"],
                 )
 
                 action = policy(obs)
@@ -291,12 +331,17 @@ def run_viewer(model_path=None, record_path=None, max_episodes=0, slow_factor=1.
 
                 if render_mode == "human":
                     env.render()
-                    # Slow down so it's watchable
-                    # 4 kHz physics = 0.25 ms per step.
-                    # At 60 fps display, we'd skip most frames.
-                    # Render every N steps to hit ~60 fps visual.
-                    if step % max(1, int(1.0 / (60 * 0.00025 * slow_factor))) == 0:
-                        time.sleep(1.0 / 60.0)
+                    # Each policy step = 10 ms sim time; sleep to match real-time
+                    time.sleep(0.01 * slow_factor)
+                    # Periodic status so you can verify keyboard inputs are working
+                    if step % 50 == 0:
+                        pos = env._sensor(env._pos_sensor_id, 3)
+                        print(f"\r  cmd: r={joy_sp['roll_deg']:+5.1f}°  "
+                              f"p={joy_sp['pitch_deg']:+5.1f}°  "
+                              f"alt={joy_sp['alt_m']:.2f}m  |  "
+                              f"z={pos[2]:.2f}m  "
+                              f"mot=[{action[0]:.2f} {action[1]:.2f} {action[2]:.2f} {action[3]:.2f}]",
+                              end="", flush=True)
                 else:
                     # Record every ~30th frame (for sane video file sizes)
                     if step % max(1, int(1.0 / (30 * 0.00025))) == 0:

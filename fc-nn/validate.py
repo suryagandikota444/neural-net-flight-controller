@@ -80,8 +80,8 @@ def run_forward_pass_check(W1, B1, W2, B2, W3, B3, sb3_model=None):
         0.0,   # accel_x / 2g
         0.0,   # accel_y / 2g
         0.5,   # accel_z / 2g  (1 g upward -> 0.5)
-        0.0,   # roll_error  / 180
-        0.0,   # pitch_error / 180
+        0.0,   # roll_error  / 45  (ANGLE_ERR_SCALE)
+        0.0,   # pitch_error / 45  (ANGLE_ERR_SCALE)
         0.0,   # altitude_error / ALT_SCALE  (at target = 0)
         0.0,   # vertical_vel  / VVEL_SCALE  (stationary = 0)
         0.0,   # hvel_x / HVEL_SCALE         (no lateral drift)
