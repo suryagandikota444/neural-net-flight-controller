@@ -1,0 +1,333 @@
+"""
+QuadrotorEnv - PyBullet-based quadrotor environment.
+
+Observation (10 values, same order as STM32 input vector):
+  [0] gyro_x  / MAX_GYRO          -> [-1, 1]
+  [1] gyro_y  / MAX_GYRO
+  [2] gyro_z  / MAX_GYRO
+  [3] accel_x / 2.0               -> [-1, 1]
+  [4] accel_y / 2.0
+  [5] accel_z / 2.0
+  [6] roll_error  / 180.0         -> [-1, 1]
+  [7] pitch_error / 180.0
+  [8] yaw_error   / 180.0
+  [9] throttle_setpoint            -> [0, 1]
+
+Action (4 values):
+  Motor PWM commands in [0, 1] (scaled to 1000-2000 µs in export)
+  Motor layout - standard X-frame:
+    0: Front-Left  (CCW)
+    1: Front-Right (CW)
+    2: Rear-Right  (CCW)
+    3: Rear-Left   (CW)
+"""
+
+import math
+import numpy as np
+import pybullet as p
+import pybullet_data
+import gymnasium as gym
+from gymnasium import spaces
+
+# -------------------------------------------------------------------
+# Physical / normalisation constants
+# -------------------------------------------------------------------
+MAX_GYRO       = 2000.0 * math.pi / 180.0   # 2000 deg/s -> rad/s
+GRAVITY        = 9.81                        # m/s²
+DT             = 0.00025                     # 4 kHz  (250 µs)
+MAX_EP_STEPS   = 1000
+
+# Quad geometry (symmetric X-frame, arm length in metres)
+ARM            = 0.1                         # 10 cm arm
+BASE_MASS      = 0.5                         # kg
+BASE_KF        = 3.16e-10                    # thrust coeff (N / RPM²)  -- tuned empirically
+BASE_KM        = 7.94e-12                    # torque coeff (N·m / RPM²)
+MAX_RPM        = 20000.0
+
+# Motor positions (body frame, metres)
+#   FL, FR, RR, RL
+MOTOR_DIRS = np.array([-1, 1, -1, 1], dtype=np.float32)   # CCW=-1, CW=+1
+MOTOR_POS  = np.array([
+    [ ARM,  ARM, 0],   # Front-Left
+    [ ARM, -ARM, 0],   # Front-Right
+    [-ARM, -ARM, 0],   # Rear-Right
+    [-ARM,  ARM, 0],   # Rear-Left
+], dtype=np.float32)
+
+# Reward constants
+POSITION_RADIUS = 0.05      # 5 cm
+CRASH_ALT       = 0.05      # 5 cm
+TILT_LIMIT      = 45.0      # degrees
+TILT_PENALTY    = 10.0
+CRASH_PENALTY   = 100.0
+SMOOTH_PENALTY  = 0.001
+ANGVEL_PENALTY  = 0.01
+
+# Noise (sim-to-real)
+GYRO_NOISE_STD  = 0.01      # rad/s
+ACCEL_NOISE_STD = 0.05      # g  (before / 2 normalisation)
+
+TARGET_POS = np.array([0.0, 0.0, 1.0], dtype=np.float32)   # hover 1 m
+
+
+class QuadrotorEnv(gym.Env):
+    """
+    Single-agent quadrotor hover environment backed by PyBullet.
+
+    Parameters
+    ----------
+    render_mode : str | None
+        "human" opens a GUI window; None (default) runs headless.
+    """
+
+    metadata = {"render_modes": ["human", "rgb_array"]}
+
+    def __init__(self, render_mode=None):
+        super().__init__()
+        self.render_mode = render_mode
+
+        # Gym spaces -------------------------------------------------------
+        self.observation_space = spaces.Box(
+            low=-1.0, high=1.0, shape=(10,), dtype=np.float32
+        )
+        # Actions: normalised thrust per motor [0, 1]
+        self.action_space = spaces.Box(
+            low=0.0, high=1.0, shape=(4,), dtype=np.float32
+        )
+
+        # Runtime state (set in reset) -------------------------------------
+        self._physics_client = None
+        self._drone_id        = None
+        self._step_count      = 0
+        self._kf              = None   # per-episode thrust coefficients
+        self._km              = None
+        self._mass            = None
+        self._wind_force      = None
+        self._prev_action     = np.zeros(4, dtype=np.float32)
+        self._throttle_sp     = 0.5    # fixed hover throttle setpoint
+
+    # ------------------------------------------------------------------
+    # Gymnasium API
+    # ------------------------------------------------------------------
+
+    def reset(self, *, seed=None, options=None):
+        super().reset(seed=seed)
+        rng = self.np_random
+
+        # --- domain randomisation --------------------------------------
+        self._kf   = BASE_KF   * rng.uniform(0.9, 1.1, size=4).astype(np.float32)
+        self._km   = BASE_KM   * rng.uniform(0.9, 1.1, size=4).astype(np.float32)
+        self._mass = BASE_MASS * float(rng.uniform(0.95, 1.05))
+
+        # CoG offset: up to ±2 mm in X and Y
+        self._cog_offset = rng.uniform(-0.002, 0.002, size=3).astype(np.float32)
+        self._cog_offset[2] = 0.0   # keep vertical CoG fixed
+
+        # Wind force: magnitude up to 0.5 N in a random direction
+        wind_dir   = rng.normal(size=3).astype(np.float32)
+        wind_dir   /= (np.linalg.norm(wind_dir) + 1e-8)
+        wind_mag   = float(rng.uniform(0.0, 0.5))
+        self._wind_force = wind_dir * wind_mag
+
+        # --- PyBullet setup --------------------------------------------
+        if self._physics_client is None:
+            connection = p.GUI if self.render_mode == "human" else p.DIRECT
+            self._physics_client = p.connect(connection)
+            p.setAdditionalSearchPath(pybullet_data.getDataPath(),
+                                      physicsClientId=self._physics_client)
+
+        p.resetSimulation(physicsClientId=self._physics_client)
+        p.setGravity(0, 0, -GRAVITY, physicsClientId=self._physics_client)
+
+        # Ground plane
+        p.loadURDF("plane.urdf", physicsClientId=self._physics_client)
+
+        # Drone: use a simple box as stand-in for the quad body
+        drone_start = [0.0, 0.0, 1.0]
+        tilt_x = float(rng.uniform(-5, 5)) * math.pi / 180
+        tilt_y = float(rng.uniform(-5, 5)) * math.pi / 180
+        start_orn = p.getQuaternionFromEuler([tilt_x, tilt_y, 0.0])
+
+        col_shape  = p.createCollisionShape(p.GEOM_BOX,
+                                            halfExtents=[0.1, 0.1, 0.02],
+                                            physicsClientId=self._physics_client)
+        vis_shape  = p.createVisualShape(p.GEOM_BOX,
+                                         halfExtents=[0.1, 0.1, 0.02],
+                                         rgbaColor=[0.2, 0.6, 1.0, 1.0],
+                                         physicsClientId=self._physics_client)
+        self._drone_id = p.createMultiBody(
+            baseMass=self._mass,
+            baseCollisionShapeIndex=col_shape,
+            baseVisualShapeIndex=vis_shape,
+            basePosition=drone_start,
+            baseOrientation=start_orn,
+            baseInertialFramePosition=self._cog_offset.tolist(),
+            physicsClientId=self._physics_client
+        )
+
+        # Disable default damping so we control everything
+        p.changeDynamics(self._drone_id, -1,
+                         linearDamping=0.0, angularDamping=0.0,
+                         physicsClientId=self._physics_client)
+
+        self._step_count  = 0
+        self._prev_action = np.zeros(4, dtype=np.float32)
+        obs = self._get_obs()
+        return obs, {}
+
+    def step(self, action):
+        action = np.clip(action, 0.0, 1.0).astype(np.float32)
+
+        # --- Convert normalised action -> RPM -> forces/torques --------
+        rpms   = action * MAX_RPM                    # shape (4,)
+        rpms2  = rpms ** 2
+
+        thrusts = self._kf * rpms2                   # N per motor
+        torques = self._km * rpms2 * MOTOR_DIRS      # N·m per motor (sign = CW/CCW)
+
+        # Rotation matrix (body -> world) from current orientation
+        pos, orn = p.getBasePositionAndOrientation(
+            self._drone_id, physicsClientId=self._physics_client
+        )
+        rot_mat = np.array(p.getMatrixFromQuaternion(orn)).reshape(3, 3)
+
+        # Aggregate thrust in body frame, rotate to world
+        total_thrust_body = np.array([0.0, 0.0, float(np.sum(thrusts))])
+        total_thrust_world = rot_mat @ total_thrust_body
+
+        # Body torques from differential thrust
+        body_torque = np.zeros(3)
+        for i in range(4):
+            # Moment arm cross thrust direction (body Z)
+            arm_vec  = MOTOR_POS[i]
+            thrust_v = np.array([0, 0, thrusts[i]])
+            body_torque += np.cross(arm_vec, thrust_v)
+            body_torque[2] += torques[i]   # yaw reaction torque
+
+        world_torque = rot_mat @ body_torque
+
+        # Apply forces / torques
+        p.applyExternalForce(
+            self._drone_id, -1,
+            total_thrust_world.tolist(), pos, p.WORLD_FRAME,
+            physicsClientId=self._physics_client
+        )
+        p.applyExternalTorque(
+            self._drone_id, -1,
+            world_torque.tolist(), p.WORLD_FRAME,
+            physicsClientId=self._physics_client
+        )
+
+        # Wind disturbance (constant per episode, world frame)
+        p.applyExternalForce(
+            self._drone_id, -1,
+            self._wind_force.tolist(), pos, p.WORLD_FRAME,
+            physicsClientId=self._physics_client
+        )
+
+        p.stepSimulation(physicsClientId=self._physics_client)
+        self._step_count += 1
+
+        obs      = self._get_obs()
+        reward   = self._compute_reward(action, pos)
+        pos_new, orn_new = p.getBasePositionAndOrientation(
+            self._drone_id, physicsClientId=self._physics_client
+        )
+        roll, pitch, _ = p.getEulerFromQuaternion(orn_new)
+        roll_deg  = abs(math.degrees(roll))
+        pitch_deg = abs(math.degrees(pitch))
+
+        crashed    = pos_new[2] < CRASH_ALT
+        over_tilt  = roll_deg > 90 or pitch_deg > 90
+        terminated = crashed or over_tilt
+        truncated  = self._step_count >= MAX_EP_STEPS
+
+        if crashed or over_tilt:
+            reward -= CRASH_PENALTY
+
+        self._prev_action = action.copy()
+        return obs, reward, terminated, truncated, {}
+
+    def render(self):
+        pass   # GUI mode renders automatically; rgb_array not implemented
+
+    def close(self):
+        if self._physics_client is not None:
+            p.disconnect(self._physics_client)
+            self._physics_client = None
+
+    # ------------------------------------------------------------------
+    # Internals
+    # ------------------------------------------------------------------
+
+    def _get_obs(self):
+        pos, orn = p.getBasePositionAndOrientation(
+            self._drone_id, physicsClientId=self._physics_client
+        )
+        vel, ang_vel = p.getBaseVelocity(
+            self._drone_id, physicsClientId=self._physics_client
+        )
+        rot_mat = np.array(p.getMatrixFromQuaternion(orn)).reshape(3, 3)
+
+        # --- Gyro (rad/s, body frame) ----------------------------------
+        ang_vel_world = np.array(ang_vel, dtype=np.float32)
+        gyro_body     = rot_mat.T @ ang_vel_world   # world -> body
+
+        # Add sensor noise
+        gyro_body += self.np_random.normal(0, GYRO_NOISE_STD, 3).astype(np.float32)
+
+        gyro_norm = np.clip(gyro_body / MAX_GYRO, -1.0, 1.0).astype(np.float32)
+
+        # --- Accel (g, body frame) -------------------------------------
+        vel_np        = np.array(vel, dtype=np.float32)
+        # Approximate specific force: gravity expressed in body frame
+        gravity_world = np.array([0, 0, -GRAVITY], dtype=np.float32)
+        gravity_body  = rot_mat.T @ gravity_world
+        accel_body    = -gravity_body / GRAVITY     # in g, resting = [0,0,+1]
+
+        accel_body += self.np_random.normal(0, ACCEL_NOISE_STD, 3).astype(np.float32)
+        accel_norm = np.clip(accel_body / 2.0, -1.0, 1.0).astype(np.float32)
+
+        # --- Attitude errors (vs target: level hover) ------------------
+        roll, pitch, yaw = p.getEulerFromQuaternion(orn)
+        roll_err  = np.clip(math.degrees(roll)  / 180.0, -1.0, 1.0)
+        pitch_err = np.clip(math.degrees(pitch) / 180.0, -1.0, 1.0)
+        yaw_err   = np.clip(math.degrees(yaw)   / 180.0, -1.0, 1.0)
+
+        # --- Throttle setpoint ----------------------------------------
+        throttle = np.float32(self._throttle_sp)
+
+        obs = np.array([
+            gyro_norm[0],  gyro_norm[1],  gyro_norm[2],
+            accel_norm[0], accel_norm[1], accel_norm[2],
+            roll_err, pitch_err, yaw_err,
+            throttle
+        ], dtype=np.float32)
+        return obs
+
+    def _compute_reward(self, action, pos_before_step):
+        pos, orn = p.getBasePositionAndOrientation(
+            self._drone_id, physicsClientId=self._physics_client
+        )
+        _, ang_vel = p.getBaseVelocity(
+            self._drone_id, physicsClientId=self._physics_client
+        )
+
+        # 1. Position reward
+        dist    = np.linalg.norm(np.array(pos) - TARGET_POS)
+        r_pos   = 1.0 if dist <= POSITION_RADIUS else 0.0
+
+        # 2. Tilt penalty
+        roll, pitch, _ = p.getEulerFromQuaternion(orn)
+        r_tilt  = 0.0
+        if abs(math.degrees(roll)) > TILT_LIMIT or abs(math.degrees(pitch)) > TILT_LIMIT:
+            r_tilt = -TILT_PENALTY
+
+        # 3. Smoothness penalty (variance of motor outputs)
+        r_smooth = -SMOOTH_PENALTY * float(np.var(action))
+
+        # 4. Angular velocity penalty
+        ang_vel_np = np.array(ang_vel, dtype=np.float32)
+        r_angvel   = -ANGVEL_PENALTY * float(np.linalg.norm(ang_vel_np))
+
+        return r_pos + r_tilt + r_smooth + r_angvel

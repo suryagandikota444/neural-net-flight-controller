@@ -1,0 +1,287 @@
+"""
+viewer.py – Interactive MuJoCo viewer for the quadrotor.
+
+Modes
+-----
+  python viewer.py                                # random actions (test the model file)
+  python viewer.py --model runs/quad_hover/best_model.zip   # policy rollout
+  python viewer.py --model runs/quad_hover/best_model.zip --record flight.mp4
+
+Controller (gamepad / joystick – Mode 2 layout)
+---------------
+  Left  stick X  : Yaw rate    (±MAX_YAW_RATE_CMD deg/s)
+  Left  stick Y  : Altitude    (hold centre = 1 m; pushed up/down ±1 m)
+  Right stick X  : Roll        (±MAX_CMD_ANGLE deg)
+  Right stick Y  : Pitch       (±MAX_CMD_ANGLE deg)
+  No joystick detected → setpoints default to level hover at 1 m.
+
+Controls (MuJoCo viewer window):
+  Mouse drag   : orbit / pan
+  Scroll       : zoom
+  Space        : pause / resume
+  Backspace    : reset episode
+  Tab          : toggle overlay
+  Esc / Q      : quit
+"""
+
+import argparse
+import math
+import time
+import numpy as np
+
+# ---------------------------------------------------------------------------
+# Gamepad / joystick support (pygame).
+# ---------------------------------------------------------------------------
+try:
+    import pygame
+    _PYGAME_OK = True
+except ImportError:
+    _PYGAME_OK = False
+
+# Deadzone applied to each raw axis value before use
+_AXIS_DEADZONE = 0.08
+
+
+def _apply_deadzone(v: float, dz: float = _AXIS_DEADZONE) -> float:
+    """Return 0 if |v| < dz, else rescale to keep full range."""
+    if abs(v) < dz:
+        return 0.0
+    sign = 1.0 if v > 0 else -1.0
+    return sign * (abs(v) - dz) / (1.0 - dz)
+
+
+class JoystickReader:
+    """
+    Thin wrapper around pygame joystick.
+
+    Mode-2 layout (standard FPV):
+      Axis 0  Left  X  → yaw rate
+      Axis 1  Left  Y  → altitude offset  (push up = higher; pygame Y is inverted)
+      Axis 2  Right X  → roll
+      Axis 3  Right Y  → pitch            (push up = nose up; pygame Y is inverted)
+    """
+
+    # If your controller has a different mapping, change these indices.
+    AXIS_YAW_RATE = 0
+    AXIS_ALT      = 1
+    AXIS_ROLL     = 2
+    AXIS_PITCH    = 3
+
+    def __init__(self):
+        self._joy = None
+        self._available = False
+        if not _PYGAME_OK:
+            print("[joystick] pygame not installed – run: pip install pygame")
+            return
+        pygame.init()
+        pygame.joystick.init()
+        n = pygame.joystick.get_count()
+        if n == 0:
+            print("[joystick] No joystick / gamepad detected – setpoints fixed at hover.")
+            return
+        self._joy = pygame.joystick.Joystick(0)
+        self._joy.init()
+        print(f"[joystick] Using: {self._joy.get_name()}  "
+              f"({self._joy.get_numaxes()} axes, "
+              f"{self._joy.get_numbuttons()} buttons)")
+        self._available = True
+
+    @property
+    def available(self) -> bool:
+        return self._available
+
+    def read(self,
+             max_roll_deg: float  = 30.0,
+             max_pitch_deg: float = 30.0,
+             max_yaw_dps: float   = 90.0,
+             base_alt: float      = 1.0,
+             alt_range: float     = 1.0,
+             ) -> dict:
+        """
+        Pump pygame events and return current setpoints.
+
+        Returns
+        -------
+        dict with keys: roll_deg, pitch_deg, yaw_rate_dps, alt_m
+        """
+        if not self._available:
+            return dict(roll_deg=0.0, pitch_deg=0.0, yaw_rate_dps=0.0, alt_m=base_alt)
+
+        pygame.event.pump()
+
+        def _ax(idx):
+            n = self._joy.get_numaxes()
+            if idx >= n:
+                return 0.0
+            return _apply_deadzone(self._joy.get_axis(idx))
+
+        yaw_raw   = _ax(self.AXIS_YAW_RATE)
+        alt_raw   = _ax(self.AXIS_ALT)    # pygame Y up = -1  → invert
+        roll_raw  = _ax(self.AXIS_ROLL)
+        pitch_raw = _ax(self.AXIS_PITCH)  # pygame Y up = -1  → invert
+
+        return dict(
+            roll_deg      =  roll_raw  * max_roll_deg,
+            pitch_deg     = -pitch_raw * max_pitch_deg,   # invert Y
+            yaw_rate_dps  =  yaw_raw   * max_yaw_dps,
+            alt_m         =  base_alt  - alt_raw * alt_range,  # invert Y
+        )
+
+    def close(self):
+        if _PYGAME_OK:
+            pygame.quit()
+
+
+def _load_policy(model_path: str | None):
+    """Return a policy function obs→action.  None = random."""
+    if model_path is None:
+        def random_policy(obs):
+            return np.random.uniform(0, 1, size=4).astype(np.float32)
+        return random_policy
+
+    from stable_baselines3 import PPO
+    import torch
+
+    ppo = PPO.load(model_path)
+
+    def sb3_policy(obs):
+        obs_t = torch.tensor(obs, dtype=torch.float32).unsqueeze(0)
+        with torch.no_grad():
+            action, _ = ppo.predict(obs_t, deterministic=True)
+        return np.array(action, dtype=np.float32).flatten()
+
+    return sb3_policy
+
+
+def _overlay_text(env, obs, action, step, ep_reward, joy_sp: dict | None = None):
+    """Build a compact HUD string."""
+    pos  = env._sensor(env._pos_sensor_id, 3)
+    quat = env._sensor(env._quat_sensor_id, 4)
+    from drone_env import _quat_to_euler
+    r, p, y = _quat_to_euler(quat)
+    lines = [
+        f"Step {step:5d}  |  Reward {ep_reward:+.2f}",
+        f"Pos   x={pos[0]:+.3f}  y={pos[1]:+.3f}  z={pos[2]:.3f}",
+        f"RPY   r={math.degrees(r):+6.1f}°  p={math.degrees(p):+6.1f}°  y={math.degrees(y):+6.1f}°",
+        f"Motor {action[0]:.2f}  {action[1]:.2f}  {action[2]:.2f}  {action[3]:.2f}",
+    ]
+    if joy_sp is not None:
+        lines.append(
+            f"CMD   r={joy_sp['roll_deg']:+5.1f}°  p={joy_sp['pitch_deg']:+5.1f}°  "
+            f"yr={joy_sp['yaw_rate_dps']:+5.0f}°/s  alt={joy_sp['alt_m']:.2f}m"
+        )
+    return "\n".join(lines)
+
+
+def run_viewer(model_path=None, record_path=None, max_episodes=0, slow_factor=1.0):
+    from drone_env import QuadrotorEnv
+
+    render_mode = "rgb_array" if record_path else "human"
+    env = QuadrotorEnv(render_mode=render_mode)
+    policy = _load_policy(model_path)
+
+    # ---- Joystick --------------------------------------------------------
+    joy = JoystickReader()
+
+    frames = []
+    episode  = 0
+    ep_limit = max_episodes if max_episodes > 0 else float("inf")
+
+    try:
+        while episode < ep_limit:
+            obs, _ = env.reset()
+            ep_reward = 0.0
+            step = 0
+            terminated = truncated = False
+
+            while not terminated and not truncated:
+                # ---- Read joystick & push setpoint into env --------------
+                joy_sp = joy.read()
+                env.set_setpoint(
+                    roll_deg     = joy_sp["roll_deg"],
+                    pitch_deg    = joy_sp["pitch_deg"],
+                    yaw_rate_dps = joy_sp["yaw_rate_dps"],
+                    alt_m        = joy_sp["alt_m"],
+                )
+
+                action = policy(obs)
+                obs, reward, terminated, truncated, _ = env.step(action)
+                ep_reward += reward
+                step += 1
+
+                if render_mode == "human":
+                    env.render()
+                    # Slow down so it's watchable
+                    # 4 kHz physics = 0.25 ms per step.
+                    # At 60 fps display, we'd skip most frames.
+                    # Render every N steps to hit ~60 fps visual.
+                    if step % max(1, int(1.0 / (60 * 0.00025 * slow_factor))) == 0:
+                        time.sleep(1.0 / 60.0)
+                else:
+                    # Record every ~30th frame (for sane video file sizes)
+                    if step % max(1, int(1.0 / (30 * 0.00025))) == 0:
+                        frames.append(env.render())
+
+            episode += 1
+            print(f"[viewer] Episode {episode:3d}  steps={step:5d}  "
+                  f"reward={ep_reward:+8.2f}  "
+                  f"{'CRASH' if terminated else 'TIMEOUT'}")
+
+    except KeyboardInterrupt:
+        print("\n[viewer] Interrupted.")
+
+    env.close()
+    joy.close()
+
+    if record_path and frames:
+        _save_video(frames, record_path)
+
+
+def _save_video(frames, path, fps=30):
+    """Save a list of RGB arrays as an MP4 video."""
+    try:
+        import imageio
+        writer = imageio.get_writer(path, fps=fps, codec="libx264",
+                                    quality=8, pixelformat="yuv420p")
+        for f in frames:
+            writer.append_data(f)
+        writer.close()
+        print(f"[viewer] Saved video to {path}  ({len(frames)} frames)")
+    except ImportError:
+        print("[viewer] Install imageio + imageio-ffmpeg to save videos:")
+        print("         pip install imageio imageio-ffmpeg")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Interactive MuJoCo quadrotor viewer."
+    )
+    parser.add_argument("--model", type=str, default=None,
+                        help="Path to a trained SB3 PPO model .zip. "
+                             "Omit for random actions.")
+    parser.add_argument("--record", type=str, default=None,
+                        help="Path to save an MP4 recording (e.g. flight.mp4).")
+    parser.add_argument("--episodes", type=int, default=0,
+                        help="Number of episodes to run (0 = infinite).")
+    parser.add_argument("--slow", type=float, default=1.0,
+                        help="Slow-motion factor. 2.0 = half speed.")
+    args = parser.parse_args()
+
+    print("[viewer] Launching MuJoCo viewer ...")
+    if args.model:
+        print(f"         Policy: {args.model}")
+    else:
+        print("         Policy: RANDOM (no model loaded)")
+    if args.record:
+        print(f"         Recording to: {args.record}")
+
+    run_viewer(
+        model_path=args.model,
+        record_path=args.record,
+        max_episodes=args.episodes,
+        slow_factor=args.slow,
+    )
+
+
+if __name__ == "__main__":
+    main()
