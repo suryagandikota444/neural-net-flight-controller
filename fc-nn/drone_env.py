@@ -215,6 +215,9 @@ class QuadrotorEnv(gym.Env):
         self._cmd_yaw_rate  = 0.0
         self._cmd_alt       = TARGET_ALT
 
+        # Optional key callback wired up by viewer.py (keyboard fallback)
+        self._key_callback  = None
+
     # ---- Setpoint API (called by viewer / controller) -------------------
 
     def set_setpoint(self,
@@ -425,6 +428,7 @@ class QuadrotorEnv(gym.Env):
             self._viewer = mujoco.viewer.launch_passive(
                 self._model, self._data,
                 show_left_ui=False, show_right_ui=False,
+                key_callback=self._key_callback,
             )
             self._viewer.cam.azimuth   = 135
             self._viewer.cam.elevation = -25

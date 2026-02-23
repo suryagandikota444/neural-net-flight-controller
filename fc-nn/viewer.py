@@ -13,7 +13,13 @@ Controller (gamepad / joystick – Mode 2 layout)
   Left  stick Y  : Altitude    (hold centre = 1 m; pushed up/down ±1 m)
   Right stick X  : Roll        (±MAX_CMD_ANGLE deg)
   Right stick Y  : Pitch       (±MAX_CMD_ANGLE deg)
-  No joystick detected → setpoints default to level hover at 1 m.
+
+Keyboard fallback (when no gamepad detected – in the MuJoCo window):
+  W / S        : Pitch forward / back
+  A / D        : Roll left / right
+  Q / E        : Yaw left / right
+  R / F        : Altitude up / down
+  (all keys are momentary – release to return to centre)
 
 Controls (MuJoCo viewer window):
   Mouse drag   : orbit / pan
@@ -77,7 +83,7 @@ class JoystickReader:
         pygame.joystick.init()
         n = pygame.joystick.get_count()
         if n == 0:
-            print("[joystick] No joystick / gamepad detected – setpoints fixed at hover.")
+            print("[joystick] No joystick / gamepad detected – falling back to keyboard.")
             return
         self._joy = pygame.joystick.Joystick(0)
         self._joy.init()
@@ -132,6 +138,74 @@ class JoystickReader:
             pygame.quit()
 
 
+class KeyboardReader:
+    """
+    WASD + QE + RF keyboard control via the MuJoCo viewer key callback.
+
+    Wire up by passing key_callback to drone_env before the first render:
+        env._key_callback = keyboard.key_callback
+
+    GLFW key codes (used by the MuJoCo/GLFW window):
+      W=87 S=83 A=65 D=68   Q=81 E=69   R=82 F=70
+    """
+
+    # GLFW key codes
+    KEY_W = 87;  KEY_S = 83   # pitch
+    KEY_A = 65;  KEY_D = 68   # roll
+    KEY_Q = 81;  KEY_E = 69   # yaw
+    KEY_R = 82;  KEY_F = 70   # altitude
+
+    # GLFW action values
+    GLFW_RELEASE = 0
+    GLFW_PRESS   = 1
+    GLFW_REPEAT  = 2
+
+    def __init__(self,
+                 max_roll_deg:  float = 20.0,
+                 max_pitch_deg: float = 20.0,
+                 max_yaw_dps:   float = 60.0,
+                 base_alt:      float = 1.0,
+                 alt_step:      float = 0.003):
+        self._held          = set()
+        self.max_roll_deg   = max_roll_deg
+        self.max_pitch_deg  = max_pitch_deg
+        self.max_yaw_dps    = max_yaw_dps
+        self._current_alt   = base_alt
+        self.alt_step       = alt_step
+        print("[keyboard] W/S=pitch  A/D=roll  Q/E=yaw  R/F=alt  (hold key to command)")
+
+    def key_callback(self, keycode, scancode, action, mods):
+        """Pass this to env._key_callback before the first render."""
+        if action in (self.GLFW_PRESS, self.GLFW_REPEAT):
+            self._held.add(keycode)
+        elif action == self.GLFW_RELEASE:
+            self._held.discard(keycode)
+
+    def read(self) -> dict:
+        roll_deg  = 0.0
+        pitch_deg = 0.0
+        yaw_dps   = 0.0
+
+        if self.KEY_A in self._held:  roll_deg  -= self.max_roll_deg
+        if self.KEY_D in self._held:  roll_deg  += self.max_roll_deg
+        if self.KEY_W in self._held:  pitch_deg += self.max_pitch_deg
+        if self.KEY_S in self._held:  pitch_deg -= self.max_pitch_deg
+        if self.KEY_Q in self._held:  yaw_dps   -= self.max_yaw_dps
+        if self.KEY_E in self._held:  yaw_dps   += self.max_yaw_dps
+        if self.KEY_R in self._held:  self._current_alt = min(self._current_alt + self.alt_step, 3.0)
+        if self.KEY_F in self._held:  self._current_alt = max(self._current_alt - self.alt_step, 0.2)
+
+        return dict(
+            roll_deg     = roll_deg,
+            pitch_deg    = pitch_deg,
+            yaw_rate_dps = yaw_dps,
+            alt_m        = self._current_alt,
+        )
+
+    def close(self):
+        pass
+
+
 def _load_policy(model_path: str | None):
     """Return a policy function obs→action.  None = random."""
     if model_path is None:
@@ -180,8 +254,14 @@ def run_viewer(model_path=None, record_path=None, max_episodes=0, slow_factor=1.
     env = QuadrotorEnv(render_mode=render_mode)
     policy = _load_policy(model_path)
 
-    # ---- Joystick --------------------------------------------------------
+    # ---- Input (joystick preferred, keyboard fallback) ------------------
     joy = JoystickReader()
+    if joy.available:
+        active_reader = joy
+    else:
+        keyboard = KeyboardReader()
+        env._key_callback = keyboard.key_callback
+        active_reader = keyboard
 
     frames = []
     episode  = 0
@@ -195,8 +275,8 @@ def run_viewer(model_path=None, record_path=None, max_episodes=0, slow_factor=1.
             terminated = truncated = False
 
             while not terminated and not truncated:
-                # ---- Read joystick & push setpoint into env --------------
-                joy_sp = joy.read()
+                # ---- Read input & push setpoint into env ---------------
+                joy_sp = active_reader.read()
                 env.set_setpoint(
                     roll_deg     = joy_sp["roll_deg"],
                     pitch_deg    = joy_sp["pitch_deg"],
@@ -231,7 +311,7 @@ def run_viewer(model_path=None, record_path=None, max_episodes=0, slow_factor=1.
         print("\n[viewer] Interrupted.")
 
     env.close()
-    joy.close()
+    active_reader.close()
 
     if record_path and frames:
         _save_video(frames, record_path)
