@@ -36,7 +36,10 @@ STM32 raw → obs conversion (ICM-42688-P, configured ±2000 dps / ±16g):
     AX, AY ≈ 0 LSB →  0/4096   = 0.0  ✓
 
 Action (4 values):
-  Motor PWM commands in [0, 1]  (scaled to 1000–2000 µs at export)
+  Residual motor commands in [-1, 1]  (centered on hover throttle)
+  Motor output = clip(HOVER_THROTTLE + action * ACTION_SCALE, 0, 1)
+  Network output of 0 = hover.  Positive = more thrust, negative = less.
+  STM32 firmware: motor_pwm_us = clip(HOVER_THR + nn_out * ACT_SCALE, 0, 1) * 1000 + 1000
   Motor layout – standard X-frame:
     0: Front-Left  (CCW)
     1: Front-Right (CW)
@@ -68,6 +71,10 @@ MAX_EP_STEPS   = 1000                        # 1000 policy steps × 10 ms = 10 s
 BASE_MASS      = 1.118                       # kg  (F450 frame, 1400KV motors, 8045 props)
 MAX_THRUST     = 8.5                         # N per motor (1400KV + 8045 → ~850g thrust)
 ARM            = 0.225                       # 225 mm arm  (F450: 450mm wheelbase / 2)
+
+# Residual action mapping: network outputs [-1,1], mapped to motor [0,1]
+HOVER_THROTTLE = BASE_MASS * GRAVITY / (4 * MAX_THRUST)   # ≈ 0.323
+ACTION_SCALE   = 0.4        # ±0.4 around hover → motor range [0, 0.72]
 
 # Motor spin directions: CCW = -1, CW = +1  (yaw torque sign)
 MOTOR_DIRS     = np.array([-1.0, 1.0, -1.0, 1.0], dtype=np.float64)
@@ -194,7 +201,7 @@ class QuadrotorEnv(gym.Env):
             low=-1.0, high=1.0, shape=(12,), dtype=np.float32
         )
         self.action_space = spaces.Box(
-            low=0.0, high=1.0, shape=(4,), dtype=np.float32
+            low=-1.0, high=1.0, shape=(4,), dtype=np.float32
         )
 
         # Rendering (lazy init)
@@ -288,23 +295,35 @@ class QuadrotorEnv(gym.Env):
 
         # --- Setpoint randomisation (training only) -----------------------
         if self._randomize_setpoints:
-            self._cmd_roll  = math.radians(float(rng.uniform(-MAX_CMD_ANGLE, MAX_CMD_ANGLE)))
-            self._cmd_pitch = math.radians(float(rng.uniform(-MAX_CMD_ANGLE, MAX_CMD_ANGLE)))
-            self._cmd_alt   = float(rng.uniform(0.6, 1.6))   # 0.6 – 1.6 m
+            if rng.random() < 0.5:
+                # 50% hover practice — zero setpoints
+                self._cmd_roll  = 0.0
+                self._cmd_pitch = 0.0
+                self._cmd_alt   = TARGET_ALT
+            else:
+                # 50% random setpoint tracking
+                self._cmd_roll  = math.radians(float(rng.uniform(-MAX_CMD_ANGLE, MAX_CMD_ANGLE)))
+                self._cmd_pitch = math.radians(float(rng.uniform(-MAX_CMD_ANGLE, MAX_CMD_ANGLE)))
+                self._cmd_alt   = float(rng.uniform(0.6, 1.6))
         # (if False, setpoints keep whatever the viewer last set via set_setpoint())
 
         obs = self._get_obs()
         return obs, {}
 
     def step(self, action):
-        action = np.clip(action, 0.0, 1.0).astype(np.float64)
+        action = np.clip(action, -1.0, 1.0).astype(np.float64)
         self._step_count += 1
 
+        # --- Residual → motor command mapping ----------------------------
+        motor_cmd = np.clip(
+            HOVER_THROTTLE + action * ACTION_SCALE, 0.0, 1.0
+        )
+
         # --- Motor forces via actuators -----------------------------------
-        thrusts = action * self._max_thrust
+        thrusts = motor_cmd * self._max_thrust
         for i, aid in enumerate(self._act_ids):
             self._model.actuator_gear[aid, 2] = self._max_thrust[i]
-        self._data.ctrl[self._act_ids] = action
+        self._data.ctrl[self._act_ids] = motor_cmd
 
         # --- Yaw reaction torque (body Z) → world frame -------------------
         yaw_torque = float(np.sum(MOTOR_DIRS * self._km_kf * thrusts))
@@ -322,10 +341,16 @@ class QuadrotorEnv(gym.Env):
         # --- Mid-episode setpoint variation (training only) ---------------
         if self._randomize_setpoints and self._step_count % 200 == 0:
             rng = self.np_random
-            if rng.random() < 0.4:
+            r = rng.random()
+            if r < 0.35:
+                # Return to hover (zero setpoint) — practice stabilisation
+                self._cmd_roll  = 0.0
+                self._cmd_pitch = 0.0
+            elif r < 0.7:
+                # New random attitude command
                 self._cmd_roll  = math.radians(float(rng.uniform(-MAX_CMD_ANGLE, MAX_CMD_ANGLE)))
                 self._cmd_pitch = math.radians(float(rng.uniform(-MAX_CMD_ANGLE, MAX_CMD_ANGLE)))
-            if rng.random() < 0.3:
+            if rng.random() < 0.25:
                 self._cmd_alt = float(rng.uniform(0.6, 1.6))
 
         # --- Observation & reward ----------------------------------------
@@ -418,27 +443,40 @@ class QuadrotorEnv(gym.Env):
         pitch_err = pitch - self._cmd_pitch
         alt_err   = pos[2] - self._cmd_alt
 
-        # 1. Tracking: exponential reward, peaks at 1.0 when on-target.
-        #    Softer altitude curve prevents oscillation around setpoint.
-        orient_err_sq = roll_err ** 2 + pitch_err ** 2   # radians²
-        r_track = math.exp(-5.0 * orient_err_sq - 4.0 * alt_err ** 2)
+        # ---- Reward components (ordered by priority) ----
 
-        # 2. Velocity damping — heavier on vertical to prevent bounce
-        hvel_sq = vel[0] ** 2 + vel[1] ** 2
-        r_vel = -0.02 * hvel_sq - 0.15 * vel[2] ** 2
+        # 1. Alive / base reward: 1.0 per step at perfect hover
+        r_alive = 1.0
 
-        # 3. Angular velocity: penalise spin (heavier to stop yaw drift)
-        r_angvel = -0.02 * float(np.dot(ang_vel, ang_vel))
+        # 2. Altitude hold (STRONG — prevents bounce)
+        #    5cm → -0.1, 10cm → -0.4, 20cm → -1.6
+        r_alt = -40.0 * alt_err ** 2
 
-        # 4. Temporal smoothness: penalise rapid *changes* in motor commands
-        #    (NOT variance between motors – that kills attitude correction)
+        # 3. Attitude tracking (relative to setpoint)
+        #    5° (0.087 rad) → -0.03, 15° → -0.27
+        r_orient = -4.0 * (roll_err ** 2 + pitch_err ** 2)
+
+        # 4. Horizontal velocity damping (prevents lateral drift)
+        #    Stronger than attitude: network prefers tilting to stop drift
+        #    0.1 m/s → -0.015, 0.3 m/s → -0.135, 1.0 m/s → -1.5
+        r_hvel = -1.5 * (vel[0] ** 2 + vel[1] ** 2)
+
+        # 5. Vertical velocity damping (critical anti-bounce damper)
+        #    Acts like derivative term in PID — damps altitude oscillation
+        #    0.1 m/s → -0.04, 0.3 m/s → -0.36
+        r_vvel = -4.0 * vel[2] ** 2
+
+        # 6. Angular velocity: separate yaw penalty (5x heavier)
+        #    Roll/pitch gyro: 0.17 rad/s (10°/s) → -0.003
+        #    Yaw gyro:        0.17 rad/s (10°/s) → -0.015
+        r_angvel = -0.1 * (ang_vel[0] ** 2 + ang_vel[1] ** 2) \
+                 - 0.5 * ang_vel[2] ** 2
+
+        # 7. Action smoothness: penalise motor command rate-of-change
         action_delta = action - self._prev_action
-        r_smooth = -0.15 * float(np.dot(action_delta, action_delta))
+        r_smooth = -0.3 * float(np.dot(action_delta, action_delta))
 
-        # 5. Small alive bonus
-        r_alive = 0.5
-
-        return r_track + r_vel + r_angvel + r_smooth + r_alive
+        return r_alive + r_alt + r_orient + r_hvel + r_vvel + r_angvel + r_smooth
 
     # ---- Rendering -------------------------------------------------------
 

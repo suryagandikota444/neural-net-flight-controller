@@ -24,7 +24,7 @@ SIZE    = $(PREFIX)size
 TARGET = firmware
 
 # === SOURCE FILES ===
-SRCS = startup.c clock.c spi.c imu.c uart.c main.c memset.c
+SRCS = startup.c clock.c spi.c imu.c uart.c main.c memset.c motor.c ahrs.c nn.c i2c.c baro.c
 
 # === COMPILER FLAGS ===
 CFLAGS  = -mcpu=cortex-m4       # Target the Cortex-M4 core
@@ -51,6 +51,14 @@ LDFLAGS += $(CFLAGS)            # Pass arch flags to linker too (for correct lib
 CFLAGS += -ffunction-sections   # Put each function in its own section
 CFLAGS += -fdata-sections       # Put each global in its own section
                                 # Combined with --gc-sections, unused code/data is stripped from the binary
+
+# === ESC CALIBRATION MODE ===
+# Build with: make ESC_CAL=1    (ESC throttle range calibration — REMOVE PROPS)
+# Normal build: make             (flight mode, ESC_CAL_MODE=0)
+ESC_CAL ?= 0
+ifneq ($(ESC_CAL),0)
+CFLAGS += -DESC_CAL_MODE=1
+endif
 
 # === BUILD RULES ===
 

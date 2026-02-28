@@ -43,13 +43,13 @@ POLICY_KWARGS = dict(
 # ---------------------------------------------------------------------------
 PPO_KWARGS = dict(
     learning_rate=3e-4,
-    n_steps=2048,               # steps per env before update
+    n_steps=4096,               # longer rollouts → better value estimates
     batch_size=512,
     n_epochs=10,
-    gamma=0.99,
+    gamma=0.995,                # higher discount → patient, stable behaviour
     gae_lambda=0.95,
     clip_range=0.2,
-    ent_coef=0.01,              # small entropy bonus to keep exploring
+    ent_coef=0.005,             # less exploration noise → more precise control
     vf_coef=0.5,
     max_grad_norm=0.5,
     verbose=1,
