@@ -60,6 +60,14 @@ ifneq ($(ESC_CAL),0)
 CFLAGS += -DESC_CAL_MODE=1
 endif
 
+# === DEBUG TELEMETRY ===
+# Build with: make DEBUG=1      (enable UART debug output at 2 Hz)
+# Normal build: make             (no debug output — zero UART blocking)
+DEBUG ?= 0
+ifeq ($(DEBUG),0)
+CFLAGS += -DDEBUG_INTERVAL=0
+endif
+
 # === BUILD RULES ===
 
 # Default target: produce the binary

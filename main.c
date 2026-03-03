@@ -151,7 +151,7 @@ static void systick_init_hz(uint32_t hz)
 }
 
 #ifndef LOOP_TIMING_DEBUG
-#define LOOP_TIMING_DEBUG 1
+#define LOOP_TIMING_DEBUG 0
 #endif
 
 #define LOOP_TIMING_INTERVAL 50
@@ -231,24 +231,46 @@ static void print_loop_timing_us(uint32_t total_cycles,
 static float accel_raw_to_g;
 
 /* Observation scaling for barometer (must match drone_env.py) */
+#define TARGET_ALT         0.3f     /* hover 30 cm above baro ground reference */
 #define ALT_SCALE          2.0f     /* ±2 m altitude error maps to ±1 */
 #define VVEL_SCALE         5.0f     /* ±5 m/s vertical vel maps to ±1 */
 #define HVEL_SCALE         3.0f     /* ±3 m/s horizontal vel maps to ±1 */
 
+/* Simple P-altitude controller — supplements the NN which is only good
+ * at attitude control.  The NN's obs[8] is clamped to a tiny band so
+ * it stays in its trained regime; this P-loop handles the rest.
+ *
+ * alt_throttle_adj = Kp*(target - alt) + Kd*(-vvel)
+ * Added to NN_HOVER_THROTTLE before mixing with NN residual.
+ */
+#define ALT_OBS_CLAMP      0.05f    /* clamp obs[8] to ±0.05 — NN comfort zone */
+#define ALT_KP             0.15f    /* throttle/m — gentle P gain */
+#define ALT_KD             0.08f    /* throttle/(m/s) — damp oscillation */
+#define ALT_ADJ_MAX        0.10f    /* cap P-altitude adjustment ±10% throttle */
+
 
 /* ============================================================
- * AXIS ALIGNMENT — Sologood F405 CW180° IMU rotation
+ * AXIS ALIGNMENT — Sologood F405 IMU mounting
  *
- * A 180° rotation around Z inverts BOTH X and Y axes.
- *   Chip X → -Board X  (forward becomes backward)
- *   Chip Y → -Board Y  (left becomes right)
- *   Chip Z → +Board Z  (up stays up)
+ * Empirically verified (test phases 2 & 3):
+ *   Chip X = Board X (forward)    — no sign change
+ *   Chip Y = Board Y (left)       — no sign change
+ *   Chip Z = Board Z (up)         — no sign change
+ *
+ * The chip's native frame matches the MuJoCo NWU convention
+ * (X-forward, Y-left, Z-up) directly. At rest:
+ *   ax≈0, ay≈0, az≈+1g. Tilt right → ay>0. Nose down → ax>0.
+ *
+ * NOTE: Betaflight reports this board as "CW180°", but that
+ * refers to BF's NED body frame, not NWU.  When converting
+ * CW180°-in-NED to NWU the negations cancel out, yielding
+ * identity alignment.
  * ============================================================ */
-#define ALIGN_AX(raw)  (-(raw))
-#define ALIGN_AY(raw)  (-(raw))
+#define ALIGN_AX(raw)  ( (raw))
+#define ALIGN_AY(raw)  ( -(raw))
 #define ALIGN_AZ(raw)  ( (raw))
-#define ALIGN_GX(raw)  (-(raw))
-#define ALIGN_GY(raw)  (-(raw))
+#define ALIGN_GX(raw)  ( -(raw))
+#define ALIGN_GY(raw)  ( (raw))
 #define ALIGN_GZ(raw)  ( (raw))
 
 
@@ -270,7 +292,9 @@ static const int NN_TO_MOTOR[4] = {
 #define LOOP_DT            (1.0f / LOOP_HZ)
 #define SETTLE_TICKS       200        /* 2 seconds — AHRS + baro convergence */
 #define TILT_LIMIT_DEG     60.0f      /* safety cutoff */
-#define DEBUG_INTERVAL     50         /* telemetry at 2 Hz (0=off) */
+#ifndef DEBUG_INTERVAL
+#define DEBUG_INTERVAL     0          /* 0=off; set to 50 for 2 Hz telemetry (blocks loop at 115200!) */
+#endif
 
 /* Throttle ramp: gradually increase from idle to hover over RAMP_TICKS
  * after arming. This helps ESCs commit to motor startup. */
@@ -309,6 +333,23 @@ static void print_fixed1(float val)
     uint32_t frac  = (uint32_t)((val - (float)whole) * 10.0f) % 10;
     uart2_write_uint32(whole);
     uart2_write_char('.');
+    uart2_write_uint32(frac);
+}
+
+/* 3-decimal-place float printer for obs/nn debug.
+ * Output: "+1.234" or "-0.003" — always sign + digits.dot.3digits */
+static void print_float3(float val)
+{
+    if (val < 0.0f) { uart2_write_char('-'); val = -val; }
+    else             { uart2_write_char('+'); }
+    uint32_t whole = (uint32_t)val;
+    uint32_t frac  = (uint32_t)((val - (float)whole) * 1000.0f + 0.5f);
+    if (frac >= 1000) { whole++; frac -= 1000; }
+    uart2_write_uint32(whole);
+    uart2_write_char('.');
+    /* Zero-pad the fractional part to 3 digits */
+    if (frac < 100) uart2_write_char('0');
+    if (frac < 10)  uart2_write_char('0');
     uart2_write_uint32(frac);
 }
 
@@ -377,7 +418,6 @@ int main(void)
 {
     /* ── 1. Clock (168 MHz from HSE) ────────────────────────── */
     int clock_ok = clock_init();
-
     /* ── 2. LED setup ───────────────────────────────────────── */
     RCC_AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
     (void)RCC_AHB1ENR;
@@ -391,398 +431,406 @@ int main(void)
 
     /* ── 3. UART (debug output) ─────────────────────────────── */
     uart2_init(115200);
-    uart2_write_string("\r\n=== FC BOOT (NN v2 + BARO) ===\r\n");
-    uart2_write_string("Clock: 168MHz OK\r\n");
+    delay_ms(500);  /* give terminal time to connect */
 
-#if LOOP_TIMING_DEBUG
-    dwt_cycle_counter_init();
-    uart2_write_string("Loop timing: DWT cycle counter enabled\r\n");
-#endif
+
+	#if LOOP_TIMING_DEBUG
+		dwt_cycle_counter_init();
+	#endif
 
     /* ── 4. SPI ─────────────────────────────────────────────── */
     delay_ms(100);
     spi1_init();
-    uart2_write_string("SPI1: OK\r\n");
     delay_ms(10);
 
     /* ── 5. IMU detection & init ────────────────────────────── */
     uint8_t whoami = 0;
     imu_type_t imu = imu_detect(&whoami);
 
-    uart2_write_string("IMU WHO_AM_I: ");
-    uart2_write_hex8(whoami);
-    uart2_write_string("\r\n");
-
     switch (imu) {
-        case IMU_MPU6000:    uart2_write_string("IMU: MPU6000\r\n"); break;
-        case IMU_ICM42688P:  uart2_write_string("IMU: ICM-42688-P\r\n"); break;
-        case IMU_BMI270:     uart2_write_string("IMU: BMI270\r\n"); break;
+        case IMU_MPU6000: break;
+        case IMU_ICM42688P: break;
+        case IMU_BMI270: break;
         default:
-            uart2_write_string("IMU: NOT DETECTED\r\n");
+            uart2_write_string("IMU: NOT FOUND\r\n");
             while (1) { blink_error(); }
     }
 
     imu_init(imu);
-    uart2_write_string("IMU: configured\r\n");
 
     /* Set accel scale factor based on detected IMU chip */
     switch (imu) {
         case IMU_ICM42688P:
             accel_raw_to_g = 1.0f / 2048.0f;   /* ±16g → 2048 LSB/g */
-            uart2_write_string("Accel scale: 1/2048 (16g)\r\n");
             break;
-        case IMU_MPU6000:
-        case IMU_BMI270:
         default:
             accel_raw_to_g = 1.0f / 4096.0f;   /* ±8g → 4096 LSB/g */
-            uart2_write_string("Accel scale: 1/4096 (8g)\r\n");
             break;
     }
 
     /* ── 6. Motor PWM init ──────────────────────────────────── */
     motor_init();
-    uart2_write_string("Motors: PWM 400Hz, idle\r\n");
 
     /* ── 7. AHRS init ───────────────────────────────────────── */
     ahrs_init();
-    uart2_write_string("AHRS: Madgwick filter ready\r\n");
 
     /* ── 8. I2C + Barometer ─────────────────────────────────── */
     i2c1_init();
-    uart2_write_string("I2C1: 400kHz on PB8/PB9\r\n");
-
-    /* I2C bus scan — find all devices on the bus */
-    uart2_write_string("I2C scan: ");
-    int i2c_found = 0;
-    for (uint8_t addr = 0x08; addr < 0x78; addr++) {
-        if (i2c1_probe(addr) == 0) {
-            uart2_write_string("0x");
-            uart2_write_hex8(addr);
-
-            /* Try to identify common baro chips */
-            uint8_t id = 0;
-            if (addr == 0x76 || addr == 0x77) {
-                /* BMP280 chip ID register 0xD0 → 0x58 */
-                /* BMP388 chip ID register 0x00 → 0x50 */
-                /* DPS310 chip ID register 0x0D → 0x10 */
-                i2c1_read_reg(addr, 0xD0, &id);
-                if (id == 0x58) {
-                    uart2_write_string("(BMP280) ");
-                } else if (id == 0x50) {
-                    uart2_write_string("(BMP388) ");
-                } else {
-                    i2c1_read_reg(addr, 0x0D, &id);
-                    if (id == 0x10) {
-                        uart2_write_string("(DPS310) ");
-                    } else {
-                        uart2_write_string("(id?0x");
-                        uart2_write_hex8(id);
-                        uart2_write_string(") ");
-                    }
-                }
-            } else {
-                uart2_write_string(" ");
-            }
-            i2c_found++;
-        }
-    }
-    if (i2c_found == 0) {
-        uart2_write_string("no devices — check wiring or try PB6/PB7");
-    }
-    uart2_write_string("\r\n");
 
     uint8_t baro_id = 0;
     baro_type_t baro = baro_init(&baro_id);
     int baro_ok = (baro != BARO_NONE);
 
-    if (baro == BARO_DPS310) {
-        uart2_write_string("BARO: DPS310 detected (ID ");
-        uart2_write_hex8(baro_id);
-        uart2_write_string(")\r\n");
-    } else if (baro == BARO_BMP280) {
-        uart2_write_string("BARO: BMP280 detected (ID ");
-        uart2_write_hex8(baro_id);
-        uart2_write_string(")\r\n");
-    } else {
-        uart2_write_string("BARO: not found (ID ");
-        uart2_write_hex8(baro_id);
-        uart2_write_string(") — obs[8:9] will be zero\r\n");
-    }
+	#if ESC_CAL_MODE
+		/* ============================================================
+		* ESC THROTTLE RANGE CALIBRATION
+		* ============================================================
+		*
+		* This teaches the ESCs what "full throttle" and "idle" mean.
+		*
+		* ** REMOVE ALL PROPELLERS BEFORE RUNNING THIS **
+		*
+		* Procedure:
+		*   1. Firmware immediately outputs 2000 µs (full throttle)
+		*   2. ESCs detect high signal on boot → enter cal mode
+		*   3. Wait 4 s — ESCs beep to confirm max throttle captured
+		*   4. Firmware drops to 1000 µs (idle)
+		*   5. Wait 4 s — ESCs beep to confirm min throttle captured
+		*   6. LED solid ON — calibration complete, power off
+		*
+		* After calibration, reflash with ESC_CAL_MODE=0.
+		*/
+		/* Step 1: Full throttle — ESCs learn the maximum */
+		motors_full_throttle();
 
-#if ESC_CAL_MODE
-    /* ============================================================
-     * ESC THROTTLE RANGE CALIBRATION
-     * ============================================================
-     *
-     * This teaches the ESCs what "full throttle" and "idle" mean.
-     *
-     * ** REMOVE ALL PROPELLERS BEFORE RUNNING THIS **
-     *
-     * Procedure:
-     *   1. Firmware immediately outputs 2000 µs (full throttle)
-     *   2. ESCs detect high signal on boot → enter cal mode
-     *   3. Wait 4 s — ESCs beep to confirm max throttle captured
-     *   4. Firmware drops to 1000 µs (idle)
-     *   5. Wait 4 s — ESCs beep to confirm min throttle captured
-     *   6. LED solid ON — calibration complete, power off
-     *
-     * After calibration, reflash with ESC_CAL_MODE=0.
-     */
-    uart2_write_string("\r\n");
-    uart2_write_string("=====================================\r\n");
-    uart2_write_string("  ESC CALIBRATION MODE\r\n");
-    uart2_write_string("  REMOVE ALL PROPELLERS!\r\n");
-    uart2_write_string("=====================================\r\n\r\n");
+		/* Blink LED rapidly while waiting — signals "active calibration" */
+		for (int i = 0; i < 40; i++) {
+			led_on();  delay_ms(50);
+			led_off(); delay_ms(50);
+		}
 
-    /* Step 1: Full throttle — ESCs learn the maximum */
-    uart2_write_string("Setting FULL THROTTLE (2000us)...\r\n");
-    uart2_write_string("Listen for ESC high beeps.\r\n");
-    motors_full_throttle();
+		/* Step 2: Drop to idle — ESCs learn the minimum */
+		motor_all_stop();
 
-    /* Blink LED rapidly while waiting — signals "active calibration" */
-    for (int i = 0; i < 40; i++) {
-        led_on();  delay_ms(50);
-        led_off(); delay_ms(50);
-    }
+		/* Slow blink while ESCs confirm */
+		for (int i = 0; i < 8; i++) {
+			led_on();  delay_ms(250);
+			led_off(); delay_ms(250);
+		}
 
-    /* Step 2: Drop to idle — ESCs learn the minimum */
-    uart2_write_string("Setting IDLE (1000us)...\r\n");
-    uart2_write_string("Listen for ESC confirmation beeps.\r\n");
-    motor_all_stop();
+		/* Done */
+		led_on();
+		while (1) { /* halt */ }
 
-    /* Slow blink while ESCs confirm */
-    for (int i = 0; i < 8; i++) {
-        led_on();  delay_ms(250);
-        led_off(); delay_ms(250);
-    }
+	#else /* Normal flight mode */
 
-    /* Done */
-    uart2_write_string("\r\nESC CALIBRATION COMPLETE\r\n");
-    uart2_write_string("Power off, reflash with ESC_CAL_MODE=0\r\n");
-    led_on();
-    while (1) { /* halt */ }
+	/* ── 9. ESC arming (3 seconds of idle PWM) ──────────────── */
+	delay_ms(3000);
 
-#else /* Normal flight mode */
+	/* ── 9b. Motor identification test ──────────────────────
+		* Fires each motor individually at ~30% throttle for 300 ms.
+		* Order: FL → FR → RL → RR
+		* Watch/listen to verify motor mapping is correct.
+		* ** REMOVE ALL PROPELLERS BEFORE POWERING ON **
+		*/
+	{
+		static const struct { int idx; const char *name; } motor_test[4] = {
+			{ 3, "FL" },   /* idx3 = Front-Left  (PA9) */
+			{ 2, "FR" },   /* idx2 = Front-Right (PA8) */
+			{ 0, "RL" },   /* idx0 = Rear-Left   (PC8) */
+			{ 1, "RR" },   /* idx1 = Rear-Right  (PC9) */
+		};
+		for (int m = 0; m < 4; m++) {
+			uart2_write_string("MOTOR TEST: ");
+			uart2_write_string(motor_test[m].name);
+			uart2_write_string("\r\n");
+			motor_set(motor_test[m].idx, 0.50f);
+			delay_ms(300);
+			motor_all_stop();
+			delay_ms(300);
+		}
+		uart2_write_string("MOTOR TEST DONE\r\n");
+	}
 
-    /* ── 9. ESC arming (3 seconds of idle PWM) ──────────────── */
-    uart2_write_string("ESC arming: 3s idle signal...\r\n");
-    delay_ms(3000);
-    uart2_write_string("ESC arming: done\r\n");
+	/* ── 10. Barometer ground reference ─────────────────────── */
+	if (baro_ok) {
+		/* Let the BMP280 IIR filter settle by reading for 2 seconds */
+		uart2_write_string("Barometer: settling...\r\n");
+		for (int i = 0; i < 50; i++) {
+			baro_update(0.04f);
+			delay_ms(40);
+		}
 
-    /* ── 10. Barometer ground reference ─────────────────────── */
-    if (baro_ok) {
-        uart2_write_string("BARO: settling 2s...\r\n");
+		baro_set_ground_reference();
+	}
 
-        /* Let the BMP280 IIR filter settle by reading for 2 seconds */
-        for (int i = 0; i < 50; i++) {
-            baro_update(0.04f);
-            delay_ms(40);
-        }
+	/* ── 11. Start SysTick for 100 Hz ───────────────────────── */
+	systick_init_hz(LOOP_HZ);
+	led_on();
 
-        baro_set_ground_reference();
-        uart2_write_string("BARO: ground reference set (P=");
-        uart2_write_uint32((uint32_t)baro_get_pressure());
-        uart2_write_string(" Pa, T=");
-        print_fixed1(baro_get_temperature());
-        uart2_write_string(" C)\r\n");
-    }
+	/* ── 12. Main control loop ──────────────────────────────── */
 
-    /* ── 11. Start SysTick for 100 Hz ───────────────────────── */
-    systick_init_hz(LOOP_HZ);
-    uart2_write_string("Control loop: 100Hz starting\r\n");
-    uart2_write_string("AHRS settling 2s (keep still)...\r\n");
-    led_on();
+	imu_raw_t  sample;
+	float      motor_cmd[4] = {0};
+	uint32_t   tick_count = 0;
+	int        armed = 0;
+	uint32_t   ramp_counter = 0;
+	
+	#if LOOP_TIMING_DEBUG
+		uint32_t   timing_counter = 0;
+	#endif
 
-    /* ── 12. Main control loop ──────────────────────────────── */
+	while (1) {
 
-    imu_raw_t  sample;
-    float      motor_cmd[4] = {0};
-    uint32_t   tick_count = 0;
-    uint32_t   debug_counter = 0;
-    int        armed = 0;
-    uint32_t   ramp_counter = 0;
-#if LOOP_TIMING_DEBUG
-    uint32_t   timing_counter = 0;
-#endif
+		/* Wait for next 100 Hz tick (poll SysTick COUNTFLAG) */
+		if (!(SYST_CSR & SYST_CSR_COUNTFLAG)) {
+			continue;
+		}
 
-    while (1) {
+		tick_count++;
 
-        /* Wait for next 100 Hz tick (poll SysTick COUNTFLAG) */
-        if (!(SYST_CSR & SYST_CSR_COUNTFLAG)) {
-            continue;
-        }
+		#if LOOP_TIMING_DEBUG
+			uint32_t t0 = dwt_cycle_now();
+		#endif
 
-        tick_count++;
+		/* ── A: Read IMU (SPI burst, ~10 µs) ──────────────── */
+		imu_read_raw(imu, &sample);
 
-    #if LOOP_TIMING_DEBUG
-        uint32_t t0 = dwt_cycle_now();
-    #endif
+		#if LOOP_TIMING_DEBUG
+			uint32_t t1 = dwt_cycle_now();
+		#endif
 
-        /* ── A: Read IMU (SPI burst, ~10 µs) ──────────────── */
-        imu_read_raw(imu, &sample);
+		/* ── B: Axis alignment (CW180°) + unit conversion ──── */
+		float gx = (float)ALIGN_GX(sample.gx) * GYRO_RAW_TO_RADS;
+		float gy = (float)ALIGN_GY(sample.gy) * GYRO_RAW_TO_RADS;
+		float gz = (float)ALIGN_GZ(sample.gz) * GYRO_RAW_TO_RADS;
 
-    #if LOOP_TIMING_DEBUG
-        uint32_t t1 = dwt_cycle_now();
-    #endif
+		float ax = (float)ALIGN_AX(sample.ax) * accel_raw_to_g;
+		float ay = (float)ALIGN_AY(sample.ay) * accel_raw_to_g;
+		float az = (float)ALIGN_AZ(sample.az) * accel_raw_to_g;
 
-        /* ── B: Axis alignment (CW180°) + unit conversion ──── */
-        float gx = (float)ALIGN_GX(sample.gx) * GYRO_RAW_TO_RADS;
-        float gy = (float)ALIGN_GY(sample.gy) * GYRO_RAW_TO_RADS;
-        float gz = (float)ALIGN_GZ(sample.gz) * GYRO_RAW_TO_RADS;
+		#if LOOP_TIMING_DEBUG
+			uint32_t t2 = dwt_cycle_now();
+		#endif
 
-        float ax = (float)ALIGN_AX(sample.ax) * accel_raw_to_g;
-        float ay = (float)ALIGN_AY(sample.ay) * accel_raw_to_g;
-        float az = (float)ALIGN_AZ(sample.az) * accel_raw_to_g;
+		/* ── C: AHRS update (Madgwick, ~5 µs) ──────────────── */
+		ahrs_update(gx, gy, gz, ax, ay, az, LOOP_DT);
 
-    #if LOOP_TIMING_DEBUG
-        uint32_t t2 = dwt_cycle_now();
-    #endif
+		#if LOOP_TIMING_DEBUG
+			uint32_t t3 = dwt_cycle_now();
+		#endif
 
-        /* ── C: AHRS update (Madgwick, ~5 µs) ──────────────── */
-        ahrs_update(gx, gy, gz, ax, ay, az, LOOP_DT);
+		float roll_deg  = ahrs_get_roll();
+		float pitch_deg = ahrs_get_pitch();
 
-    #if LOOP_TIMING_DEBUG
-        uint32_t t3 = dwt_cycle_now();
-    #endif
+		/* ── C2: Barometer update (~25 Hz, decimated internally) */
+		if (baro_ok) {
+			baro_update(LOOP_DT);
+		}
 
-        float roll_deg  = ahrs_get_roll();
-        float pitch_deg = ahrs_get_pitch();
+		#if LOOP_TIMING_DEBUG
+			uint32_t t4 = dwt_cycle_now();
+		#endif
 
-        /* ── C2: Barometer update (~25 Hz, decimated internally) */
-        if (baro_ok) {
-            baro_update(LOOP_DT);
-        }
+		/* ── D: Settling check ─────────────────────────────── */
+		if (!armed) {
+			if (tick_count >= SETTLE_TICKS) {
+				armed = 1;
+				ramp_counter = 0;
+			}
+			continue;
+		}
 
-    #if LOOP_TIMING_DEBUG
-        uint32_t t4 = dwt_cycle_now();
-    #endif
+		/* ── E: Safety — tilt limit ───────────────────────── */
+		if (my_fabsf(roll_deg) > TILT_LIMIT_DEG ||
+			my_fabsf(pitch_deg) > TILT_LIMIT_DEG)
+		{
+			motor_all_stop();
+			// continue;
+		}
 
-        /* ── D: Settling check ─────────────────────────────── */
-        if (!armed) {
-            if (tick_count >= SETTLE_TICKS) {
-                armed = 1;
-                ramp_counter = 0;
-                uart2_write_string("ARMED — motors live (ramping)\r\n");
-            }
-            continue;
-        }
+		/* ── F: Build observation vector (matches drone_env.py) */
+		float obs[12];
 
-        /* ── E: Safety — tilt limit ───────────────────────── */
-        if (my_fabsf(roll_deg) > TILT_LIMIT_DEG ||
-            my_fabsf(pitch_deg) > TILT_LIMIT_DEG)
-        {
-            motor_all_stop();
-            continue;
-        }
+		/* Gyro (normalized by MAX_GYRO) */
+		obs[0] = clampf(gx / MAX_GYRO_RADS, -1.0f, 1.0f);
+		obs[1] = clampf(gy / MAX_GYRO_RADS, -1.0f, 1.0f);
+		obs[2] = clampf(gz / MAX_GYRO_RADS, -1.0f, 1.0f);
+		
+		/* Accel (normalized by 2g) */
+		obs[3] = clampf(ax / 2.0f, -1.0f, 1.0f);
+		obs[4] = clampf(ay / 2.0f, -1.0f, 1.0f);
+		obs[5] = clampf(az / 2.0f, -1.0f, 1.0f);
 
-        /* ── F: Build observation vector (matches drone_env.py) */
-        float obs[12];
+		/* Attitude error (roll/pitch in degrees, scaled by 45°) */
+		obs[6] = clampf(roll_deg  * ANGLE_OBS_SCALE, -1.0f, 1.0f);
+		obs[7] = clampf(pitch_deg * ANGLE_OBS_SCALE, -1.0f, 1.0f);
 
-        /* Gyro (normalized by MAX_GYRO) */
-        obs[0] = clampf(gx / MAX_GYRO_RADS, -1.0f, 1.0f);
-        obs[1] = clampf(gy / MAX_GYRO_RADS, -1.0f, 1.0f);
-        obs[2] = clampf(gz / MAX_GYRO_RADS, -1.0f, 1.0f);
+		/* Altitude error and vertical velocity from barometer */
+		float alt_throttle_adj = 0.0f;
+		float alt  = 0.0f;
+		float vvel = 0.0f;
+		if (baro_ok) {
+			alt            = baro_get_altitude();
+			float alt_err  = alt - TARGET_ALT;         /* positive = above target */
+			vvel           = baro_get_vvel();           /* positive = going up */
 
-        /* Accel (normalized by 2g) */
-        obs[3] = clampf(ax / 2.0f, -1.0f, 1.0f);
-        obs[4] = clampf(ay / 2.0f, -1.0f, 1.0f);
-        obs[5] = clampf(az / 2.0f, -1.0f, 1.0f);
+			/* Feed the NN a tightly clamped altitude signal so it stays
+			* in its ≈0 comfort zone (attitude-only regime). */
+			obs[8]  = clampf(alt_err / ALT_SCALE, -ALT_OBS_CLAMP, ALT_OBS_CLAMP);
+			obs[9]  = clampf(vvel / VVEL_SCALE, -1.0f, 1.0f);
 
-        /* Attitude error (roll/pitch in degrees, scaled by 45°) */
-        obs[6] = clampf(roll_deg  * ANGLE_OBS_SCALE, -1.0f, 1.0f);
-        obs[7] = clampf(pitch_deg * ANGLE_OBS_SCALE, -1.0f, 1.0f);
+			/* Simple P+D altitude hold — adjusts base throttle */
+			alt_throttle_adj = clampf(
+				ALT_KP * (TARGET_ALT - alt) + ALT_KD * (-vvel),
+				-ALT_ADJ_MAX, ALT_ADJ_MAX
+			);
+		} else {
+			obs[8]  = 0.0f;
+			obs[9]  = 0.0f;
+		}
 
-        /* Altitude error and vertical velocity from barometer */
-        if (baro_ok) {
-            float alt_err = baro_get_altitude();   /* positive = above ground ref */
-            float vvel    = baro_get_vvel();        /* positive = going up */
-            obs[8]  = clampf(alt_err / ALT_SCALE, -1.0f, 1.0f);
-            obs[9]  = clampf(vvel / VVEL_SCALE, -1.0f, 1.0f);
-        } else {
-            obs[8]  = 0.0f;
-            obs[9]  = 0.0f;
-        }
+		/* Horizontal velocity — not available without optical flow / GPS */
+		obs[10] = 0.0f;
+		obs[11] = 0.0f;
 
-        /* Horizontal velocity — not available without optical flow / GPS */
-        obs[10] = 0.0f;
-        obs[11] = 0.0f;
+		/* Print obs at ~10 Hz */
+		// {
+		// 	static uint32_t obs_print_counter = 0;
+		// 	if (++obs_print_counter >= 10) {
+		// 		obs_print_counter = 0;
+		// 		uart2_write_string("OBS:");
+		// 		for (int k = 0; k < 12; k++) {
+		// 			uart2_write_char(' ');
+		// 			print_float3(obs[k]);
+		// 		}
+		// 		/* Raw gyro (rad/s), accel (g), baro (m, m/s) */
+		// 		uart2_write_string(" | GYR:");
+		// 		uart2_write_char(' '); print_float3(gx);
+		// 		uart2_write_char(' '); print_float3(gy);
+		// 		uart2_write_char(' '); print_float3(gz);
+		// 		uart2_write_string(" | ACC:");
+		// 		uart2_write_char(' '); print_float3(ax);
+		// 		uart2_write_char(' '); print_float3(ay);
+		// 		uart2_write_char(' '); print_float3(az);
+		// 		uart2_write_string(" | ALT:");
+		// 		uart2_write_char(' '); print_float3(alt);
+		// 		uart2_write_string(" VV:");
+		// 		uart2_write_char(' '); print_float3(vvel);
+		// 		uart2_write_string("\r\n");
+		// 	}
+		// }
 
-    #if LOOP_TIMING_DEBUG
-        uint32_t t5 = dwt_cycle_now();
-    #endif
+		
 
-        /* ── G: NN forward pass (~15 µs) ──────────────────── */
-        float nn_out[4];
-        nn_forward(obs, nn_out);
+		#if LOOP_TIMING_DEBUG
+			uint32_t t5 = dwt_cycle_now();
+		#endif
 
-    #if LOOP_TIMING_DEBUG
-        uint32_t t6 = dwt_cycle_now();
-    #endif
+		/* ── G: NN forward pass (~15 µs) ──────────────────── */
+		float nn_out[4];
+		nn_forward(obs, nn_out);
 
-        /* ── H: Residual action → motor command ──────────── */
-        for (int i = 0; i < 4; i++) {
-            motor_cmd[i] = clampf(
-                NN_HOVER_THROTTLE + nn_out[i] * NN_ACTION_SCALE,
-                0.0f, 1.0f
-            );
-        }
+		/* Clip NN output to [-1,1] — matches training env np.clip(action,-1,1) */
+		for (int k = 0; k < 4; k++) nn_out[k] = clampf(nn_out[k], -1.0f, 1.0f);
 
-        /* ── H2: Throttle ramp after arming ─────────────────
-         *
-         * Gradually ramp from idle to full NN output over RAMP_TICKS.
-         * This helps ESCs commit to motor startup instead of
-         * jumping from 1000 µs to ~1322 µs instantly.
-         *
-         * ramp_frac goes from 0.0 → 1.0 over RAMP_TICKS ticks.
-         * motor_cmd = ramp_frac × nn_cmd
-         */
-        if (ramp_counter < RAMP_TICKS) {
-            ramp_counter++;
-            float ramp_frac = (float)ramp_counter / (float)RAMP_TICKS;
-            for (int i = 0; i < 4; i++) {
-                motor_cmd[i] *= ramp_frac;
-            }
-        }
+		/* Action smoothing — adaptive non-linear IIR filter.
+			*
+			* Two alphas:
+			*   ALPHA_SLOW: used when the change is small (noise regime)
+			*               → heavy smoothing, kills high-freq chatter
+			*   ALPHA_FAST: used when the change is large (genuine control input)
+			*               → fast tracking, no lag on real attitude corrections
+			*
+			* The threshold SNAP_THRESH separates the two regimes.
+			* If |raw - smoothed| < SNAP_THRESH → use ALPHA_SLOW
+			* If |raw - smoothed| >= SNAP_THRESH → use ALPHA_FAST
+			*
+			* Noise from vibration/sim-to-real gap is typically small (<0.15).
+			* Real NN corrections during a tilt event are larger (>0.15).
+			*/
+		#define ACTION_ALPHA_SLOW   0.08f   /* heavy smoothing for noise */
+		#define ACTION_ALPHA_FAST   0.60f   /* fast tracking for real inputs */
+		#define ACTION_SNAP_THRESH  0.15f   /* boundary between regimes */
 
-#if LOOP_TIMING_DEBUG
-        uint32_t t7 = dwt_cycle_now();
-#endif
+		static float nn_smoothed[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+		for (int k = 0; k < 4; k++) {
+			float diff  = nn_out[k] - nn_smoothed[k];
+			float alpha = (diff < 0.0f ? -diff : diff) >= ACTION_SNAP_THRESH
+							? ACTION_ALPHA_FAST
+							: ACTION_ALPHA_SLOW;
+			nn_smoothed[k] += alpha * diff;
+		}
+		for (int k = 0; k < 4; k++)
+			nn_out[k] = nn_smoothed[k];
 
-        /* ── I: Write to motors (NN→Betaflight mapping) ─── */
-        for (int i = 0; i < 4; i++) {
-            motor_set(NN_TO_MOTOR[i], motor_cmd[i]);
-        }
+		#if LOOP_TIMING_DEBUG
+			uint32_t t6 = dwt_cycle_now();
+		#endif
 
-#if LOOP_TIMING_DEBUG
-        uint32_t t8 = dwt_cycle_now();
-        if (++timing_counter >= LOOP_TIMING_INTERVAL) {
-            timing_counter = 0;
-            print_loop_timing_us(
-                dwt_cycle_delta(t0, t8),
-                dwt_cycle_delta(t0, t1),
-                dwt_cycle_delta(t1, t2),
-                dwt_cycle_delta(t2, t3),
-                dwt_cycle_delta(t3, t4),
-                dwt_cycle_delta(t4, t5),
-                dwt_cycle_delta(t5, t6),
-                dwt_cycle_delta(t6, t7),
-                dwt_cycle_delta(t7, t8)
-            );
-        }
-#endif
+		/* ── H: Residual action → motor command ──────────── */
+		float base_throttle = NN_HOVER_THROTTLE + alt_throttle_adj;
+		for (int i = 0; i < 4; i++) {
+			motor_cmd[i] = clampf(
+				base_throttle + nn_out[i] * NN_ACTION_SCALE,
+				0.0f, 1.0f
+			);
+		}
 
-        /* ── J: Debug telemetry at 2 Hz ────────────────────── */
-        if (DEBUG_INTERVAL > 0 && ++debug_counter >= DEBUG_INTERVAL) {
-            debug_counter = 0;
-            print_telemetry(roll_deg, pitch_deg, motor_cmd,
-                            baro_get_altitude(), baro_get_vvel(),
-                            baro_get_pressure(), baro_get_temperature(),
-                            baro_ok);
-            led_off(); delay_ms(2); led_on();
-        }
-    }
+		/* ── H2: Throttle ramp after arming ─────────────────
+		*
+		* Gradually ramp from idle to full NN output over RAMP_TICKS.
+		* This helps ESCs commit to motor startup instead of
+		* jumping from 1000 µs to ~1322 µs instantly.
+		*
+		* ramp_frac goes from 0.0 → 1.0 over RAMP_TICKS ticks.
+		* motor_cmd = ramp_frac × nn_cmd
+		*/
+		if (ramp_counter < RAMP_TICKS) {
+			ramp_counter++;
+			float ramp_frac = (float)ramp_counter / (float)RAMP_TICKS;
+			for (int i = 0; i < 4; i++) {
+				/* Ramp the base throttle while preserving NN residual direction.
+				* At ramp_frac=0 motors sit at 0; at ramp_frac=1 full command.
+				* A minimum spin floor keeps all motors above ESC deadband
+				* so slow-spinning motors don't stall during ramp-up. */
+				float nn_residual = nn_out[i] * NN_ACTION_SCALE;
+				float ramped_base = ramp_frac * NN_HOVER_THROTTLE;
+				float floor       = ramp_frac * 0.06f; /* ~1060 µs min spin */
+				float cmd = ramped_base + ramp_frac * nn_residual;
+				motor_cmd[i] = clampf(cmd, floor, 1.0f);
+			}
+		}
 
-#endif /* ESC_CAL_MODE */
+		#if LOOP_TIMING_DEBUG
+				uint32_t t7 = dwt_cycle_now();
+		#endif
+
+		/* ── I: Write to motors (NN→Betaflight mapping) ─── */
+		for (int i = 0; i < 4; i++) {
+			motor_set(NN_TO_MOTOR[i], motor_cmd[i]);
+		}
+
+		/* Print motor outputs at 10 Hz */
+		{
+			static uint32_t mot_print_counter = 0;
+			if (++mot_print_counter >= 10) {
+				mot_print_counter = 0;
+				/* FL FR RR RL in µs */
+				uart2_write_string("MOT FL:");
+				uart2_write_uint32(1000 + (uint32_t)(motor_cmd[0] * 1000.0f));
+				uart2_write_string(" FR:");
+				uart2_write_uint32(1000 + (uint32_t)(motor_cmd[1] * 1000.0f));
+				uart2_write_string(" RR:");
+				uart2_write_uint32(1000 + (uint32_t)(motor_cmd[2] * 1000.0f));
+				uart2_write_string(" RL:");
+				uart2_write_uint32(1000 + (uint32_t)(motor_cmd[3] * 1000.0f));
+				uart2_write_string("\r\n");
+			}
+		}
+	}
+
+	#endif
 
     return 0;
 }

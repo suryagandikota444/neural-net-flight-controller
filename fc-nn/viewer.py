@@ -362,6 +362,12 @@ def run_viewer(model_path=None, record_path=None, max_episodes=0, slow_factor=1.
                               f"z={pos[2]:.2f}m  "
                               f"mot=[{action[0]:.2f} {action[1]:.2f} {action[2]:.2f} {action[3]:.2f}]",
                               end="", flush=True)
+                    # Print full obs vector + NN output every ~1 s (100 steps × 10 ms)
+                    if step % 100 == 0:
+                        obs_str = ",".join(f"{v:+.4f}" for v in obs)
+                        act_str = ",".join(f"{v:+.4f}" for v in action)
+                        print(f"\n  [t={step*0.01:.1f}s] obs=[{obs_str}]")
+                        print(f"          act=[{act_str}]")
                 else:
                     # Record every ~30th frame (for sane video file sizes)
                     if step % max(1, int(1.0 / (30 * 0.00025))) == 0:

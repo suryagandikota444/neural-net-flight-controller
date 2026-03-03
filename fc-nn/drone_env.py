@@ -103,8 +103,17 @@ TILT_LIMIT_RAD  = math.radians(45.0)
 CRASH_PENALTY   = 50.0
 
 # Sim-to-real noise (added on top of MuJoCo sensor noise)
-GYRO_NOISE_STD  = 0.01      # rad/s
-ACCEL_NOISE_STD = 0.05      # g
+# Bumped up from 0.01/0.05 to better match real ICM-42688-P noise floor
+GYRO_NOISE_STD  = 0.02      # rad/s  (was 0.01)
+ACCEL_NOISE_STD = 0.08      # g      (was 0.05)
+
+# AHRS latency simulation: std-dev of Gaussian noise added to attitude obs
+# to simulate Madgwick filter lag (~100 ms convergence on hardware)
+AHRS_LAG_STD    = 0.03      # ~1.5° of attitude jitter in normalised units
+
+# Action smoothing alpha applied during training (must match ACTION_SMOOTH_ALPHA
+# in main.c so the NN learns to expect filtered outputs)
+TRAIN_ACTION_ALPHA = 0.3    # EMA: 0=frozen, 1=raw; same default as firmware
 
 TARGET_ALT      = 1.0        # hover altitude (m)
 
@@ -214,7 +223,8 @@ class QuadrotorEnv(gym.Env):
         self._max_thrust    = None
         self._km_kf        = None
         self._wind_force   = np.zeros(3)
-        self._prev_action  = np.zeros(4, dtype=np.float32)
+        self._prev_action   = np.zeros(4, dtype=np.float32)
+        self._smooth_action = np.zeros(4, dtype=np.float32)  # EMA state
 
         # Pilot setpoints (modified at runtime by viewer / controller)
         # Angles in radians, yaw_rate in rad/s, alt in metres
@@ -284,15 +294,6 @@ class QuadrotorEnv(gym.Env):
             -sr * sp,      # z
         ])
 
-        # Free-joint qpos: [x, y, z, qw, qx, qy, qz]
-        self._data.qpos[0:3] = [0.0, 0.0, 1.0]
-        self._data.qpos[3:7] = quat
-
-        mujoco.mj_forward(self._model, self._data)
-
-        self._step_count  = 0
-        self._prev_action = np.zeros(4, dtype=np.float32)
-
         # --- Setpoint randomisation (training only) -----------------------
         if self._randomize_setpoints:
             if rng.random() < 0.5:
@@ -305,6 +306,20 @@ class QuadrotorEnv(gym.Env):
                 self._cmd_roll  = math.radians(float(rng.uniform(-MAX_CMD_ANGLE, MAX_CMD_ANGLE)))
                 self._cmd_pitch = math.radians(float(rng.uniform(-MAX_CMD_ANGLE, MAX_CMD_ANGLE)))
                 self._cmd_alt   = float(rng.uniform(0.6, 1.6))
+
+        # Always start at the commanded altitude.
+        # Ground starts can be added later via curriculum once hover is stable.
+        init_z = self._cmd_alt
+
+        # Free-joint qpos: [x, y, z, qw, qx, qy, qz]
+        self._data.qpos[0:3] = [0.0, 0.0, init_z]
+        self._data.qpos[3:7] = quat
+
+        mujoco.mj_forward(self._model, self._data)
+
+        self._step_count    = 0
+        self._prev_action   = np.zeros(4, dtype=np.float32)
+        self._smooth_action = np.zeros(4, dtype=np.float32)
         # (if False, setpoints keep whatever the viewer last set via set_setpoint())
 
         obs = self._get_obs()
@@ -314,9 +329,18 @@ class QuadrotorEnv(gym.Env):
         action = np.clip(action, -1.0, 1.0).astype(np.float64)
         self._step_count += 1
 
+        # --- Action EMA smoothing (matches ACTION_SMOOTH_ALPHA in firmware) ---
+        # The NN trains with the same low-pass filter so it learns to expect
+        # smoothed outputs, closing the sim-to-real gap.
+        self._smooth_action = (
+            TRAIN_ACTION_ALPHA * action
+            + (1.0 - TRAIN_ACTION_ALPHA) * self._smooth_action
+        ).astype(np.float32)
+        smooth_action = self._smooth_action.astype(np.float64)
+
         # --- Residual → motor command mapping ----------------------------
         motor_cmd = np.clip(
-            HOVER_THROTTLE + action * ACTION_SCALE, 0.0, 1.0
+            HOVER_THROTTLE + smooth_action * ACTION_SCALE, 0.0, 1.0
         )
 
         # --- Motor forces via actuators -----------------------------------
@@ -370,7 +394,7 @@ class QuadrotorEnv(gym.Env):
         if terminated:
             reward -= CRASH_PENALTY
 
-        self._prev_action = action.astype(np.float32)
+        self._prev_action = action.astype(np.float32)  # store raw action for rate penalty
         return obs, float(reward), terminated, truncated, {}
 
     def render(self):
@@ -406,10 +430,12 @@ class QuadrotorEnv(gym.Env):
         accel_norm = np.clip(accel_g / 2.0, -1.0, 1.0).astype(np.float32)
 
         # Attitude error (roll & pitch, relative to setpoint)
+        # Add AHRS lag noise to simulate Madgwick filter latency on hardware
         quat = self._sensor(self._quat_sensor_id, 4)
         roll, pitch, _ = _quat_to_euler(quat)
-        roll_err  = np.float32(np.clip(math.degrees(roll  - self._cmd_roll)  / ANGLE_ERR_SCALE, -1.0, 1.0))
-        pitch_err = np.float32(np.clip(math.degrees(pitch - self._cmd_pitch) / ANGLE_ERR_SCALE, -1.0, 1.0))
+        ahrs_noise = self.np_random.normal(0, AHRS_LAG_STD, 2)
+        roll_err  = np.float32(np.clip(math.degrees(roll  - self._cmd_roll)  / ANGLE_ERR_SCALE + ahrs_noise[0], -1.0, 1.0))
+        pitch_err = np.float32(np.clip(math.degrees(pitch - self._cmd_pitch) / ANGLE_ERR_SCALE + ahrs_noise[1], -1.0, 1.0))
 
         # Altitude error (positive = above target, relative to setpoint)
         pos = self._sensor(self._pos_sensor_id, 3)
@@ -443,40 +469,36 @@ class QuadrotorEnv(gym.Env):
         pitch_err = pitch - self._cmd_pitch
         alt_err   = pos[2] - self._cmd_alt
 
-        # ---- Reward components (ordered by priority) ----
+        # ---- Reward components ----
 
-        # 1. Alive / base reward: 1.0 per step at perfect hover
-        r_alive = 1.0
+        # 1. Positive tracking reward (exponential — smooth gradient toward target)
+        #    Always in [0, 1], peaks at 1.0 when attitude + altitude are perfect.
+        #    This is the PRIMARY learning signal — gives the agent a clear
+        #    direction to improve, even far from the target.
+        orient_err_sq = roll_err ** 2 + pitch_err ** 2
+        r_track = math.exp(-5.0 * orient_err_sq - 4.0 * alt_err ** 2)
 
-        # 2. Altitude hold (STRONG — prevents bounce)
-        #    5cm → -0.1, 10cm → -0.4, 20cm → -1.6
-        r_alt = -40.0 * alt_err ** 2
+        # 2. Alive bonus
+        r_alive = 0.5
 
-        # 3. Attitude tracking (relative to setpoint)
-        #    5° (0.087 rad) → -0.03, 15° → -0.27
-        r_orient = -4.0 * (roll_err ** 2 + pitch_err ** 2)
+        # 3. Velocity damping (matches PPO_1 proven coefficients)
+        hvel_sq = vel[0] ** 2 + vel[1] ** 2
+        r_vel = -0.02 * hvel_sq - 0.15 * vel[2] ** 2
 
-        # 4. Horizontal velocity damping (prevents lateral drift)
-        #    Stronger than attitude: network prefers tilting to stop drift
-        #    0.1 m/s → -0.015, 0.3 m/s → -0.135, 1.0 m/s → -1.5
-        r_hvel = -1.5 * (vel[0] ** 2 + vel[1] ** 2)
+        # 4. Angular velocity penalty (slightly heavier on yaw)
+        r_angvel = -0.02 * (ang_vel[0] ** 2 + ang_vel[1] ** 2) \
+                 - 0.06 * ang_vel[2] ** 2
 
-        # 5. Vertical velocity damping (critical anti-bounce damper)
-        #    Acts like derivative term in PID — damps altitude oscillation
-        #    0.1 m/s → -0.04, 0.3 m/s → -0.36
-        r_vvel = -4.0 * vel[2] ** 2
-
-        # 6. Angular velocity: separate yaw penalty (5x heavier)
-        #    Roll/pitch gyro: 0.17 rad/s (10°/s) → -0.003
-        #    Yaw gyro:        0.17 rad/s (10°/s) → -0.015
-        r_angvel = -0.1 * (ang_vel[0] ** 2 + ang_vel[1] ** 2) \
-                 - 0.5 * ang_vel[2] ** 2
-
-        # 7. Action smoothness: penalise motor command rate-of-change
+        # 5. Action smoothness: penalise motor command rate-of-change
+        # Use raw action (not smoothed) so the gradient punishes the NN directly
         action_delta = action - self._prev_action
-        r_smooth = -0.3 * float(np.dot(action_delta, action_delta))
+        r_smooth = -0.30 * float(np.dot(action_delta, action_delta))  # was -0.15
 
-        return r_alive + r_alt + r_orient + r_hvel + r_vvel + r_angvel + r_smooth
+        # 6. Motor symmetry: light penalty on diagonal bias
+        diag_diff = (action[0] + action[3]) - (action[1] + action[2])
+        r_symm = -0.05 * diag_diff ** 2
+
+        return r_track + r_alive + r_vel + r_angvel + r_smooth + r_symm
 
     # ---- Rendering -------------------------------------------------------
 

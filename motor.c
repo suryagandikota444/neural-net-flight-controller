@@ -101,11 +101,13 @@
 
 /* --- GPIOA registers (base 0x40020000) --- */
 #define GPIOA_MODER     (*(volatile uint32_t *)0x40020000)
+#define GPIOA_OTYPER    (*(volatile uint32_t *)0x40020004)
 #define GPIOA_OSPEEDR   (*(volatile uint32_t *)0x40020008)
 #define GPIOA_AFRH      (*(volatile uint32_t *)0x40020024)  /* Pins 8-15 */
 
 /* --- GPIOC registers (base 0x40020800) --- */
 #define GPIOC_MODER     (*(volatile uint32_t *)0x40020800)
+#define GPIOC_OTYPER    (*(volatile uint32_t *)0x40020804)
 #define GPIOC_OSPEEDR   (*(volatile uint32_t *)0x40020808)
 #define GPIOC_AFRH      (*(volatile uint32_t *)0x40020824)  /* Pins 8-15 */
 
@@ -154,6 +156,7 @@
  * We use Channel 3 (PC8 = Motor 1) and Channel 4 (PC9 = Motor 2).
  */
 #define TIM8_CR1    (*(volatile uint32_t *)0x40010400)
+#define TIM8_CR2    (*(volatile uint32_t *)0x40010404)  /* Has CCPC bit 0 */
 #define TIM8_CCMR2  (*(volatile uint32_t *)0x4001041C)
 #define TIM8_CCER   (*(volatile uint32_t *)0x40010420)
 #define TIM8_PSC    (*(volatile uint32_t *)0x40010428)
@@ -284,6 +287,10 @@ void motor_init(void)
 
     GPIOA_OSPEEDR |= ((3U << (8 * 2)) | (3U << (9 * 2)));  /* Very high speed */
 
+    /* Ensure push-pull output type (OTYPER bit = 0).
+     * DFU/soft-reset may not clear this if a prior firmware set open-drain. */
+    GPIOA_OTYPER &= ~((1U << 8) | (1U << 9));
+
     /* --- PC8 (TIM8_CH3, Motor 1) and PC9 (TIM8_CH4, Motor 2) ---
      *
      * GPIOC_AFRH:
@@ -298,7 +305,13 @@ void motor_init(void)
 
     GPIOC_OSPEEDR |= ((3U << (8 * 2)) | (3U << (9 * 2)));  /* Very high speed */
 
+    /* Ensure push-pull output type */
+    GPIOC_OTYPER &= ~((1U << 8) | (1U << 9));
+
     /* ── Step 3: Configure TIM8 (Motor 1 = CH3, Motor 2 = CH4) ─ */
+
+    /* Ensure CCPC=0 (no preloaded CCER — same fix as TIM1 below) */
+    TIM8_CR2 = 0;
 
     /* CCMR2 controls channels 3 and 4.
      * Set both to PWM mode 1 with preload enabled.
