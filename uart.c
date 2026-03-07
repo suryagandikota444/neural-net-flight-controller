@@ -1,16 +1,9 @@
 /*
- * uart.c — USART2 driver for STM32F405 (bare-metal, blocking TX)
+ * uart.c — configurable USART driver for STM32F405 (bare-metal, blocking TX)
  *
- * ── Why USART2? ────────────────────────────────────────────────
- * The STM32F405 has three USART peripherals relevant to us:
- *   USART1 — APB2 bus (84MHz), TX=PA9,  RX=PA10
- *   USART2 — APB1 bus (42MHz), TX=PA2,  RX=PA3   ← we use this
- *   USART3 — APB1 bus (42MHz), TX=PB10, RX=PB11
- *
- * USART2's pins (PA2/PA3) are on the same port as the SPI1 CS pin
- * (PA4) and are typically broken out on the Sologood F405 UART pads.
- * The slower APB1 bus (42MHz vs 84MHz) makes no practical difference
- * for 115200 baud — the timing error is <0.2%.
+ * Set UART_PERIPH in uart.h to choose the peripheral:
+ *   2 → USART2  TX=PA2   RX=PA3   (APB1, 42 MHz)
+ *   3 → USART3  TX=PB10  RX=PB11  (APB1, 42 MHz)
  *
  * ── Baud rate math ─────────────────────────────────────────────
  * USART oversamples by 16 (default). The BRR register stores the
@@ -44,53 +37,56 @@
 #include "clock.h"  /* For APB1_HZ */
 
 /* ============================================================
- * REGISTER DEFINITIONS
+ * REGISTER DEFINITIONS  (selected by UART_PERIPH in uart.h)
  * All addresses from RM0090 (STM32F405 Reference Manual).
  * ============================================================ */
 
 /* --- RCC clock enables --- */
-#define RCC_AHB1ENR          (*(volatile uint32_t *)0x40023830)
-#define RCC_APB1ENR          (*(volatile uint32_t *)0x40023840)
-#define RCC_AHB1ENR_GPIOAEN  (1U << 0)    /* GPIOA clock enable */
-#define RCC_APB1ENR_USART2EN (1U << 17)   /* USART2 clock enable */
+#define RCC_AHB1ENR    (*(volatile uint32_t *)0x40023830)
+#define RCC_APB1ENR    (*(volatile uint32_t *)0x40023840)
 
-/* --- GPIOA registers (base 0x40020000) ---
- *
- * We configure two pins:
- *   PA2 = USART2_TX  (AF7, output, high-speed)
- *   PA3 = USART2_RX  (AF7, input,  pull-up)
- *
- * MODER:   2 bits per pin — 00=input, 01=output, 10=AF, 11=analog
- * OSPEEDR: 2 bits per pin — 00=low, 01=medium, 10=high, 11=very high
- * PUPDR:   2 bits per pin — 00=none, 01=pull-up, 10=pull-down
- * AFR[0]:  4 bits per pin for pins 0-7 — AF7 = USART1/2/3
- */
-#define GPIOA_MODER    (*(volatile uint32_t *)0x40020000)
-#define GPIOA_OSPEEDR  (*(volatile uint32_t *)0x40020008)
-#define GPIOA_PUPDR    (*(volatile uint32_t *)0x4002000C)
-#define GPIOA_AFR0     (*(volatile uint32_t *)0x40020020)  /* Pins 0-7 */
+/* ── Per-peripheral configuration ──────────────────────────── */
+#if UART_PERIPH == 2
+/*  USART2 — TX=PA2, RX=PA3, GPIOA, APB1 bit 17, base 0x40004400 */
+#define UART_RCC_GPIO_EN     (1U << 0)       /* GPIOA on AHB1       */
+#define UART_RCC_USART_EN    (1U << 17)      /* USART2 on APB1      */
+#define UART_GPIO_BASE       0x40020000U     /* GPIOA               */
+#define UART_TX_PIN          2
+#define UART_RX_PIN          3
+#define UART_AF              7               /* AF7 for USART2      */
+#define UART_AFR_IDX         0               /* AFR[0] (pins 0-7)   */
+#define USART_BASE           0x40004400U
 
-/* --- USART2 registers (base 0x40004400) ---
- *
- * SR  — Status Register (offset 0x00)
- *   Bit 6: TC   — Transmission Complete (all bits sent incl. stop bit)
- *   Bit 7: TXE  — TX data register Empty (DR ready for next write)
- *
- * DR  — Data Register (offset 0x04)
- *   Write to transmit; read to receive. Only [7:0] used for 8-bit frames.
- *
- * BRR — Baud Rate Register (offset 0x08)
- *   [15:4] DIV_Mantissa, [3:0] DIV_Fraction — see baud math above.
- *
- * CR1 — Control Register 1 (offset 0x0C)
- *   Bit 2:  RE  — Receiver Enable
- *   Bit 3:  TE  — Transmitter Enable (also sends idle frame on the line)
- *   Bit 13: UE  — USART Enable (must be set last, after BRR/CR1 config)
- */
-#define USART2_SR    (*(volatile uint32_t *)0x40004400)
-#define USART2_DR    (*(volatile uint32_t *)0x40004404)
-#define USART2_BRR   (*(volatile uint32_t *)0x40004408)
-#define USART2_CR1   (*(volatile uint32_t *)0x4000440C)
+#elif UART_PERIPH == 3
+/*  USART3 — TX=PB10, RX=PB11, GPIOB, APB1 bit 18, base 0x40004800 */
+#define UART_RCC_GPIO_EN     (1U << 1)       /* GPIOB on AHB1       */
+#define UART_RCC_USART_EN    (1U << 18)      /* USART3 on APB1      */
+#define UART_GPIO_BASE       0x40020400U     /* GPIOB               */
+#define UART_TX_PIN          10
+#define UART_RX_PIN          11
+#define UART_AF              7               /* AF7 for USART3      */
+#define UART_AFR_IDX         1               /* AFR[1] (pins 8-15)  */
+#define USART_BASE           0x40004800U
+
+#else
+#error "UART_PERIPH must be 2 or 3"
+#endif
+
+/* --- GPIO registers (generic, computed from UART_GPIO_BASE) --- */
+#define GPIO_MODER     (*(volatile uint32_t *)(UART_GPIO_BASE + 0x00))
+#define GPIO_OSPEEDR   (*(volatile uint32_t *)(UART_GPIO_BASE + 0x08))
+#define GPIO_PUPDR     (*(volatile uint32_t *)(UART_GPIO_BASE + 0x0C))
+#define GPIO_AFR       (*(volatile uint32_t *)(UART_GPIO_BASE + 0x20 + 4*UART_AFR_IDX))
+
+/* Pin number within the AFR register (pins 0-7 in AFR[0], 8-15 → subtract 8 in AFR[1]) */
+#define UART_TX_AFR_PIN  (UART_TX_PIN - 8 * UART_AFR_IDX)
+#define UART_RX_AFR_PIN  (UART_RX_PIN - 8 * UART_AFR_IDX)
+
+/* --- USART registers (generic, computed from USART_BASE) --- */
+#define USART_SR     (*(volatile uint32_t *)(USART_BASE + 0x00))
+#define USART_DR     (*(volatile uint32_t *)(USART_BASE + 0x04))
+#define USART_BRR    (*(volatile uint32_t *)(USART_BASE + 0x08))
+#define USART_CR1    (*(volatile uint32_t *)(USART_BASE + 0x0C))
 
 #define USART_SR_TXE    (1U << 7)
 #define USART_SR_TC     (1U << 6)
@@ -100,108 +96,91 @@
 
 
 /* ============================================================
- * uart2_init
+ * uart_init
  * ============================================================ */
-void uart2_init(uint32_t baud)
+void uart_init(uint32_t baud)
 {
     /* ── Step 1: Enable peripheral clocks ──────────────────────
      *
      * Peripherals are clock-gated by default (saves power).
-     * Writing to GPIOA or USART2 registers before enabling their
-     * clocks has no effect — the write is silently ignored.
-     * Enable GPIOA on AHB1 and USART2 on APB1. */
-    RCC_AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
-    RCC_APB1ENR |= RCC_APB1ENR_USART2EN;
+     * Enable the GPIO port on AHB1 and the USART on APB1. */
+    RCC_AHB1ENR |= UART_RCC_GPIO_EN;
+    RCC_APB1ENR |= UART_RCC_USART_EN;
 
     /* Read RCC_APB1ENR back — this forces the AHB bus to complete
      * the write before we proceed. Without this, a speculative
-     * read of USART2_CR1 could arrive before the clock is enabled. */
+     * read of USART registers could arrive before the clock is enabled. */
     (void)RCC_APB1ENR;
 
-    /* ── Step 2: Configure PA2 (TX) and PA3 (RX) ───────────────
+    /* ── Step 2: Configure TX and RX pins ──────────────────────
      *
-     * MODER: set both to Alternate Function mode (0b10).
-     * Clear 2 bits, then set. PA2 → bits[5:4], PA3 → bits[7:6]. */
-    GPIOA_MODER &= ~((3U << (2 * 2)) | (3U << (3 * 2)));
-    GPIOA_MODER |=  ((2U << (2 * 2)) | (2U << (3 * 2)));
+     * MODER: set both to Alternate Function mode (0b10). */
+    GPIO_MODER &= ~((3U << (UART_TX_PIN * 2)) | (3U << (UART_RX_PIN * 2)));
+    GPIO_MODER |=  ((2U << (UART_TX_PIN * 2)) | (2U << (UART_RX_PIN * 2)));
 
-    /* OSPEEDR: high speed (0b10) on both pins.
-     * "High speed" here means the GPIO output slew rate — it allows
-     * the pin to toggle fast enough for UART at 115200+.
-     * Without this, the rise/fall times are too slow and the
-     * waveform gets rounded off at higher baud rates. */
-    GPIOA_OSPEEDR &= ~((3U << (2 * 2)) | (3U << (3 * 2)));
-    GPIOA_OSPEEDR |=  ((2U << (2 * 2)) | (2U << (3 * 2)));
+    /* OSPEEDR: high speed (0b10) on both pins. */
+    GPIO_OSPEEDR &= ~((3U << (UART_TX_PIN * 2)) | (3U << (UART_RX_PIN * 2)));
+    GPIO_OSPEEDR |=  ((2U << (UART_TX_PIN * 2)) | (2U << (UART_RX_PIN * 2)));
 
-    /* PUPDR: pull-up on PA3 (RX), no pull on PA2 (TX).
-     * The RX line should be held high when idle (UART idles mark=high).
-     * A floating RX pin with no pull-up will read noise as data.
-     * TX is driven by the USART peripheral, so no pull needed. */
-    GPIOA_PUPDR &= ~((3U << (2 * 2)) | (3U << (3 * 2)));
-    GPIOA_PUPDR |=  (1U << (3 * 2));  /* PA3 = pull-up (0b01) */
+    /* PUPDR: pull-up on RX, no pull on TX. */
+    GPIO_PUPDR &= ~((3U << (UART_TX_PIN * 2)) | (3U << (UART_RX_PIN * 2)));
+    GPIO_PUPDR |=  (1U << (UART_RX_PIN * 2));
 
-    /* AFR0: assign AF7 (USART1/2/3) to PA2 and PA3.
-     * AFR0 covers pins 0-7, 4 bits each.
-     * PA2 → bits[11:8], PA3 → bits[15:12].
-     * AF7 = 0b0111. */
-    GPIOA_AFR0 &= ~((0xFU << (2 * 4)) | (0xFU << (3 * 4)));
-    GPIOA_AFR0 |=  ((7U  << (2 * 4)) | (7U  << (3 * 4)));
+    /* AFR: assign the selected AF to TX and RX pins. */
+    GPIO_AFR &= ~((0xFU << (UART_TX_AFR_PIN * 4)) | (0xFU << (UART_RX_AFR_PIN * 4)));
+    GPIO_AFR |=  (((uint32_t)UART_AF << (UART_TX_AFR_PIN * 4)) |
+                  ((uint32_t)UART_AF << (UART_RX_AFR_PIN * 4)));
 
     /* ── Step 3: Set baud rate ──────────────────────────────────
      *
-     * BRR = round(fCK / baud) where fCK = APB1_HZ (42MHz).
-     * The +baud/2 term rounds to nearest instead of truncating,
-     * which halves the maximum baud rate error. */
-    USART2_BRR = (APB1_HZ + (baud / 2U)) / baud;
+     * BRR = round(fCK / baud) where fCK = APB1_HZ (42MHz). */
+    USART_BRR = (APB1_HZ + (baud / 2U)) / baud;
 
     /* ── Step 4: Enable USART ───────────────────────────────────
      *
-     * Set UE (USART Enable), TE (TX enable), RE (RX enable) together.
-     * TE causes the USART to send an idle frame (all 1s for one
-     * frame period) before the first real byte — this is normal
-     * UART behaviour and the CP2102 will ignore it. */
-    USART2_CR1 = USART_CR1_UE | USART_CR1_TE | USART_CR1_RE;
+     * Set UE (USART Enable), TE (TX enable), RE (RX enable). */
+    USART_CR1 = USART_CR1_UE | USART_CR1_TE | USART_CR1_RE;
 }
 
 
 /* ============================================================
- * uart2_write_char — blocking single-byte TX
+ * uart_write_char — blocking single-byte TX
  * ============================================================ */
-void uart2_write_char(char c)
+void uart_write_char(char c)
 {
     /* Spin until the TX data register is empty (previous byte has
      * been moved into the shift register and is clocking out). */
-    while (!(USART2_SR & USART_SR_TXE));
-    USART2_DR = (uint8_t)c;
+    while (!(USART_SR & USART_SR_TXE));
+    USART_DR = (uint8_t)c;
 }
 
 
 /* ============================================================
- * uart2_write_string — transmit a null-terminated string
+ * uart_write_string — transmit a null-terminated string
  * ============================================================ */
-void uart2_write_string(const char *s)
+void uart_write_string(const char *s)
 {
     while (*s) {
-        uart2_write_char(*s++);
+        uart_write_char(*s++);
     }
 }
 
 
 /* ============================================================
- * uart2_write_uint32 — print uint32 in decimal
+ * uart_write_uint32 — print uint32 in decimal
  * ============================================================
  *
  * No printf, no libc. Build digits right-to-left in a 10-char
  * buffer (2^32 - 1 = 4,294,967,295 is 10 digits), then print
  * forward from the first populated slot.
  */
-void uart2_write_uint32(uint32_t val)
+void uart_write_uint32(uint32_t val)
 {
     char buf[10];
     int  i = 9;
 
     if (val == 0) {
-        uart2_write_char('0');
+        uart_write_char('0');
         return;
     }
 
@@ -211,42 +190,42 @@ void uart2_write_uint32(uint32_t val)
     }
 
     while (++i < 10) {
-        uart2_write_char(buf[i]);
+        uart_write_char(buf[i]);
     }
 }
 
 
 /* ============================================================
- * uart2_write_int32 — print int32 in decimal with sign
+ * uart_write_int32 — print int32 in decimal with sign
  * ============================================================
  *
  * Prints a leading '+' or '-' then the absolute value.
  * Handles INT32_MIN correctly by casting through uint32_t.
  */
-void uart2_write_int32(int32_t val)
+void uart_write_int32(int32_t val)
 {
     if (val < 0) {
-        uart2_write_char('-');
-        uart2_write_uint32((uint32_t)(-(val + 1)) + 1U);
+        uart_write_char('-');
+        uart_write_uint32((uint32_t)(-(val + 1)) + 1U);
     } else {
-        uart2_write_char('+');
-        uart2_write_uint32((uint32_t)val);
+        uart_write_char('+');
+        uart_write_uint32((uint32_t)val);
     }
 }
 
 
 /* ============================================================
- * uart2_write_hex8 — print uint8_t as "0xXX"
+ * uart_write_hex8 — print uint8_t as "0xXX"
  * ============================================================
  *
  * Always exactly 4 characters. Useful for WHO_AM_I values,
  * raw register dumps, anything where decimal is misleading.
  */
-void uart2_write_hex8(uint8_t val)
+void uart_write_hex8(uint8_t val)
 {
     const char hex[] = "0123456789ABCDEF";
-    uart2_write_char('0');
-    uart2_write_char('x');
-    uart2_write_char(hex[(val >> 4) & 0xF]);
-    uart2_write_char(hex[val & 0xF]);
+    uart_write_char('0');
+    uart_write_char('x');
+    uart_write_char(hex[(val >> 4) & 0xF]);
+    uart_write_char(hex[val & 0xF]);
 }

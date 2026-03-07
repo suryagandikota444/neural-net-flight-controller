@@ -1,8 +1,10 @@
 # Makefile for STM32F405 Bare-Metal Flight Controller
 #
 # Usage:
-#   make          — build firmware.bin
-#   make flash    — build and flash via ST-Link
+#   make          — build firmware.bin  (normal flight firmware)
+#   make test     — build test.bin      (hardware test harness, NO motors)
+#   make flash    — build and flash firmware via DFU (dfu-util)
+#   make flash-test — build and flash test harness via DFU (dfu-util)
 #   make clean    — remove build artifacts
 #   make size     — show memory usage
 #
@@ -24,7 +26,11 @@ SIZE    = $(PREFIX)size
 TARGET = firmware
 
 # === SOURCE FILES ===
+# Normal flight firmware — full system
 SRCS = startup.c clock.c spi.c imu.c uart.c main.c memset.c motor.c ahrs.c nn.c i2c.c baro.c
+
+# Test harness — no motors, no NN, no baro, no i2c. Safe for bench.
+SRCS_TEST = startup.c clock.c spi.c imu.c uart.c test_harness.c memset.c ahrs.c
 
 # === COMPILER FLAGS ===
 CFLAGS  = -mcpu=cortex-m4       # Target the Cortex-M4 core
@@ -70,7 +76,7 @@ endif
 
 # === BUILD RULES ===
 
-# Default target: produce the binary
+# Default target: produce the flight firmware binary
 all: $(TARGET).bin
 
 # Link object files into an ELF (contains debug info, section headers, etc.)
@@ -85,22 +91,36 @@ $(TARGET).bin: $(TARGET).elf
 	@echo "Build complete: $(TARGET).bin"
 	@$(SIZE) $<
 
+# === TEST HARNESS ===
+# Builds test_harness.c instead of main.c, links only the drivers it needs.
+# No motor.c, nn.c, i2c.c, baro.c — motors never initialize = safe on bench.
+test: test.bin
+
+test.elf: $(SRCS_TEST)
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
+
+test.bin: test.elf
+	$(OBJCOPY) -O binary -S $< $@
+	@echo "Build complete: test.bin (test harness — motors disabled)"
+	@$(SIZE) $<
+
+# Flash test harness via DFU
+flash-test: test.bin
+	dfu-util -a 0 -s 0x08000000:leave -D $<
+
+# === UTILITIES ===
+
 # Show memory usage breakdown
 size: $(TARGET).elf
 	$(SIZE) $<
 
-# Flash via ST-Link (using st-flash utility)
+# Flash via DFU (using dfu-util)
 # 0x08000000 is the start of flash — our binary goes right at the beginning
 flash: $(TARGET).bin
-	st-flash write $< 0x08000000
-
-# Alternative: flash via OpenOCD
-flash-openocd: $(TARGET).bin
-	openocd -f interface/stlink.cfg -f target/stm32f4x.cfg \
-		-c "program $(TARGET).elf verify reset exit"
+	dfu-util -a 0 -s 0x08000000:leave -D $<
 
 # Clean build artifacts
 clean:
-	rm -f $(TARGET).elf $(TARGET).bin
+	rm -f $(TARGET).elf $(TARGET).bin test.elf test.bin
 
-.PHONY: all clean flash flash-openocd size
+.PHONY: all clean flash flash-openocd flash-test size test

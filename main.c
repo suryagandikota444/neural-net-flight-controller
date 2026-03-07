@@ -95,6 +95,22 @@
 #define ESC_CAL_MODE 0
 #endif
 
+/*
+ * RAW_LOG_MODE: Set to 1 to stream raw IMU samples at 100 Hz for noise analysis.
+ *   Build with: make CFLAGS_EXTRA="-DRAW_LOG_MODE=1"
+ *
+ *   Output (one line per tick, CSV):
+ *     RAW,+gx,+gy,+gz,+ax,+ay,+az    (rad/s and g, 3 decimal places)
+ *
+ *   Log 45 s with:  python fc-nn/log_imu.py --port /dev/cu.SLAB_USBtoUART --seconds 45
+ *   Then analyse:   python fc-nn/analyze_imu.py imu_log.csv
+ *
+ *   ** Motors are disabled in this mode — safe on bench **
+ */
+#ifndef RAW_LOG_MODE
+#define RAW_LOG_MODE 1
+#endif
+
 
 /* ============================================================
  * GPIO — LED on PC15 (directly driven, active-low on this board)
@@ -150,9 +166,7 @@ static void systick_init_hz(uint32_t hz)
     SYST_CSR = SYST_CSR_CLKSOURCE | SYST_CSR_ENABLE;
 }
 
-#ifndef LOOP_TIMING_DEBUG
-#define LOOP_TIMING_DEBUG 0
-#endif
+
 
 #define LOOP_TIMING_INTERVAL 50
 
@@ -191,28 +205,31 @@ static void print_loop_timing_us(uint32_t total_cycles,
                                  uint32_t baro_cycles,
                                  uint32_t obs_cycles,
                                  uint32_t nn_cycles,
+                                 uint32_t iir_cycles,
                                  uint32_t map_cycles,
                                  uint32_t pwm_cycles)
 {
-    uart2_write_string("LT us tot:");
-    uart2_write_uint32(cycles_to_us(total_cycles));
-    uart2_write_string(" imu:");
-    uart2_write_uint32(cycles_to_us(imu_cycles));
-    uart2_write_string(" conv:");
-    uart2_write_uint32(cycles_to_us(conv_cycles));
-    uart2_write_string(" ahrs:");
-    uart2_write_uint32(cycles_to_us(ahrs_cycles));
-    uart2_write_string(" baro:");
-    uart2_write_uint32(cycles_to_us(baro_cycles));
-    uart2_write_string(" obs:");
-    uart2_write_uint32(cycles_to_us(obs_cycles));
-    uart2_write_string(" nn:");
-    uart2_write_uint32(cycles_to_us(nn_cycles));
-    uart2_write_string(" map:");
-    uart2_write_uint32(cycles_to_us(map_cycles));
-    uart2_write_string(" pwm:");
-    uart2_write_uint32(cycles_to_us(pwm_cycles));
-    uart2_write_string("\r\n");
+    uart_write_string("LT us tot:");
+    uart_write_uint32(cycles_to_us(total_cycles));
+    uart_write_string(" imu:");
+    uart_write_uint32(cycles_to_us(imu_cycles));
+    uart_write_string(" conv:");
+    uart_write_uint32(cycles_to_us(conv_cycles));
+    uart_write_string(" ahrs:");
+    uart_write_uint32(cycles_to_us(ahrs_cycles));
+    uart_write_string(" baro:");
+    uart_write_uint32(cycles_to_us(baro_cycles));
+    uart_write_string(" obs:");
+    uart_write_uint32(cycles_to_us(obs_cycles));
+    uart_write_string(" nn:");
+    uart_write_uint32(cycles_to_us(nn_cycles));
+    uart_write_string(" iir:");
+    uart_write_uint32(cycles_to_us(iir_cycles));
+    uart_write_string(" map:");
+    uart_write_uint32(cycles_to_us(map_cycles));
+    uart_write_string(" pwm:");
+    uart_write_uint32(cycles_to_us(pwm_cycles));
+    uart_write_string("\r\n");
 }
 
 
@@ -327,30 +344,30 @@ static inline float my_fabsf(float x)
  * ============================================================ */
 static void print_fixed1(float val)
 {
-    if (val < 0.0f) { uart2_write_char('-'); val = -val; }
-    else             { uart2_write_char('+'); }
+    if (val < 0.0f) { uart_write_char('-'); val = -val; }
+    else             { uart_write_char('+'); }
     uint32_t whole = (uint32_t)val;
     uint32_t frac  = (uint32_t)((val - (float)whole) * 10.0f) % 10;
-    uart2_write_uint32(whole);
-    uart2_write_char('.');
-    uart2_write_uint32(frac);
+    uart_write_uint32(whole);
+    uart_write_char('.');
+    uart_write_uint32(frac);
 }
 
 /* 3-decimal-place float printer for obs/nn debug.
  * Output: "+1.234" or "-0.003" — always sign + digits.dot.3digits */
 static void print_float3(float val)
 {
-    if (val < 0.0f) { uart2_write_char('-'); val = -val; }
-    else             { uart2_write_char('+'); }
+    if (val < 0.0f) { uart_write_char('-'); val = -val; }
+    else             { uart_write_char('+'); }
     uint32_t whole = (uint32_t)val;
     uint32_t frac  = (uint32_t)((val - (float)whole) * 1000.0f + 0.5f);
     if (frac >= 1000) { whole++; frac -= 1000; }
-    uart2_write_uint32(whole);
-    uart2_write_char('.');
+    uart_write_uint32(whole);
+    uart_write_char('.');
     /* Zero-pad the fractional part to 3 digits */
-    if (frac < 100) uart2_write_char('0');
-    if (frac < 10)  uart2_write_char('0');
-    uart2_write_uint32(frac);
+    if (frac < 100) uart_write_char('0');
+    if (frac < 10)  uart_write_char('0');
+    uart_write_uint32(frac);
 }
 
 static void print_telemetry(float roll, float pitch,
@@ -361,31 +378,31 @@ static void print_telemetry(float roll, float pitch,
 {
     static const char *labels[4] = {"FL:", "FR:", "RR:", "RL:"};
 
-    uart2_write_string("R:");
+    uart_write_string("R:");
     print_fixed1(roll);
-    uart2_write_string(" P:");
+    uart_write_string(" P:");
     print_fixed1(pitch);
-    uart2_write_string(" | ");
+    uart_write_string(" | ");
     for (int i = 0; i < 4; i++) {
-        uart2_write_string(labels[i]);
-        uart2_write_uint32(1000 + (uint32_t)(motor_cmd[i] * 1000.0f));
-        if (i < 3) uart2_write_char(' ');
+        uart_write_string(labels[i]);
+        uart_write_uint32(1000 + (uint32_t)(motor_cmd[i] * 1000.0f));
+        if (i < 3) uart_write_char(' ');
     }
 
     if (baro_ok) {
-        uart2_write_string(" | A:");
+        uart_write_string(" | A:");
         print_fixed1(alt_m);
-        uart2_write_string(" V:");
+        uart_write_string(" V:");
         print_fixed1(vvel_mps);
-        uart2_write_string(" T:");
+        uart_write_string(" T:");
         print_fixed1(temp_c);
-        uart2_write_string(" Pa:");
-        uart2_write_uint32((uint32_t)pressure_pa);
+        uart_write_string(" Pa:");
+        uart_write_uint32((uint32_t)pressure_pa);
     } else {
-        uart2_write_string(" | BARO:none");
+        uart_write_string(" | BARO:none");
     }
 
-    uart2_write_string("\r\n");
+    uart_write_string("\r\n");
 }
 
 
@@ -430,13 +447,11 @@ int main(void)
     }
 
     /* ── 3. UART (debug output) ─────────────────────────────── */
-    uart2_init(115200);
+    uart_init(115200);
     delay_ms(500);  /* give terminal time to connect */
 
 
-	#if LOOP_TIMING_DEBUG
-		dwt_cycle_counter_init();
-	#endif
+	dwt_cycle_counter_init();
 
     /* ── 4. SPI ─────────────────────────────────────────────── */
     delay_ms(100);
@@ -452,7 +467,7 @@ int main(void)
         case IMU_ICM42688P: break;
         case IMU_BMI270: break;
         default:
-            uart2_write_string("IMU: NOT FOUND\r\n");
+            uart_write_string("IMU: NOT FOUND\r\n");
             while (1) { blink_error(); }
     }
 
@@ -541,21 +556,21 @@ int main(void)
 			{ 1, "RR" },   /* idx1 = Rear-Right  (PC9) */
 		};
 		for (int m = 0; m < 4; m++) {
-			uart2_write_string("MOTOR TEST: ");
-			uart2_write_string(motor_test[m].name);
-			uart2_write_string("\r\n");
+			uart_write_string("MOTOR TEST: ");
+			uart_write_string(motor_test[m].name);
+			uart_write_string("\r\n");
 			motor_set(motor_test[m].idx, 0.50f);
 			delay_ms(300);
 			motor_all_stop();
 			delay_ms(300);
 		}
-		uart2_write_string("MOTOR TEST DONE\r\n");
+		uart_write_string("MOTOR TEST DONE\r\n");
 	}
 
 	/* ── 10. Barometer ground reference ─────────────────────── */
 	if (baro_ok) {
 		/* Let the BMP280 IIR filter settle by reading for 2 seconds */
-		uart2_write_string("Barometer: settling...\r\n");
+		uart_write_string("Barometer: settling...\r\n");
 		for (int i = 0; i < 50; i++) {
 			baro_update(0.04f);
 			delay_ms(40);
@@ -576,9 +591,7 @@ int main(void)
 	int        armed = 0;
 	uint32_t   ramp_counter = 0;
 	
-	#if LOOP_TIMING_DEBUG
-		uint32_t   timing_counter = 0;
-	#endif
+	uint32_t   timing_counter = 0;
 
 	while (1) {
 
@@ -589,16 +602,12 @@ int main(void)
 
 		tick_count++;
 
-		#if LOOP_TIMING_DEBUG
-			uint32_t t0 = dwt_cycle_now();
-		#endif
+		uint32_t t0 = dwt_cycle_now();
 
 		/* ── A: Read IMU (SPI burst, ~10 µs) ──────────────── */
 		imu_read_raw(imu, &sample);
 
-		#if LOOP_TIMING_DEBUG
-			uint32_t t1 = dwt_cycle_now();
-		#endif
+		uint32_t t1 = dwt_cycle_now();
 
 		/* ── B: Axis alignment (CW180°) + unit conversion ──── */
 		float gx = (float)ALIGN_GX(sample.gx) * GYRO_RAW_TO_RADS;
@@ -609,16 +618,26 @@ int main(void)
 		float ay = (float)ALIGN_AY(sample.ay) * accel_raw_to_g;
 		float az = (float)ALIGN_AZ(sample.az) * accel_raw_to_g;
 
-		#if LOOP_TIMING_DEBUG
-			uint32_t t2 = dwt_cycle_now();
+		uint32_t t2 = dwt_cycle_now();
+
+		/* ── B2: RAW sensor log (100 Hz CSV, enable with RAW_LOG_MODE=1) */
+		#if RAW_LOG_MODE
+		{
+			uart_write_string("RAW,");
+			print_float3(gx); uart_write_char(',');
+			print_float3(gy); uart_write_char(',');
+			print_float3(gz); uart_write_char(',');
+			print_float3(ax); uart_write_char(',');
+			print_float3(ay); uart_write_char(',');
+			print_float3(az);
+			uart_write_string("\r\n");
+		}
 		#endif
 
 		/* ── C: AHRS update (Madgwick, ~5 µs) ──────────────── */
 		ahrs_update(gx, gy, gz, ax, ay, az, LOOP_DT);
 
-		#if LOOP_TIMING_DEBUG
-			uint32_t t3 = dwt_cycle_now();
-		#endif
+		uint32_t t3 = dwt_cycle_now();
 
 		float roll_deg  = ahrs_get_roll();
 		float pitch_deg = ahrs_get_pitch();
@@ -628,9 +647,7 @@ int main(void)
 			baro_update(LOOP_DT);
 		}
 
-		#if LOOP_TIMING_DEBUG
-			uint32_t t4 = dwt_cycle_now();
-		#endif
+		uint32_t t4 = dwt_cycle_now();
 
 		/* ── D: Settling check ─────────────────────────────── */
 		if (!armed) {
@@ -699,33 +716,31 @@ int main(void)
 		// 	static uint32_t obs_print_counter = 0;
 		// 	if (++obs_print_counter >= 10) {
 		// 		obs_print_counter = 0;
-		// 		uart2_write_string("OBS:");
+		// 		uart_write_string("OBS:");
 		// 		for (int k = 0; k < 12; k++) {
-		// 			uart2_write_char(' ');
+		// 			uart_write_char(' ');
 		// 			print_float3(obs[k]);
 		// 		}
 		// 		/* Raw gyro (rad/s), accel (g), baro (m, m/s) */
-		// 		uart2_write_string(" | GYR:");
-		// 		uart2_write_char(' '); print_float3(gx);
-		// 		uart2_write_char(' '); print_float3(gy);
-		// 		uart2_write_char(' '); print_float3(gz);
-		// 		uart2_write_string(" | ACC:");
-		// 		uart2_write_char(' '); print_float3(ax);
-		// 		uart2_write_char(' '); print_float3(ay);
-		// 		uart2_write_char(' '); print_float3(az);
-		// 		uart2_write_string(" | ALT:");
-		// 		uart2_write_char(' '); print_float3(alt);
-		// 		uart2_write_string(" VV:");
-		// 		uart2_write_char(' '); print_float3(vvel);
-		// 		uart2_write_string("\r\n");
+		// 		uart_write_string(" | GYR:");
+		// 		uart_write_char(' '); print_float3(gx);
+		// 		uart_write_char(' '); print_float3(gy);
+		// 		uart_write_char(' '); print_float3(gz);
+		// 		uart_write_string(" | ACC:");
+		// 		uart_write_char(' '); print_float3(ax);
+		// 		uart_write_char(' '); print_float3(ay);
+		// 		uart_write_char(' '); print_float3(az);
+		// 		uart_write_string(" | ALT:");
+		// 		uart_write_char(' '); print_float3(alt);
+		// 		uart_write_string(" VV:");
+		// 		uart_write_char(' '); print_float3(vvel);
+		// 		uart_write_string("\r\n");
 		// 	}
 		// }
 
 		
 
-		#if LOOP_TIMING_DEBUG
-			uint32_t t5 = dwt_cycle_now();
-		#endif
+		uint32_t t5 = dwt_cycle_now();
 
 		/* ── G: NN forward pass (~15 µs) ──────────────────── */
 		float nn_out[4];
@@ -733,6 +748,8 @@ int main(void)
 
 		/* Clip NN output to [-1,1] — matches training env np.clip(action,-1,1) */
 		for (int k = 0; k < 4; k++) nn_out[k] = clampf(nn_out[k], -1.0f, 1.0f);
+
+		uint32_t t6 = dwt_cycle_now();  /* after NN inference */
 
 		/* Action smoothing — adaptive non-linear IIR filter.
 			*
@@ -764,9 +781,7 @@ int main(void)
 		for (int k = 0; k < 4; k++)
 			nn_out[k] = nn_smoothed[k];
 
-		#if LOOP_TIMING_DEBUG
-			uint32_t t6 = dwt_cycle_now();
-		#endif
+		uint32_t t7 = dwt_cycle_now();  /* after IIR smoothing */
 
 		/* ── H: Residual action → motor command ──────────── */
 		float base_throttle = NN_HOVER_THROTTLE + alt_throttle_adj;
@@ -802,32 +817,47 @@ int main(void)
 			}
 		}
 
-		#if LOOP_TIMING_DEBUG
-				uint32_t t7 = dwt_cycle_now();
-		#endif
+		uint32_t t8 = dwt_cycle_now();  /* after motor command mapping */
 
 		/* ── I: Write to motors (NN→Betaflight mapping) ─── */
 		for (int i = 0; i < 4; i++) {
 			motor_set(NN_TO_MOTOR[i], motor_cmd[i]);
 		}
 
-		/* Print motor outputs at 10 Hz */
-		{
-			static uint32_t mot_print_counter = 0;
-			if (++mot_print_counter >= 10) {
-				mot_print_counter = 0;
-				/* FL FR RR RL in µs */
-				uart2_write_string("MOT FL:");
-				uart2_write_uint32(1000 + (uint32_t)(motor_cmd[0] * 1000.0f));
-				uart2_write_string(" FR:");
-				uart2_write_uint32(1000 + (uint32_t)(motor_cmd[1] * 1000.0f));
-				uart2_write_string(" RR:");
-				uart2_write_uint32(1000 + (uint32_t)(motor_cmd[2] * 1000.0f));
-				uart2_write_string(" RL:");
-				uart2_write_uint32(1000 + (uint32_t)(motor_cmd[3] * 1000.0f));
-				uart2_write_string("\r\n");
-			}
-		}
+		uint32_t t9 = dwt_cycle_now();  /* after PWM write */
+		// if (++timing_counter >= LOOP_TIMING_INTERVAL) {
+		// 	timing_counter = 0;
+		// 	print_loop_timing_us(
+		// 		dwt_cycle_delta(t0, t9),  /* total */
+		// 		dwt_cycle_delta(t0, t1),  /* imu   */
+		// 		dwt_cycle_delta(t1, t2),  /* conv  */
+		// 		dwt_cycle_delta(t2, t3),  /* ahrs  */
+		// 		dwt_cycle_delta(t3, t4),  /* baro  */
+		// 		dwt_cycle_delta(t4, t5),  /* obs   */
+		// 		dwt_cycle_delta(t5, t6),  /* nn    */
+		// 		dwt_cycle_delta(t6, t7),  /* iir   */
+		// 		dwt_cycle_delta(t7, t8),  /* map   */
+		// 		dwt_cycle_delta(t8, t9)   /* pwm   */
+		// 	);
+		// }
+
+		// /* Print motor outputs at 10 Hz */
+		// {
+		// 	static uint32_t mot_print_counter = 0;
+		// 	if (++mot_print_counter >= 10) {
+		// 		mot_print_counter = 0;
+		// 		/* FL FR RR RL in µs */
+		// 		uart_write_string("MOT FL:");
+		// 		uart_write_uint32(1000 + (uint32_t)(motor_cmd[0] * 1000.0f));
+		// 		uart_write_string(" FR:");
+		// 		uart_write_uint32(1000 + (uint32_t)(motor_cmd[1] * 1000.0f));
+		// 		uart_write_string(" RR:");
+		// 		uart_write_uint32(1000 + (uint32_t)(motor_cmd[2] * 1000.0f));
+		// 		uart_write_string(" RL:");
+		// 		uart_write_uint32(1000 + (uint32_t)(motor_cmd[3] * 1000.0f));
+		// 		uart_write_string("\r\n");
+		// 	}
+		// }
 	}
 
 	#endif

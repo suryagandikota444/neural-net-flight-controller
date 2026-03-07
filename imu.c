@@ -92,6 +92,7 @@ imu_type_t imu_detect(uint8_t *whoami)
  *   0x4E  PWR_MGMT0       — accel + gyro power mode
  *   0x4F  GYRO_CONFIG0    — ODR + full-scale
  *   0x50  ACCEL_CONFIG0   — ODR + full-scale
+ *   0x51  GYRO_CONFIG1    — UI filter bandwidth (LPF)
  *   0x76  REG_BANK_SEL    — bank select (we always stay on bank 0)
  *
  * Burst layout from 0x1D (14 bytes):
@@ -111,9 +112,11 @@ imu_type_t imu_detect(uint8_t *whoami)
 #define ICM_REG_FIFO_CONFIG     0x16
 #define ICM_REG_TEMP_DATA1      0x1D
 #define ICM_REG_PWR_MGMT0       0x4E
-#define ICM_REG_GYRO_CONFIG0    0x4F
-#define ICM_REG_ACCEL_CONFIG0   0x50
-#define ICM_REG_BANK_SEL        0x76
+#define ICM_REG_GYRO_CONFIG0         0x4F
+#define ICM_REG_ACCEL_CONFIG0        0x50
+#define ICM_REG_GYRO_CONFIG1         0x51   /* filter order (bits [3:2]) */
+#define ICM_REG_GYRO_ACCEL_CONFIG0   0x52   /* UI filter bandwidth for gyro [3:0] and accel [7:4] */
+#define ICM_REG_BANK_SEL             0x76
 
 /* GYRO_CONFIG0 [7:5] FS_SEL: 000=±2000, 001=±1000, 010=±500, 011=±250 dps
  * GYRO_CONFIG0 [3:0] ODR:    0110=1kHz, 0101=2kHz, 0100=4kHz, 0011=8kHz  */
@@ -126,6 +129,24 @@ imu_type_t imu_detect(uint8_t *whoami)
 /* PWR_MGMT0 [3:2] GYRO_MODE: 11=low-noise
  * PWR_MGMT0 [1:0] ACCEL_MODE: 11=low-noise                                */
 #define ICM_PWR_GYRO_ACCEL_LN       0x0F   /* 0b00001111 */
+
+/* GYRO_ACCEL_CONFIG0 (0x52) — UI filter bandwidth
+ * bits [7:4]: accel UI LPF BW  (0 = ODR/2 = no extra filtering — leave default)
+ * bits [3:0]: gyro  UI LPF BW
+ *   0 = ODR/2  (Nyquist, no filtering — default after reset)
+ *   1 = ODR/4
+ *   2 = ODR/5
+ *   3 = ODR/8
+ *   4 = ODR/10
+ *   5 = ODR/16
+ *   6 = ODR/20  → 1000/20 = 50 Hz  ← chosen value
+ *   7 = ODR/40
+ *  15 = low-latency bypass (no filtering)
+ *
+ * At 1 kHz ODR, value 6 puts the cutoff at exactly 50 Hz — the Nyquist
+ * limit of the 100 Hz control loop.  Any energy above 50 Hz is attenuated
+ * before it reaches the output registers, preventing aliasing. */
+#define ICM_GYRO_UI_BW_50HZ         0x06   /* gyro bits [3:0] = 6 = ODR/20 = 50 Hz; accel bits [7:4] = 0 (default) */
 
 static void icm42688p_init(void)
 {
@@ -141,6 +162,12 @@ static void icm42688p_init(void)
 
     /* Gyro: ±2000 dps, 1 kHz */
     spi1_write_register(ICM_REG_GYRO_CONFIG0, ICM_GYRO_FS_2000DPS_ODR_1K);
+
+    /* Gyro UI LPF: 50 Hz cutoff (ODR/20) via GYRO_ACCEL_CONFIG0 (0x52).
+     * Attenuates motor/prop vibration above 50 Hz before it reaches
+     * the output registers, preventing aliasing into the 0-50 Hz
+     * control band when the firmware reads at 100 Hz. */
+    spi1_write_register(ICM_REG_GYRO_ACCEL_CONFIG0, ICM_GYRO_UI_BW_50HZ);
 
     /* Accel: ±16 g, 1 kHz */
     spi1_write_register(ICM_REG_ACCEL_CONFIG0, ICM_ACCEL_FS_16G_ODR_1K);

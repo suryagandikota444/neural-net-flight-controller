@@ -104,8 +104,8 @@ CRASH_PENALTY   = 50.0
 
 # Sim-to-real noise (added on top of MuJoCo sensor noise)
 # Bumped up from 0.01/0.05 to better match real ICM-42688-P noise floor
-GYRO_NOISE_STD  = 0.02      # rad/s  (was 0.01)
-ACCEL_NOISE_STD = 0.08      # g      (was 0.05)
+GYRO_NOISE_STD  = 0.09      # rad/s  (was 0.01)
+ACCEL_NOISE_STD = 0.22      # g      (was 0.05)
 
 # AHRS latency simulation: std-dev of Gaussian noise added to attitude obs
 # to simulate Madgwick filter lag (~100 ms convergence on hardware)
