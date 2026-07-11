@@ -74,7 +74,7 @@
 #define BARO_ADDR_HI    0x77
 
 /* Velocity filter coefficient */
-#define VVEL_ALPHA      0.3f
+#define VVEL_ALPHA      0.1f
 
 /* Read baro every N ticks (100 Hz / 4 = 25 Hz) */
 #define BARO_DECIMATION 4

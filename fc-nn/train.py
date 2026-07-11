@@ -99,6 +99,81 @@ class DroneMetricsCallback(BaseCallback):
         self._ep_crashes.clear()
 
 
+# ---------------------------------------------------------------------------
+# Curriculum callback — advances difficulty based on rolling crash rate
+# ---------------------------------------------------------------------------
+
+class CurriculumCallback(BaseCallback):
+    """
+    Tracks rolling crash rate and advances curriculum progress when the agent
+    is performing well (low crash rate).  Broadcasts to all SubprocVecEnv workers.
+
+    Schedule:
+        - progress stays at 0 until the agent reaches `advance_threshold` crash rate
+        - then advances by `step_size` each time the rolling crash rate is checked
+        - never goes backwards (monotonic ramp)
+        - logs curriculum/progress and curriculum/tilt_max to TensorBoard
+
+    Parameters
+    ----------
+    advance_threshold : float
+        Crash rate must be BELOW this to advance (default 0.30 = 30% crashes).
+    step_size : float
+        How much to increment progress each rollout when threshold is met.
+    window : int
+        Number of episodes to average over for the rolling crash rate.
+    """
+
+    def __init__(self, advance_threshold=0.30, step_size=0.02, window=200,
+                 verbose=0):
+        super().__init__(verbose)
+        self._threshold = advance_threshold
+        self._step_size = step_size
+        self._window = window
+        self._crash_history = []
+        self._progress = 0.0
+
+    def _on_step(self) -> bool:
+        for info in self.locals.get("infos", []):
+            ep = info.get("episode")
+            if ep is not None:
+                self._crash_history.append(1.0 if ep["l"] < 1000 else 0.0)
+                # Keep a bounded window
+                if len(self._crash_history) > self._window * 2:
+                    self._crash_history = self._crash_history[-self._window:]
+        return True
+
+    def _on_rollout_end(self) -> None:
+        if len(self._crash_history) < 50:
+            # Not enough data yet — keep at current progress
+            return
+
+        rolling_crash = np.mean(self._crash_history[-self._window:])
+
+        # Advance if crash rate is below threshold (agent has mastered current level)
+        if rolling_crash < self._threshold and self._progress < 1.0:
+            self._progress = min(1.0, self._progress + self._step_size)
+
+            # Broadcast new curriculum to all envs (works with SubprocVecEnv)
+            self.training_env.env_method("set_curriculum", self._progress)
+
+            if self.verbose:
+                from drone_env import CURRIC_TILT_START, CURRIC_TILT_END
+                _tilt = CURRIC_TILT_START + (CURRIC_TILT_END - CURRIC_TILT_START) * self._progress
+                print(f"[curriculum] progress={self._progress:.2f}  "
+                      f"crash_rate={rolling_crash:.3f}  tilt_max={_tilt:.1f}°")
+
+        # Log to TensorBoard
+        from drone_env import CURRIC_TILT_START, CURRIC_TILT_END, CURRIC_CMD_ANGLE_START, CURRIC_CMD_ANGLE_END
+        self.logger.record("curriculum/progress", self._progress)
+        self.logger.record("curriculum/tilt_max_deg",
+                           CURRIC_TILT_START + (CURRIC_TILT_END - CURRIC_TILT_START) * self._progress)
+        self.logger.record("curriculum/cmd_angle_deg",
+                           CURRIC_CMD_ANGLE_START + (CURRIC_CMD_ANGLE_END - CURRIC_CMD_ANGLE_START) * self._progress)
+        self.logger.record("curriculum/rolling_crash_rate",
+                           np.mean(self._crash_history[-self._window:]))
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--timesteps", type=int, default=10_000_000,
@@ -151,7 +226,13 @@ def main():
         render=False,
     )
     drone_cb = DroneMetricsCallback()
-    callbacks = CallbackList([checkpoint_cb, eval_cb, drone_cb])
+    curric_cb = CurriculumCallback(
+        advance_threshold=0.30,   # advance when <30% of episodes crash
+        step_size=0.02,           # 50 advances to reach 1.0 (gradual ramp)
+        window=200,               # rolling window of 200 episodes
+        verbose=1,
+    )
+    callbacks = CallbackList([checkpoint_cb, eval_cb, drone_cb, curric_cb])
 
     # --- Model ------------------------------------------------------------
     if args.resume:

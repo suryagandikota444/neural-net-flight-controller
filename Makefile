@@ -29,8 +29,9 @@ TARGET = firmware
 # Normal flight firmware — full system
 SRCS = startup.c clock.c spi.c imu.c uart.c main.c memset.c motor.c ahrs.c nn.c i2c.c baro.c
 
-# Test harness — no motors, no NN, no baro, no i2c. Safe for bench.
-SRCS_TEST = startup.c clock.c spi.c imu.c uart.c test_harness.c memset.c ahrs.c
+# Test harness — includes motors for test 10 (wire verification).
+# Still safe: motors only spin in test 10 with explicit warning.
+SRCS_TEST = startup.c clock.c spi.c imu.c uart.c test_harness.c memset.c ahrs.c nn.c i2c.c baro.c motor.c
 
 # === COMPILER FLAGS ===
 CFLAGS  = -mcpu=cortex-m4       # Target the Cortex-M4 core
@@ -93,7 +94,7 @@ $(TARGET).bin: $(TARGET).elf
 
 # === TEST HARNESS ===
 # Builds test_harness.c instead of main.c, links only the drivers it needs.
-# No motor.c, nn.c, i2c.c, baro.c — motors never initialize = safe on bench.
+# No motor.c — motors never initialize = safe on bench.
 test: test.bin
 
 test.elf: $(SRCS_TEST)

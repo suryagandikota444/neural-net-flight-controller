@@ -262,7 +262,7 @@ static float accel_raw_to_g;
  */
 #define ALT_OBS_CLAMP      0.05f    /* clamp obs[8] to ±0.05 — NN comfort zone */
 #define ALT_KP             0.15f    /* throttle/m — gentle P gain */
-#define ALT_KD             0.08f    /* throttle/(m/s) — damp oscillation */
+#define ALT_KD             0.02f    /* throttle/(m/s) — damp oscillation */
 #define ALT_ADJ_MAX        0.10f    /* cap P-altitude adjustment ±10% throttle */
 
 
@@ -590,6 +590,11 @@ int main(void)
 	uint32_t   tick_count = 0;
 	int        armed = 0;
 	uint32_t   ramp_counter = 0;
+	float gyro_bias[3]  = {0.0f, 0.0f, 0.0f};
+    float accel_bias[3] = {0.0f, 0.0f, 0.0f};   /* ax_bias, ay_bias (az handled separately) */
+    float cal_sum_gx = 0, cal_sum_gy = 0, cal_sum_gz = 0;
+    float cal_sum_ax = 0, cal_sum_ay = 0, cal_sum_az = 0;
+    int   cal_count = 0;
 	
 	uint32_t   timing_counter = 0;
 
@@ -611,28 +616,31 @@ int main(void)
 
 		/* ── B: Axis alignment (CW180°) + unit conversion ──── */
 		float gx = (float)ALIGN_GX(sample.gx) * GYRO_RAW_TO_RADS;
-		float gy = (float)ALIGN_GY(sample.gy) * GYRO_RAW_TO_RADS;
-		float gz = (float)ALIGN_GZ(sample.gz) * GYRO_RAW_TO_RADS;
+        float gy = (float)ALIGN_GY(sample.gy) * GYRO_RAW_TO_RADS;
+        float gz = (float)ALIGN_GZ(sample.gz) * GYRO_RAW_TO_RADS;
 
-		float ax = (float)ALIGN_AX(sample.ax) * accel_raw_to_g;
-		float ay = (float)ALIGN_AY(sample.ay) * accel_raw_to_g;
-		float az = (float)ALIGN_AZ(sample.az) * accel_raw_to_g;
+        float ax = (float)ALIGN_AX(sample.ax) * accel_raw_to_g;
+        float ay = (float)ALIGN_AY(sample.ay) * accel_raw_to_g;
+        float az = (float)ALIGN_AZ(sample.az) * accel_raw_to_g;
+
+        /* Apply bias correction (computed during settle phase).
+         * Before arming, biases are all 0 so this is a no-op.
+         * After arming, this removes persistent accel/gyro offsets.
+         *
+         * Gyro: subtract average at rest (should be ~0 rad/s)
+         * Accel: subtract offset from expected gravity vector [0, 0, +1g]
+         *   ax_corrected = ax - ax_avg     (expected 0)
+         *   ay_corrected = ay - ay_avg     (expected 0)
+         *   az_corrected = az - (az_avg - 1.0)  = az - az_avg + 1.0
+         */
+        gx -= gyro_bias[0];
+        gy -= gyro_bias[1];
+        gz -= gyro_bias[2];
+        ax -= accel_bias[0];
+        ay -= accel_bias[1];
+        az -= accel_bias[2];
 
 		uint32_t t2 = dwt_cycle_now();
-
-		/* ── B2: RAW sensor log (100 Hz CSV, enable with RAW_LOG_MODE=1) */
-		#if RAW_LOG_MODE
-		{
-			uart_write_string("RAW,");
-			print_float3(gx); uart_write_char(',');
-			print_float3(gy); uart_write_char(',');
-			print_float3(gz); uart_write_char(',');
-			print_float3(ax); uart_write_char(',');
-			print_float3(ay); uart_write_char(',');
-			print_float3(az);
-			uart_write_string("\r\n");
-		}
-		#endif
 
 		/* ── C: AHRS update (Madgwick, ~5 µs) ──────────────── */
 		ahrs_update(gx, gy, gz, ax, ay, az, LOOP_DT);
@@ -649,14 +657,49 @@ int main(void)
 
 		uint32_t t4 = dwt_cycle_now();
 
-		/* ── D: Settling check ─────────────────────────────── */
-		if (!armed) {
-			if (tick_count >= SETTLE_TICKS) {
-				armed = 1;
-				ramp_counter = 0;
-			}
-			continue;
-		}
+		/* ── D: Settling check + IMU bias calibration ──────────
+         *
+         * During the 2-second settle period:
+         *   - AHRS runs (converges to approximate orientation)
+         *   - We accumulate accel and gyro readings for bias cal
+         *   - Skip the last 50 ticks (first 150 only) to avoid
+         *     counting samples while AHRS is still way off
+         *
+         * At arming:
+         *   - Compute gyro bias as simple average (should be ~0)
+         *   - Compute accel bias: ax,ay average should be 0,
+         *     az average should be +1g. We subtract the offset
+         *     from the expected value.
+         */
+        if (!armed) {
+            /* Accumulate during ticks 50–199 (skip first 0.5s for IMU warmup) */
+            if (tick_count >= 50 && tick_count < SETTLE_TICKS) {
+                cal_sum_gx += gx;
+                cal_sum_gy += gy;
+                cal_sum_gz += gz;
+                cal_sum_ax += ax;
+                cal_sum_ay += ay;
+                cal_sum_az += az;
+                cal_count++;
+            }
+
+            if (tick_count >= SETTLE_TICKS) {
+                /* Compute biases */
+                if (cal_count > 0) {
+                    float inv_n = 1.0f / (float)cal_count;
+                    gyro_bias[0] = cal_sum_gx * inv_n;
+                    gyro_bias[1] = cal_sum_gy * inv_n;
+                    gyro_bias[2] = cal_sum_gz * inv_n;
+                    accel_bias[0] = cal_sum_ax * inv_n;         /* expect 0, subtract offset */
+                    accel_bias[1] = cal_sum_ay * inv_n;         /* expect 0, subtract offset */
+                    accel_bias[2] = cal_sum_az * inv_n - 1.0f;  /* expect +1g, subtract offset from 1g */
+                }
+
+                armed = 1;
+                ramp_counter = 0;
+            }
+            continue;
+        }
 
 		/* ── E: Safety — tilt limit ───────────────────────── */
 		if (my_fabsf(roll_deg) > TILT_LIMIT_DEG ||
@@ -823,6 +866,48 @@ int main(void)
 		for (int i = 0; i < 4; i++) {
 			motor_set(NN_TO_MOTOR[i], motor_cmd[i]);
 		}
+
+		/* ── Full telemetry log (10 Hz) ──────────────────────
+		 * Format: TEL,gx,gy,gz,ax,ay,az,roll,pitch,
+		 *         obs[0..11],nn[0..3],mot[0..3]
+		 * Total: 28 float values, comma-separated
+		 * At 10 Hz, ~230 bytes/line × 10 = ~2.3 kB/s (fits 115200 baud)
+		 */
+		#if RAW_LOG_MODE
+		{
+			static uint32_t tel_div = 0;
+			if (++tel_div >= 20) {   /* 100 Hz / 10 = 10 Hz */
+				tel_div = 0;
+				uart_write_string("TEL,");
+				/* Raw IMU (6) */
+				print_float3(gx); uart_write_char(',');
+				print_float3(gy); uart_write_char(',');
+				print_float3(gz); uart_write_char(',');
+				print_float3(ax); uart_write_char(',');
+				print_float3(ay); uart_write_char(',');
+				print_float3(az); uart_write_char(',');
+				/* AHRS attitude (2) */
+				print_float3(roll_deg);  uart_write_char(',');
+				print_float3(pitch_deg); uart_write_char(',');
+				/* Obs vector (12) */
+				for (int k = 0; k < 12; k++) {
+					print_float3(obs[k]);
+					uart_write_char(',');
+				}
+				/* NN output post-smoothing (4) */
+				print_float3(nn_out[0]); uart_write_char(',');
+				print_float3(nn_out[1]); uart_write_char(',');
+				print_float3(nn_out[2]); uart_write_char(',');
+				print_float3(nn_out[3]); uart_write_char(',');
+				/* Final motor commands (4) */
+				print_float3(motor_cmd[0]); uart_write_char(',');
+				print_float3(motor_cmd[1]); uart_write_char(',');
+				print_float3(motor_cmd[2]); uart_write_char(',');
+				print_float3(motor_cmd[3]);
+				uart_write_string("\r\n");
+			}
+		}
+		#endif
 
 		uint32_t t9 = dwt_cycle_now();  /* after PWM write */
 		// if (++timing_counter >= LOOP_TIMING_INTERVAL) {

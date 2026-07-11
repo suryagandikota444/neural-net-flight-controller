@@ -87,8 +87,20 @@ HVEL_SCALE      = 3.0        # ±3 m/s horizontal velocity maps to ±1
 ANGLE_ERR_SCALE = 45.0       # ±45° attitude error maps to ±1 (STM32: err_deg / 45.0)
 
 # Setpoint limits (used by viewer/controller; training always commands 0)
-MAX_CMD_ANGLE   = 30.0       # degrees – max roll/pitch command
+MAX_CMD_ANGLE   = 45.0       # degrees – max roll/pitch command (final target)
 MAX_YAW_RATE_CMD = 180.0     # deg/s   – max yaw-rate command
+
+# ---------------------------------------------------------------------------
+# Curriculum schedule — all values lerp from START → END as progress goes 0→1
+# ---------------------------------------------------------------------------
+CURRIC_TILT_START      = 5.0     # initial tilt range (deg) at progress=0
+CURRIC_TILT_END        = 35.0    # final tilt range (deg) at progress=1
+CURRIC_CMD_ANGLE_START = 15.0    # max setpoint cmd angle (deg) at progress=0
+CURRIC_CMD_ANGLE_END   = 45.0    # max setpoint cmd angle (deg) at progress=1
+CURRIC_HOVER_FRAC_START = 0.70   # fraction of episodes that are pure hover at start
+CURRIC_HOVER_FRAC_END   = 0.50   # fraction at end (original 50/50 split)
+CURRIC_SMOOTH_PEN_START = 0.15   # r_smooth penalty weight at start (gentler)
+CURRIC_SMOOTH_PEN_END   = 0.30   # r_smooth penalty weight at end (full strength)
 
 # STM32 raw-to-obs scale factors  (ICM-42688-P at ±2000 dps / ±16 g)
 # Use these in the firmware when feeding the NN inference:
@@ -99,7 +111,7 @@ ACCEL_LSB_NORM  = 4096.0     # 2048 LSB/g × 2g normalisation range
 
 # Reward constants  (continuous + shaped)
 CRASH_ALT       = 0.05
-TILT_LIMIT_RAD  = math.radians(45.0)
+TILT_LIMIT_RAD  = math.radians(60.0)
 CRASH_PENALTY   = 50.0
 
 # Sim-to-real noise (added on top of MuJoCo sensor noise)
@@ -238,6 +250,20 @@ class QuadrotorEnv(gym.Env):
         # Set to False in the viewer so the pilot controls setpoints manually.
         self._randomize_setpoints = True
 
+        # Curriculum progress: 0.0 = easy (small tilts, gentle penalties),
+        # 1.0 = full difficulty.  Updated externally via set_curriculum().
+        self._curriculum = 0.0
+
+    # ---- Curriculum API (called by CurriculumCallback) -------------------
+
+    def set_curriculum(self, progress: float) -> None:
+        """Set curriculum progress in [0, 1].  0 = easiest, 1 = hardest."""
+        self._curriculum = float(np.clip(progress, 0.0, 1.0))
+
+    def get_curriculum(self) -> float:
+        """Return current curriculum progress."""
+        return self._curriculum
+
     # ---- Setpoint API (called by viewer / controller) -------------------
 
     def set_setpoint(self,
@@ -282,9 +308,10 @@ class QuadrotorEnv(gym.Env):
         self._model.body_mass[self._drone_body_id] = mass
         self._model.body_ipos[self._drone_body_id] = cog_offset
 
-        # Random initial tilt ±5 deg
-        tilt_x = float(rng.uniform(-5, 5)) * math.pi / 180
-        tilt_y = float(rng.uniform(-5, 5)) * math.pi / 180
+        # Random initial tilt — range grows with curriculum progress
+        _tilt_max = CURRIC_TILT_START + (CURRIC_TILT_END - CURRIC_TILT_START) * self._curriculum
+        tilt_x = float(rng.uniform(-_tilt_max, _tilt_max)) * math.pi / 180
+        tilt_y = float(rng.uniform(-_tilt_max, _tilt_max)) * math.pi / 180
         cr, sr = math.cos(tilt_x / 2), math.sin(tilt_x / 2)
         cp, sp = math.cos(tilt_y / 2), math.sin(tilt_y / 2)
         quat = np.array([
@@ -296,15 +323,17 @@ class QuadrotorEnv(gym.Env):
 
         # --- Setpoint randomisation (training only) -----------------------
         if self._randomize_setpoints:
-            if rng.random() < 0.5:
-                # 50% hover practice — zero setpoints
+            _hover_frac = CURRIC_HOVER_FRAC_START + (CURRIC_HOVER_FRAC_END - CURRIC_HOVER_FRAC_START) * self._curriculum
+            _cmd_angle  = CURRIC_CMD_ANGLE_START  + (CURRIC_CMD_ANGLE_END  - CURRIC_CMD_ANGLE_START)  * self._curriculum
+            if rng.random() < _hover_frac:
+                # Hover practice — zero setpoints
                 self._cmd_roll  = 0.0
                 self._cmd_pitch = 0.0
                 self._cmd_alt   = TARGET_ALT
             else:
-                # 50% random setpoint tracking
-                self._cmd_roll  = math.radians(float(rng.uniform(-MAX_CMD_ANGLE, MAX_CMD_ANGLE)))
-                self._cmd_pitch = math.radians(float(rng.uniform(-MAX_CMD_ANGLE, MAX_CMD_ANGLE)))
+                # Random setpoint tracking (angle range grows with curriculum)
+                self._cmd_roll  = math.radians(float(rng.uniform(-_cmd_angle, _cmd_angle)))
+                self._cmd_pitch = math.radians(float(rng.uniform(-_cmd_angle, _cmd_angle)))
                 self._cmd_alt   = float(rng.uniform(0.6, 1.6))
 
         # Always start at the commanded altitude.
@@ -365,15 +394,16 @@ class QuadrotorEnv(gym.Env):
         # --- Mid-episode setpoint variation (training only) ---------------
         if self._randomize_setpoints and self._step_count % 200 == 0:
             rng = self.np_random
+            _cmd_angle = CURRIC_CMD_ANGLE_START + (CURRIC_CMD_ANGLE_END - CURRIC_CMD_ANGLE_START) * self._curriculum
             r = rng.random()
             if r < 0.35:
                 # Return to hover (zero setpoint) — practice stabilisation
                 self._cmd_roll  = 0.0
                 self._cmd_pitch = 0.0
             elif r < 0.7:
-                # New random attitude command
-                self._cmd_roll  = math.radians(float(rng.uniform(-MAX_CMD_ANGLE, MAX_CMD_ANGLE)))
-                self._cmd_pitch = math.radians(float(rng.uniform(-MAX_CMD_ANGLE, MAX_CMD_ANGLE)))
+                # New random attitude command (range grows with curriculum)
+                self._cmd_roll  = math.radians(float(rng.uniform(-_cmd_angle, _cmd_angle)))
+                self._cmd_pitch = math.radians(float(rng.uniform(-_cmd_angle, _cmd_angle)))
             if rng.random() < 0.25:
                 self._cmd_alt = float(rng.uniform(0.6, 1.6))
 
@@ -491,8 +521,10 @@ class QuadrotorEnv(gym.Env):
 
         # 5. Action smoothness: penalise motor command rate-of-change
         # Use raw action (not smoothed) so the gradient punishes the NN directly
+        # Penalty ramps from gentle (0.15) to full (0.30) with curriculum
+        _smooth_pen = CURRIC_SMOOTH_PEN_START + (CURRIC_SMOOTH_PEN_END - CURRIC_SMOOTH_PEN_START) * self._curriculum
         action_delta = action - self._prev_action
-        r_smooth = -0.30 * float(np.dot(action_delta, action_delta))  # was -0.15
+        r_smooth = -_smooth_pen * float(np.dot(action_delta, action_delta))
 
         # 6. Motor symmetry: light penalty on diagonal bias
         diag_diff = (action[0] + action[3]) - (action[1] + action[2])
