@@ -1,0 +1,23 @@
+{
+  "files": {
+    "main.c": "9f115906d36ea836ef0c80eab7f27b3127c9075b16d8f24d1e686386b0701a4e",
+    "ahrs.c": "b79d74d5d89a5b04e24fad0224b652a1f16123ef7eadc92a5192a4f45885b1e2",
+    "ahrs.h": "55b2e238e22453c500c2a099262c96ecbd949827db60ba1a2c92b7f7b52347cb",
+    "flight_safety.c": "5fb1be465c82a4389eafa2ea035848521bafe35a6cb2eb82d21c5735409c6394",
+    "flight_safety.h": "e56a1468c1667a4c1f6fa6603bcc33364286df892eb3eb6236af210e66326aa3",
+    "Makefile": "515392122555ffa1b20e54e9c8704093235a3c2a706f14d53c1bc55faff6ae91",
+    "fc-nn/drone_env.py": "7d8eaa16d3d64c91c65bebb6d2841847b432c157423bd004b7c51e93b7c47c11",
+    "fc-nn/quadrotor.xml": "ed7101636721f94a6a562559b397ce68d5e6feca898bb140ed68ae8e3f3bf349",
+    "fc-nn/validate.py": "27d62a17444f1213cbe16681021dba4e639f063e806bc61e6b5bc2bdc57254b8",
+    "fc-nn/evaluation.py": "a950eeb711ba9d716363ef2aa5771fd25418c508865f19e34bb2ffa6caafc8fc",
+    "fc-nn/run_experiment.py": "259d34cb724d5b8e378094c1c5021cb92505d17a055b658d1e22f8f55ebd59dd",
+    "fc-nn/generate_golden.py": "086d3a4bfc490afe71e2126d68850097a04e5a444294d36adc30f1ebb42d1d92",
+    "fc-nn/test_sim_regressions.py": "1141eb4d8ee979d333f6db21a78640fa2ac79385ea87ecdad2fbf1951b8e7666",
+    "host_test/test_ahrs_host.c": "68e7970e29a05368c226f2df12559d0e2d253e1b43ae4679b84b1881d2a417c6",
+    "host_test/test_safety_host.c": "4461830d00dbd2cad86744716dc41aa30047b191cb85e804cc50ad09b7eff885",
+    "host_test/test_build_dependencies.py": "603f6e8bbbe5ac0cecdc4bf7a5e40ab1e589a17e07737c24654e23c9cce4c564",
+    "host_test/test_candidate_parity.py": "d2b61597e0e5e6e411ff71954ace1c1645ca8cc90830b9e52b49dfd0ac6d283b"
+  },
+  "selected_candidate_sha256": "4dd6c8c132691d62e5f7805df621a4df4ba4ec51a8b9480401810277a3853000",
+  "root_weights_sha256": "6e4796de3f582fc249e699eb5bee43db43a912c6929d3d86ab850e1b95a94d60"
+}

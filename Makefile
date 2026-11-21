@@ -2,7 +2,7 @@
 #
 # Usage:
 #   make          — build firmware.bin  (normal flight firmware)
-#   make test     — build test.bin      (hardware test harness, NO motors)
+#   make test     — build test.bin      (harness includes powered motor tests)
 #   make flash    — build and flash firmware via DFU (dfu-util)
 #   make flash-test — build and flash test harness via DFU (dfu-util)
 #   make clean    — remove build artifacts
@@ -24,13 +24,15 @@ SIZE    = $(PREFIX)size
 
 # === TARGET ===
 TARGET = firmware
+TEST_TARGET ?= test
+PYTHON ?= fc-nn/.venv/bin/python
+HOST_CC ?= cc
 
 # === SOURCE FILES ===
 # Normal flight firmware — full system
-SRCS = startup.c clock.c spi.c imu.c uart.c main.c memset.c motor.c ahrs.c nn.c i2c.c baro.c
+SRCS = startup.c clock.c spi.c imu.c uart.c main.c memset.c motor.c ahrs.c nn.c i2c.c baro.c flight_safety.c
 
-# Test harness — includes motors for test 10 (wire verification).
-# Still safe: motors only spin in test 10 with explicit warning.
+# Test harness includes powered tests 10 and 14; it is not passive bench firmware.
 SRCS_TEST = startup.c clock.c spi.c imu.c uart.c test_harness.c memset.c ahrs.c nn.c i2c.c baro.c motor.c
 
 # === COMPILER FLAGS ===
@@ -81,8 +83,29 @@ endif
 all: $(TARGET).bin
 
 # Link object files into an ELF (contains debug info, section headers, etc.)
-$(TARGET).elf: $(SRCS)
-	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
+HEADERS = $(wildcard *.h)
+
+# Content signatures also handle same-second edits on macOS's older make.
+# Only changed source/header/linker/command content forces a fresh link.
+FLIGHT_SIGNATURE := $(shell { printf '%s\n' '$(CC) $(CFLAGS) $(LDFLAGS)'; cksum $(SRCS) $(HEADERS) linker.ld Makefile; } | cksum)
+TEST_SIGNATURE := $(shell { printf '%s\n' '$(CC) $(CFLAGS) $(LDFLAGS)'; cksum $(SRCS_TEST) $(HEADERS) linker.ld Makefile; } | cksum)
+ifneq ($(FLIGHT_SIGNATURE),$(shell cat $(TARGET).build-config 2>/dev/null))
+.PHONY: $(TARGET).elf
+endif
+ifneq ($(TEST_SIGNATURE),$(shell cat $(TEST_TARGET).build-config 2>/dev/null))
+.PHONY: $(TEST_TARGET).elf
+endif
+
+$(TARGET).build-config: SIGNATURE = $(FLIGHT_SIGNATURE)
+$(TEST_TARGET).build-config: SIGNATURE = $(TEST_SIGNATURE)
+$(TARGET).build-config $(TEST_TARGET).build-config: FORCE
+	@mkdir -p $(dir $@)
+	@printf '%s\n' '$(SIGNATURE)' > $@.tmp
+	@cmp -s $@.tmp $@ || cp $@.tmp $@
+	@rm -f $@.tmp
+
+$(TARGET).elf: $(SRCS) $(HEADERS) linker.ld Makefile $(TARGET).build-config
+	$(CC) $(CFLAGS) $(LDFLAGS) $(SRCS) -o $@
 
 # Convert ELF to raw binary (just the bytes that go into flash, nothing else)
 # -O binary: output format is raw binary
@@ -93,20 +116,19 @@ $(TARGET).bin: $(TARGET).elf
 	@$(SIZE) $<
 
 # === TEST HARNESS ===
-# Builds test_harness.c instead of main.c, links only the drivers it needs.
-# No motor.c — motors never initialize = safe on bench.
-test: test.bin
+# Builds test_harness.c instead of main.c, including motor.c.
+test: $(TEST_TARGET).bin
 
-test.elf: $(SRCS_TEST)
-	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
+$(TEST_TARGET).elf: $(SRCS_TEST) $(HEADERS) linker.ld Makefile $(TEST_TARGET).build-config
+	$(CC) $(CFLAGS) $(LDFLAGS) $(SRCS_TEST) -o $@
 
-test.bin: test.elf
+$(TEST_TARGET).bin: $(TEST_TARGET).elf
 	$(OBJCOPY) -O binary -S $< $@
-	@echo "Build complete: test.bin (test harness — motors disabled)"
+	@echo "Build complete: $@ (harness includes powered motor tests)"
 	@$(SIZE) $<
 
 # Flash test harness via DFU
-flash-test: test.bin
+flash-test: $(TEST_TARGET).bin
 	dfu-util -a 0 -s 0x08000000:leave -D $<
 
 # === UTILITIES ===
@@ -120,8 +142,25 @@ size: $(TARGET).elf
 flash: $(TARGET).bin
 	dfu-util -a 0 -s 0x08000000:leave -D $<
 
+# === HOST-SIDE TESTS (run on the Mac, no hardware needed) ===
+# Layer 0: compiles the REAL nn.c + weights.h natively and checks it against
+# golden vectors generated from the trained model by test_nn_parity.py.
+host-test: host_test/golden_vectors.h
+	$(HOST_CC) -O1 -Wall -Wno-missing-braces -std=c99 host_test/test_nn_host.c -o host_test/test_nn -lm
+	./host_test/test_nn
+
+host_test/golden_vectors.h: weights.h fc-nn/generate_golden.py fc-nn/test_nn_parity.py fc-nn/fw_common.py FORCE
+	$(PYTHON) fc-nn/generate_golden.py
+
+host-regression:
+	$(HOST_CC) -O1 -Wall -Wextra -std=c99 host_test/test_ahrs_host.c -o host_test/test_ahrs -lm
+	./host_test/test_ahrs
+	$(HOST_CC) -O1 -Wall -Wextra -std=c99 host_test/test_safety_host.c -o host_test/test_safety -lm
+	./host_test/test_safety
+
 # Clean build artifacts
 clean:
-	rm -f $(TARGET).elf $(TARGET).bin test.elf test.bin
+	rm -f $(TARGET).elf $(TARGET).bin $(TARGET).build-config $(TEST_TARGET).elf $(TEST_TARGET).bin $(TEST_TARGET).build-config host_test/test_nn host_test/test_ahrs host_test/test_safety
 
-.PHONY: all clean flash flash-openocd flash-test size test
+.PHONY: all clean flash flash-openocd flash-test size test host-test host-regression FORCE
+FORCE:

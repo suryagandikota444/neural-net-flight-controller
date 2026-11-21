@@ -301,24 +301,14 @@ def run_viewer(model_path=None, record_path=None, max_episodes=0, slow_factor=1.
     smooth_sp = dict(roll_deg=0.0, pitch_deg=0.0, yaw_rate_dps=0.0, alt_m=1.0)
 
     def _clean_reset():
-        """Reset env and remove domain-randomisation artefacts for clean hover."""
-        from drone_env import BASE_MASS, MAX_THRUST, KM_KF_RATIO
-        import mujoco as _mj
-        obs, info = env.reset()
-        # Override randomised wind, thrust, CoG to nominal values
-        env._wind_force[:] = 0.0
-        env._max_thrust[:] = MAX_THRUST
-        env._km_kf[:]      = KM_KF_RATIO
-        env._model.body_mass[env._drone_body_id] = BASE_MASS
-        env._model.body_ipos[env._drone_body_id] = [0, 0, 0]
-        # Re-level the drone (remove random initial tilt)
-        env._data.qpos[3:7] = [1, 0, 0, 0]   # identity quaternion
-        env._data.qvel[:]   = 0.0
-        _mj.mj_forward(env._model, env._data)
-        obs = env._get_obs()
-        # Reset smoothed setpoints
+        """Use the same consistent nominal-physics reset as evaluation."""
         smooth_sp.update(roll_deg=0.0, pitch_deg=0.0, yaw_rate_dps=0.0, alt_m=1.0)
-        return obs, info
+        return env.reset(options={
+            "domain_randomization": False,
+            "randomize_setpoints": False,
+            "initial_rpy_deg": [0.0, 0.0, 0.0],
+            "setpoint": dict(smooth_sp),
+        })
 
     frames = []
     episode  = 0
@@ -351,6 +341,10 @@ def run_viewer(model_path=None, record_path=None, max_episodes=0, slow_factor=1.
 
                 if render_mode == "human":
                     env.render()
+                    if not env._viewer.is_running():
+                        env.close()
+                        active_reader.close()
+                        return
                     # Each policy step = 10 ms sim time; sleep to match real-time
                     time.sleep(0.01 * slow_factor)
                     # Periodic status so you can verify keyboard inputs are working

@@ -1,0 +1,30 @@
+{
+  "passed": true,
+  "checks": {
+    "W1": {
+      "float_count": 384,
+      "matches_policy_header_and_binary": true
+    },
+    "B1": {
+      "float_count": 32,
+      "matches_policy_header_and_binary": true
+    },
+    "W2": {
+      "float_count": 1024,
+      "matches_policy_header_and_binary": true
+    },
+    "B2": {
+      "float_count": 32,
+      "matches_policy_header_and_binary": true
+    },
+    "W3": {
+      "float_count": 128,
+      "matches_policy_header_and_binary": true
+    },
+    "B3": {
+      "float_count": 4,
+      "matches_policy_header_and_binary": true
+    }
+  },
+  "binary_size_bytes": 17088
+}

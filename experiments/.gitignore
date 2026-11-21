@@ -1,0 +1,7 @@
+# Large local experiment evidence remains available on disk.
+*/before/
+*/trajectories/
+*/training_*/
+*.log
+*.npz
+*.zip

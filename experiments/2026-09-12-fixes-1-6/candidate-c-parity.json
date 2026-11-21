@@ -1,0 +1,7 @@
+{
+  "model": "/Users/sg/Documents/Projects/FC/experiments/2026-09-12-fixes-1-6/training_seed43/best_model.zip",
+  "observations": 1017,
+  "max_absolute_error": 2.86102294921875e-06,
+  "tolerance": 1e-05,
+  "passed": true
+}

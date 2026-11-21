@@ -1,0 +1,554 @@
+[
+  {
+    "label": "initial",
+    "additional_timesteps": 0,
+    "score": [
+      0,
+      35,
+      -11.810897946474457
+    ],
+    "elapsed_s": 22.456963499978883,
+    "summary": {
+      "hover30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 0,
+        "completed_mean_altitude_rmse_m": 0.2192534089533115,
+        "completed_mean_attitude_rms_deg": 0.7398209912390643,
+        "completed_mean_max_drift_m": 4.289679667190063,
+        "failure_counts": {
+          "altitude_rmse": 5,
+          "horizontal_envelope": 5,
+          "time_in_altitude_band": 5
+        }
+      },
+      "roll_plus30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 0,
+        "completed_mean_altitude_rmse_m": 0.32673189649880646,
+        "completed_mean_attitude_rms_deg": 8.208154576037192,
+        "completed_mean_max_drift_m": 0.7798449637690081,
+        "failure_counts": {
+          "sustained_recovery": 5
+        }
+      },
+      "roll_minus30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 0,
+        "completed_mean_altitude_rmse_m": 0.3318057169906005,
+        "completed_mean_attitude_rms_deg": 8.149271522291711,
+        "completed_mean_max_drift_m": 0.8251897609253455,
+        "failure_counts": {
+          "sustained_recovery": 5
+        }
+      },
+      "pitch_plus30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 0,
+        "completed_mean_altitude_rmse_m": 0.2864437315756382,
+        "completed_mean_attitude_rms_deg": 7.185130900688252,
+        "completed_mean_max_drift_m": 0.9918930289110724,
+        "failure_counts": {
+          "sustained_recovery": 5
+        }
+      },
+      "pitch_minus30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 0,
+        "completed_mean_altitude_rmse_m": 0.33126635513575275,
+        "completed_mean_attitude_rms_deg": 7.931206604576057,
+        "completed_mean_max_drift_m": 0.5120635709592334,
+        "failure_counts": {
+          "sustained_recovery": 5
+        }
+      },
+      "wind10": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 0,
+        "completed_mean_altitude_rmse_m": 0.21838579327634,
+        "completed_mean_attitude_rms_deg": 2.7345020165921965,
+        "completed_mean_max_drift_m": 1.8525320271377463,
+        "failure_counts": {
+          "altitude_rmse": 5,
+          "time_in_altitude_band": 5
+        }
+      },
+      "randomized_hover30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 0,
+        "completed_mean_altitude_rmse_m": 0.2534450087545942,
+        "completed_mean_attitude_rms_deg": 4.536681199560301,
+        "completed_mean_max_drift_m": 4.3624617479633505,
+        "failure_counts": {
+          "altitude_rmse": 5,
+          "attitude_rms": 3,
+          "horizontal_envelope": 5,
+          "time_in_altitude_band": 5
+        }
+      }
+    }
+  },
+  {
+    "label": "262144",
+    "additional_timesteps": 262144,
+    "score": [
+      3,
+      35,
+      -8.999154732533253
+    ],
+    "elapsed_s": 109.10329779199674,
+    "summary": {
+      "hover30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 0,
+        "completed_mean_altitude_rmse_m": 0.11284528670982827,
+        "completed_mean_attitude_rms_deg": 0.9416225924015247,
+        "completed_mean_max_drift_m": 3.8638281590235244,
+        "failure_counts": {
+          "altitude_rmse": 5,
+          "horizontal_envelope": 5,
+          "time_in_altitude_band": 5
+        }
+      },
+      "roll_plus30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 0,
+        "completed_mean_altitude_rmse_m": 0.26283561225158786,
+        "completed_mean_attitude_rms_deg": 8.115409360450625,
+        "completed_mean_max_drift_m": 0.7326943211376445,
+        "failure_counts": {
+          "sustained_recovery": 5
+        }
+      },
+      "roll_minus30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 0,
+        "completed_mean_altitude_rmse_m": 0.25970687714559604,
+        "completed_mean_attitude_rms_deg": 7.971527402249796,
+        "completed_mean_max_drift_m": 0.7475761451670191,
+        "failure_counts": {
+          "sustained_recovery": 5
+        }
+      },
+      "pitch_plus30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 3,
+        "completed_mean_altitude_rmse_m": 0.21535065601934197,
+        "completed_mean_attitude_rms_deg": 7.183770877845542,
+        "completed_mean_max_drift_m": 0.9386582771386012,
+        "failure_counts": {
+          "sustained_recovery": 2
+        }
+      },
+      "pitch_minus30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 0,
+        "completed_mean_altitude_rmse_m": 0.2599987159349217,
+        "completed_mean_attitude_rms_deg": 7.824673025782298,
+        "completed_mean_max_drift_m": 0.4855767851122502,
+        "failure_counts": {
+          "sustained_recovery": 5
+        }
+      },
+      "wind10": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 0,
+        "completed_mean_altitude_rmse_m": 0.1047276628430089,
+        "completed_mean_attitude_rms_deg": 2.7184008860163598,
+        "completed_mean_max_drift_m": 1.646602687521856,
+        "failure_counts": {
+          "altitude_rmse": 5,
+          "time_in_altitude_band": 5
+        }
+      },
+      "randomized_hover30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 0,
+        "completed_mean_altitude_rmse_m": 0.18782216425720039,
+        "completed_mean_attitude_rms_deg": 4.8989929897703925,
+        "completed_mean_max_drift_m": 3.9484678957156505,
+        "failure_counts": {
+          "altitude_rmse": 5,
+          "attitude_rms": 4,
+          "horizontal_envelope": 5,
+          "time_in_altitude_band": 5
+        }
+      }
+    }
+  },
+  {
+    "label": "507904",
+    "additional_timesteps": 507904,
+    "score": [
+      22,
+      35,
+      -7.776693622191532
+    ],
+    "elapsed_s": 171.75740520798718,
+    "summary": {
+      "hover30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 0,
+        "completed_mean_altitude_rmse_m": 0.07515530319503534,
+        "completed_mean_attitude_rms_deg": 1.5714777851819401,
+        "completed_mean_max_drift_m": 3.723593208542341,
+        "failure_counts": {
+          "altitude_rmse": 5,
+          "attitude_rms": 2,
+          "horizontal_envelope": 5,
+          "time_in_altitude_band": 5
+        }
+      },
+      "roll_plus30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 3,
+        "completed_mean_altitude_rmse_m": 0.22578204026746568,
+        "completed_mean_attitude_rms_deg": 7.938545615320026,
+        "completed_mean_max_drift_m": 0.7209442870915442,
+        "failure_counts": {
+          "sustained_recovery": 2
+        }
+      },
+      "roll_minus30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 4,
+        "completed_mean_altitude_rmse_m": 0.2273092924732531,
+        "completed_mean_attitude_rms_deg": 7.948610478753144,
+        "completed_mean_max_drift_m": 0.6967132434064128,
+        "failure_counts": {
+          "sustained_recovery": 1
+        }
+      },
+      "pitch_plus30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 5,
+        "completed_mean_altitude_rmse_m": 0.18753939629605537,
+        "completed_mean_attitude_rms_deg": 7.123794689451644,
+        "completed_mean_max_drift_m": 0.910615909067522,
+        "failure_counts": {}
+      },
+      "pitch_minus30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 5,
+        "completed_mean_altitude_rmse_m": 0.24570043076405662,
+        "completed_mean_attitude_rms_deg": 7.9873325443711165,
+        "completed_mean_max_drift_m": 0.47820618965026673,
+        "failure_counts": {}
+      },
+      "wind10": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 5,
+        "completed_mean_altitude_rmse_m": 0.05279606445969125,
+        "completed_mean_attitude_rms_deg": 2.73300474979147,
+        "completed_mean_max_drift_m": 1.5285517259761456,
+        "failure_counts": {}
+      },
+      "randomized_hover30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 0,
+        "completed_mean_altitude_rmse_m": 0.1419384188880625,
+        "completed_mean_attitude_rms_deg": 4.6090119465993125,
+        "completed_mean_max_drift_m": 3.7572071370392757,
+        "failure_counts": {
+          "altitude_rmse": 5,
+          "attitude_rms": 4,
+          "horizontal_envelope": 5,
+          "time_in_altitude_band": 5
+        }
+      }
+    }
+  },
+  {
+    "label": "753664",
+    "additional_timesteps": 753664,
+    "score": [
+      24,
+      35,
+      -6.568911731798795
+    ],
+    "elapsed_s": 235.39054087499972,
+    "summary": {
+      "hover30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 0,
+        "completed_mean_altitude_rmse_m": 0.028600267011406666,
+        "completed_mean_attitude_rms_deg": 1.4576301429277705,
+        "completed_mean_max_drift_m": 3.7495742022720364,
+        "failure_counts": {
+          "altitude_rmse": 2,
+          "attitude_rms": 2,
+          "horizontal_envelope": 5,
+          "time_in_altitude_band": 1
+        }
+      },
+      "roll_plus30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 5,
+        "completed_mean_altitude_rmse_m": 0.19670657285052254,
+        "completed_mean_attitude_rms_deg": 7.825489748422051,
+        "completed_mean_max_drift_m": 0.7414152430637746,
+        "failure_counts": {}
+      },
+      "roll_minus30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 4,
+        "completed_mean_altitude_rmse_m": 0.19288343792816193,
+        "completed_mean_attitude_rms_deg": 7.865224207131009,
+        "completed_mean_max_drift_m": 0.7030015455614043,
+        "failure_counts": {
+          "sustained_recovery": 1
+        }
+      },
+      "pitch_plus30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 5,
+        "completed_mean_altitude_rmse_m": 0.16616139851256218,
+        "completed_mean_attitude_rms_deg": 7.254153216173684,
+        "completed_mean_max_drift_m": 0.9412095258653286,
+        "failure_counts": {}
+      },
+      "pitch_minus30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 5,
+        "completed_mean_altitude_rmse_m": 0.20435752535881302,
+        "completed_mean_attitude_rms_deg": 7.626705090164608,
+        "completed_mean_max_drift_m": 0.5417945401080416,
+        "failure_counts": {}
+      },
+      "wind10": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 5,
+        "completed_mean_altitude_rmse_m": 0.014463454256175724,
+        "completed_mean_attitude_rms_deg": 2.754017869746264,
+        "completed_mean_max_drift_m": 1.5327570873500256,
+        "failure_counts": {}
+      },
+      "randomized_hover30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 0,
+        "completed_mean_altitude_rmse_m": 0.11546508325386973,
+        "completed_mean_attitude_rms_deg": 4.731240444259342,
+        "completed_mean_max_drift_m": 3.9085124299750182,
+        "failure_counts": {
+          "altitude_rmse": 4,
+          "attitude_rms": 4,
+          "horizontal_envelope": 5,
+          "time_in_altitude_band": 4
+        }
+      }
+    }
+  },
+  {
+    "label": "1015808",
+    "additional_timesteps": 1015808,
+    "score": [
+      21,
+      35,
+      -6.217743148263159
+    ],
+    "elapsed_s": 299.37976949999575,
+    "summary": {
+      "hover30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 0,
+        "completed_mean_altitude_rmse_m": 0.05696629410803426,
+        "completed_mean_attitude_rms_deg": 2.542374284073005,
+        "completed_mean_max_drift_m": 3.9050572297721606,
+        "failure_counts": {
+          "altitude_rmse": 3,
+          "attitude_rms": 5,
+          "horizontal_envelope": 5,
+          "time_in_altitude_band": 5
+        }
+      },
+      "roll_plus30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 4,
+        "completed_mean_altitude_rmse_m": 0.17268652134387094,
+        "completed_mean_attitude_rms_deg": 7.7767555297842845,
+        "completed_mean_max_drift_m": 0.7661775611170145,
+        "failure_counts": {
+          "sustained_recovery": 1
+        }
+      },
+      "roll_minus30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 4,
+        "completed_mean_altitude_rmse_m": 0.17596850127543825,
+        "completed_mean_attitude_rms_deg": 7.875399058519617,
+        "completed_mean_max_drift_m": 0.7048842842090807,
+        "failure_counts": {
+          "sustained_recovery": 1
+        }
+      },
+      "pitch_plus30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 4,
+        "completed_mean_altitude_rmse_m": 0.14783086590794597,
+        "completed_mean_attitude_rms_deg": 7.292755675530311,
+        "completed_mean_max_drift_m": 0.9330557001243726,
+        "failure_counts": {
+          "sustained_recovery": 1
+        }
+      },
+      "pitch_minus30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 4,
+        "completed_mean_altitude_rmse_m": 0.19038187412698254,
+        "completed_mean_attitude_rms_deg": 7.830051218586843,
+        "completed_mean_max_drift_m": 0.5890663313078952,
+        "failure_counts": {
+          "sustained_recovery": 1
+        }
+      },
+      "wind10": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 5,
+        "completed_mean_altitude_rmse_m": 0.009724151891706915,
+        "completed_mean_attitude_rms_deg": 2.761497346398535,
+        "completed_mean_max_drift_m": 1.5296845851327592,
+        "failure_counts": {}
+      },
+      "randomized_hover30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 0,
+        "completed_mean_altitude_rmse_m": 0.08677397291666199,
+        "completed_mean_attitude_rms_deg": 4.242811695306495,
+        "completed_mean_max_drift_m": 3.9151046434328665,
+        "failure_counts": {
+          "altitude_rmse": 3,
+          "attitude_rms": 4,
+          "horizontal_envelope": 5,
+          "time_in_altitude_band": 4
+        }
+      }
+    }
+  },
+  {
+    "label": "final",
+    "additional_timesteps": 1015808,
+    "score": [
+      21,
+      35,
+      -6.286222656997102
+    ],
+    "elapsed_s": 318.56551929199486,
+    "summary": {
+      "hover30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 0,
+        "completed_mean_altitude_rmse_m": 0.07315367224194566,
+        "completed_mean_attitude_rms_deg": 3.070753405409125,
+        "completed_mean_max_drift_m": 3.929394466982978,
+        "failure_counts": {
+          "altitude_rmse": 5,
+          "attitude_rms": 5,
+          "horizontal_envelope": 5,
+          "time_in_altitude_band": 5
+        }
+      },
+      "roll_plus30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 4,
+        "completed_mean_altitude_rmse_m": 0.17305009078539924,
+        "completed_mean_attitude_rms_deg": 7.797460294164213,
+        "completed_mean_max_drift_m": 0.760577624323509,
+        "failure_counts": {
+          "sustained_recovery": 1
+        }
+      },
+      "roll_minus30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 4,
+        "completed_mean_altitude_rmse_m": 0.17781715689272515,
+        "completed_mean_attitude_rms_deg": 7.911514450696084,
+        "completed_mean_max_drift_m": 0.7032620262080533,
+        "failure_counts": {
+          "sustained_recovery": 1
+        }
+      },
+      "pitch_plus30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 4,
+        "completed_mean_altitude_rmse_m": 0.1435166510257307,
+        "completed_mean_attitude_rms_deg": 7.176289100925286,
+        "completed_mean_max_drift_m": 0.9151596476307887,
+        "failure_counts": {
+          "sustained_recovery": 1
+        }
+      },
+      "pitch_minus30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 4,
+        "completed_mean_altitude_rmse_m": 0.1904723641191392,
+        "completed_mean_attitude_rms_deg": 7.839470542923436,
+        "completed_mean_max_drift_m": 0.5844382291994888,
+        "failure_counts": {
+          "sustained_recovery": 1
+        }
+      },
+      "wind10": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 5,
+        "completed_mean_altitude_rmse_m": 0.008864653903572849,
+        "completed_mean_attitude_rms_deg": 2.770363241072531,
+        "completed_mean_max_drift_m": 1.5235066522008316,
+        "failure_counts": {}
+      },
+      "randomized_hover30": {
+        "episodes": 5,
+        "completed": 5,
+        "passed": 0,
+        "completed_mean_altitude_rmse_m": 0.08508845744481111,
+        "completed_mean_attitude_rms_deg": 3.962297463418968,
+        "completed_mean_max_drift_m": 3.877353552343666,
+        "failure_counts": {
+          "altitude_rmse": 4,
+          "attitude_rms": 4,
+          "horizontal_envelope": 5,
+          "time_in_altitude_band": 4
+        }
+      }
+    }
+  }
+]

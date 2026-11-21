@@ -1,0 +1,20 @@
+{
+  "seed": 42,
+  "requested_timesteps": 1000000,
+  "n_envs": 4,
+  "fixed_curriculum": 0.0,
+  "task": "original training task at fixed easy curriculum",
+  "warm_start": "/Users/sg/Documents/Projects/FC/fc-nn/runs/quad_hover/best_model.zip",
+  "model_sha256": "3269a9caaeb22a6ed0e6d5e1d43cb17e4979f52a57e0a51492e793326d1d0d0c",
+  "commit": "675cbaccc29ae7e4f96803bba0755da088a14892",
+  "source_hashes": {
+    "drone_env.py": "0ab5d02daf7bbf58d71177ab758e65d2b403b86406c186b11e94dfe74ee243ef",
+    "quadrotor.xml": "ed7101636721f94a6a562559b397ce68d5e6feca898bb140ed68ae8e3f3bf349",
+    "evaluation.py": "a950eeb711ba9d716363ef2aa5771fd25418c508865f19e34bb2ffa6caafc8fc",
+    "train.py": "180e8fa66da0d9224ce01987a538602e13063cff3b43806e6d8da2248a9088cf",
+    "run_experiment.py": "085a69280b96efddd9e1aeb340501a1331d9ef83168191d1052c4d13fe76b243"
+  },
+  "actual_additional_timesteps": 1015808,
+  "elapsed_s": 299.3316174170177,
+  "status": "completed"
+}

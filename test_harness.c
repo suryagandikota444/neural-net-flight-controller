@@ -3181,6 +3181,205 @@ static void test13_baro_throttle_noise(imu_type_t imu, int baro_ok)
 
 
 /* ============================================================
+ * TEST 14: Throttle Staircase — REAL hover point + vibration
+ * ============================================================
+ *
+ * THE most important unknown: at what PWM does this aircraft
+ * actually hover? The sim assumes a LINEAR thrust map where
+ * hover = 0.3226 → 1323 µs. Real ESC+prop combos are nonlinear;
+ * if the true hover point is above ~1420 µs (base + P-loop cap),
+ * the firmware can NEVER sustain altitude — no NN can fix that.
+ *
+ * ── SETUP (required) ───────────────────────────────────────
+ *   1. PROPS ON (this measures real thrust).
+ *   2. STRAP the drone to a kitchen scale with tape/zip ties,
+ *      or strap it to a heavy bench plate. It must NOT be able
+ *      to lift off or tip. Cable-tie through the frame arms.
+ *   3. Note the scale reading at idle (= drone+strap weight).
+ *   4. At each throttle step, write down the scale reading.
+ *      thrust(g) = idle_reading - current_reading
+ *      HOVER PWM = the step where thrust ≈ takeoff weight.
+ *
+ * While stepping, the test ALSO measures what the flight code
+ * will experience at each power level:
+ *   - accel/gyro noise std (vibration vs the 0.22 g / 0.09 rad/s
+ *     the NN was trained with)
+ *   - AHRS roll/pitch drift (does Madgwick survive vibration?)
+ * ============================================================ */
+#define T14_STEP_START_US   1100
+#define T14_STEP_END_US     1700
+#define T14_STEP_SIZE_US      50
+#define T14_STEP_TICKS       300   /* 3 s per step at 100 Hz */
+#define T14_ABORT_TILT_DEG    40.0f
+
+static void test14_throttle_staircase(imu_type_t imu)
+{
+    print_banner("TEST 14: Throttle Staircase (REAL hover point)");
+    uart_write_string("** PROPS ON — DRONE MUST BE STRAPPED DOWN / ON A SCALE **\r\n");
+    uart_write_string("** IT WILL PULL HARD AT THE TOP STEPS. SECURE IT. **\r\n\r\n");
+    uart_write_string("Procedure: note scale reading at idle, then at each step.\r\n");
+    uart_write_string("  thrust(g) = idle_reading - reading\r\n");
+    uart_write_string("  hover PWM = step where thrust = takeoff weight\r\n\r\n");
+    uart_write_string("Starting in 15 seconds (power off NOW to skip)...\r\n");
+    for (int i = 15; i > 0; i--) {
+        uart_write_uint32((uint32_t)i);
+        uart_write_string("... ");
+        led_on();  delay_ms(500);
+        led_off(); delay_ms(500);
+    }
+    uart_write_string("\r\n");
+
+    motor_init();
+    delay_ms(3000);   /* ESC arming */
+
+    /* AHRS reference at idle */
+    ahrs_init();
+    systick_init_100hz();
+    for (int i = 0; i < 200; i++) {
+        while (!(SYST_CSR & SYST_CSR_COUNTFLAG)) {}
+        imu_raw_t s;
+        imu_read_raw(imu, &s);
+        ahrs_update(
+            (float)ALIGN_GX(s.gx) * GYRO_RAW_TO_RADS,
+            (float)ALIGN_GY(s.gy) * GYRO_RAW_TO_RADS,
+            (float)ALIGN_GZ(s.gz) * GYRO_RAW_TO_RADS,
+            (float)ALIGN_AX(s.ax) * accel_raw_to_g,
+            (float)ALIGN_AY(s.ay) * accel_raw_to_g,
+            (float)ALIGN_AZ(s.az) * accel_raw_to_g,
+            0.01f);
+    }
+    float roll_ref  = ahrs_get_roll();
+    float pitch_ref = ahrs_get_pitch();
+
+    uart_write_string("\r\n  PWM(us) | az_mean | az_std | gyr_std | AHRS drift(deg)\r\n");
+    uart_write_string("  --------+---------+--------+---------+----------------\r\n");
+
+    float worst_drift  = 0.0f;
+    float az_std_hover = 0.0f;    /* az_std at the sim's assumed hover PWM */
+    int   aborted      = 0;
+
+    for (uint32_t pwm = T14_STEP_START_US;
+         pwm <= T14_STEP_END_US && !aborted;
+         pwm += T14_STEP_SIZE_US)
+    {
+        float cmd = (float)(pwm - 1000U) / 1000.0f;
+        for (int m = 0; m < 4; m++) motor_set(m, cmd);
+
+        /* 0.5 s settle so ESC/rpm reaches steady state */
+        for (int i = 0; i < 50; i++) {
+            while (!(SYST_CSR & SYST_CSR_COUNTFLAG)) {}
+            imu_raw_t s;
+            imu_read_raw(imu, &s);
+            ahrs_update(
+                (float)ALIGN_GX(s.gx) * GYRO_RAW_TO_RADS,
+                (float)ALIGN_GY(s.gy) * GYRO_RAW_TO_RADS,
+                (float)ALIGN_GZ(s.gz) * GYRO_RAW_TO_RADS,
+                (float)ALIGN_AX(s.ax) * accel_raw_to_g,
+                (float)ALIGN_AY(s.ay) * accel_raw_to_g,
+                (float)ALIGN_AZ(s.az) * accel_raw_to_g,
+                0.01f);
+        }
+
+        /* Sample this step */
+        float sum_az = 0, sum_az2 = 0;
+        float sum_g = 0, sum_g2 = 0;   /* pooled gyro x/y/z */
+        int   n = 0, ng = 0;
+
+        for (int i = 0; i < T14_STEP_TICKS; i++) {
+            while (!(SYST_CSR & SYST_CSR_COUNTFLAG)) {}
+            imu_raw_t s;
+            imu_read_raw(imu, &s);
+            float gx = (float)ALIGN_GX(s.gx) * GYRO_RAW_TO_RADS;
+            float gy = (float)ALIGN_GY(s.gy) * GYRO_RAW_TO_RADS;
+            float gz = (float)ALIGN_GZ(s.gz) * GYRO_RAW_TO_RADS;
+            float ax = (float)ALIGN_AX(s.ax) * accel_raw_to_g;
+            float ay = (float)ALIGN_AY(s.ay) * accel_raw_to_g;
+            float az = (float)ALIGN_AZ(s.az) * accel_raw_to_g;
+            ahrs_update(gx, gy, gz, ax, ay, az, 0.01f);
+
+            sum_az += az;  sum_az2 += az * az;  n++;
+            sum_g += gx + gy + gz;
+            sum_g2 += gx * gx + gy * gy + gz * gz;  ng += 3;
+
+            /* Safety: strapped drone should not tilt. If it does,
+             * the strap failed — kill everything immediately. */
+            float r = ahrs_get_roll()  - roll_ref;
+            float p = ahrs_get_pitch() - pitch_ref;
+            if (FABSF(r) > T14_ABORT_TILT_DEG ||
+                FABSF(p) > T14_ABORT_TILT_DEG) {
+                motor_all_stop();
+                uart_write_string("\r\n  !! TILT DETECTED — ABORTED. "
+                                  "Strap the drone properly. !!\r\n");
+                aborted = 1;
+                break;
+            }
+        }
+        if (aborted) break;
+
+        float az_mean = sum_az / (float)n;
+        float az_var  = sum_az2 / (float)n - az_mean * az_mean;
+        float g_mean  = sum_g / (float)ng;
+        float g_var   = sum_g2 / (float)ng - g_mean * g_mean;
+        float az_std, g_std;
+        __asm__ volatile ("vsqrt.f32 %0, %1" : "=t"(az_std) : "t"(az_var));
+        __asm__ volatile ("vsqrt.f32 %0, %1" : "=t"(g_std)  : "t"(g_var));
+
+        float drift_r = ahrs_get_roll()  - roll_ref;
+        float drift_p = ahrs_get_pitch() - pitch_ref;
+        float drift = FABSF(drift_r) > FABSF(drift_p)
+                        ? FABSF(drift_r) : FABSF(drift_p);
+        if (drift > worst_drift) worst_drift = drift;
+        if (pwm == 1300 || pwm == 1350) {
+            if (az_std > az_std_hover) az_std_hover = az_std;
+        }
+
+        uart_write_string("    ");
+        uart_write_uint32(pwm);
+        uart_write_string("  | ");
+        print_float3(az_mean);
+        uart_write_string(" | ");
+        print_float3(az_std);
+        uart_write_string(" | ");
+        print_float3(g_std);
+        uart_write_string("  | ");
+        print_float3(drift);
+        uart_write_string("   << WRITE DOWN SCALE READING\r\n");
+    }
+
+    motor_all_stop();
+
+    uart_write_string("\r\n---- THROTTLE STAIRCASE RESULTS ----\r\n\r\n");
+    uart_write_string("  1. HOVER POINT: find the PWM where your scale showed\r\n");
+    uart_write_string("     thrust = takeoff weight. Firmware budget:\r\n");
+    uart_write_string("       base (NN_HOVER_THROTTLE)  = 1323 us\r\n");
+    uart_write_string("       + P-alt loop cap (+0.10)  = 1423 us MAX SUSTAINED\r\n");
+    uart_write_string("     hover PWM <= 1370 us  → healthy margin      PASS\r\n");
+    uart_write_string("     hover PWM 1370-1423   → marginal, will sag  WARN\r\n");
+    uart_write_string("     hover PWM  > 1423 us  → CANNOT HOVER. Set\r\n");
+    uart_write_string("       NN_HOVER_THROTTLE = (hover_us - 1000)/1000 in\r\n");
+    uart_write_string("       weights.h AND retrain/re-verify.           FAIL\r\n\r\n");
+
+    uart_write_string("  2. VIBRATION at hover power: az_std = ");
+    print_float3(az_std_hover);
+    uart_write_string(" g\r\n");
+    if (az_std_hover < 0.25f)
+        print_pass("within NN training noise (0.22 g)");
+    else if (az_std_hover < 0.5f)
+        print_fail("2x above training noise — accel LPF + soft-mount needed");
+    else
+        print_fail(">2x training noise — NN inputs OUT OF DISTRIBUTION in flight");
+
+    uart_write_string("\r\n  3. AHRS integrity: worst attitude drift = ");
+    print_float3(worst_drift);
+    uart_write_string(" deg (drone physically still)\r\n");
+    if (worst_drift < 3.0f)
+        print_pass("Madgwick survives vibration");
+    else
+        print_fail("attitude estimate corrupted by vibration — obs[6..7] are lies in flight");
+}
+
+
+/* ============================================================
  * MAIN
  * ============================================================ */
 int main(void)
@@ -3310,6 +3509,12 @@ int main(void)
 
     /* TEST 13: Baro throttle noise characterization — 8 sec, board flat */
     test13_baro_throttle_noise(imu, baro_ok);
+
+    /* TEST 14: Throttle staircase — PROPS ON, DRONE STRAPPED DOWN.
+     * Measures the REAL hover PWM (vs the 1323 us the sim assumes) and
+     * vibration / AHRS integrity at flight power. Runs last: 15 s
+     * countdown gives you time to power off if the rig isn't ready. */
+    test14_throttle_staircase(imu);
 
     /* ── Done ── */
     print_banner("ALL TESTS COMPLETE");

@@ -50,6 +50,10 @@ void ahrs_update(float gx, float gy, float gz,
                  float ax, float ay, float az,
                  float dt);
 
+/* Whether the last update was numerically valid. Invalid input is rejected;
+ * the last valid orientation is retained. Zero accel permits gyro-only update. */
+int ahrs_is_valid(void);
+
 /* Get current roll angle in degrees.
  * Positive = right wing down. Range: -180 to +180. */
 float ahrs_get_roll(void);

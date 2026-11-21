@@ -1,0 +1,1502 @@
+
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+#   Motors OFF — safe for bench use     #
+########################################
+
+IMU WHO_AM_I = 0x0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x0x11)
+
+========================================
+TEST 1: SPI Register Readback
+========================================
+Verifying IMU accepted configuration writes.
+Any MISMATCH means SPI bus or init is broken.
+
+Chip: ICM-42688-P
+
+  GYRO_CONFIG0  (0x0x4F) = 0x0x06  expected 0x0x06  OK
+  ACCEL_CONFIG0 (0x0x50) = 0x0x06  expected 0x0x06  OK
+  PWR_MGMT0     (0x0x4E) = 0x0x0F  expected 0x0x0F  OK
+  GYRO_ACCEL_CF (0x0x52) = 0x0x06  expected 0x0x06  OK
+
+  Result: 4/4 registers match.
+  [PASS] All config registers verified
+
+========================================
+TEST 2: Static IMU Characterization
+========================================
+Board must be FLAT and STILL for 5 seconds.
+Starting in 3 seconds...
+Sampling...
+
+  [0] ax=-0.016 ay=-0.026 az=+1.000 | gx=-0.001 gy=-0.005 gz=+0.000 | raw_az=+2048
+  [50] ax=-0.037 ay=-0.012 az=+1.009 | gx=-0.003 gy=-0.006 gz=+0.001 | raw_az=+2067
+  [100] ax=-0.040 ay=-0.004 az=+1.012 | gx=-0.002 gy=-0.005 gz=+0.001 | raw_az=+2072
+  [150] ax=-0.022 ay=-0.019 az=+1.004 | gx=-0.001 gy=-0.004 gz=+0.000 | raw_az=+2056
+  [200] ax=-0.018 ay=-0.026 az=+0.999 | gx=-0.002 gy=-0.005 gz=+0.000 | raw_az=+2045
+  [250] ax=-0.035 ay=-0.014 az=+1.006 | gx=-0.003 gy=-0.006 gz=+0.001 | raw_az=+2060
+  [300] ax=-0.036 ay=-0.006 az=+1.010 | gx=-0.002 gy=-0.005 gz=+0.000 | raw_az=+2068
+  [350] ax=-0.019 ay=-0.022 az=+1.002 | gx=-0.001 gy=-0.004 gz=+0.000 | raw_az=+2053
+  [400] ax=-0.021 ay=-0.024 az=+1.001 | gx=-0.002 gy=-0.005 gz=+0.000 | raw_az=+2051
+  [450] ax=-0.042 ay=-0.005 az=+1.010 | gx=-0.003 gy=-0.006 gz=+0.001 | raw_az=+2069
+
+---- STATIC RESULTS (500 samples, 5 sec) ----
+
+  Accel averages (g):
+    ax_avg = -0.028   (expect ~0.00)
+    ay_avg = -0.015   (expect ~0.00)
+    az_avg = +1.006   (expect ~+1.00)
+    az_min = +0.997   az_max = +1.017
+    raw_az_avg = +2059   (ICM42688: expect ~+2048, MPU6000: expect ~+4096)
+
+  Gyro averages (rad/s):
+    gx_avg = -0.002   (expect ~0.00)
+    gy_avg = -0.005   (expect ~0.00)
+    gz_avg = +0.000   (expect ~0.00)
+
+---- DIAGNOSTICS ----
+
+  [PASS] az ≈ +1.0g — gravity direction correct
+  [PASS] ax ≈ 0 — X-axis not seeing gravity
+  [PASS] ay ≈ 0 — Y-axis not seeing gravity
+  [PASS] Gyros ≈ 0 — no unexpected rotation bias
+  [PASS] az noise spread < 0.10g — clean signal
+
+========================================
+TEST 3: Dynamic Axis Alignment
+========================================
+This test verifies that physical tilts produce
+the correct signs in both raw accel and AHRS.
+
+You will tilt the board 3 ways, ~30 deg each.
+Follow the prompts.
+
+Step 0: Place board FLAT. AHRS settling (2 sec)...
+  AHRS settled. Roll=-0.911 Pitch=+1.604
+  (Should be near 0,0 if board is flat)
+
+----------------------------------------
+TILT 1: NOSE DOWN (~30 degrees)
+  Lift the REAR of the board so the nose dips.
+  Expected: ax > 0, AHRS pitch < 0
+----------------------------------------
+
+  >> Tilt NOSE DOWN now and hold steady <<
+  (Hold for ~4 seconds)
+
+  Preparing in 3...2...1...SAMPLING
+
+  ax=+0.115 ay=-0.017 az=+0.987 | R=-0.901 P=+1.221 Y=+0.051
+  ax=+0.205 ay=+0.004 az=+0.969 | R=-0.790 P=-5.141 Y=+0.308
+  ax=+0.296 ay=-0.009 az=+0.930 | R=-0.789 P=-10.087 Y=+0.624
+  ax=+0.301 ay=-0.001 az=+0.948 | R=-0.673 P=-12.716 Y=+0.721
+  ax=+0.295 ay=-0.002 az=+0.969 | R=-0.626 P=-13.892 Y=+0.720
+  ax=+0.293 ay=-0.006 az=+0.964 | R=-0.575 P=-14.940 Y=+0.712
+  ax=+0.299 ay=-0.007 az=+0.958 | R=-0.465 P=-16.127 Y=+0.684
+  ax=+0.289 ay=-0.008 az=+0.971 | R=-0.419 P=-16.631 Y=+0.658
+  ax=+0.295 ay=-0.003 az=+0.958 | R=-0.359 P=-17.201 Y=+0.663
+  ax=+0.294 ay=-0.006 az=+0.957 | R=-0.356 P=-17.089 Y=+0.675
+  ax=+0.291 ay=-0.003 az=+0.961 | R=-0.423 P=-16.768 Y=+0.678
+  ax=+0.291 ay=-0.005 az=+0.963 | R=-0.350 P=-16.774 Y=+0.660
+  ax=+0.292 ay=-0.003 az=+0.958 | R=-0.356 P=-16.992 Y=+0.662
+  ax=+0.290 ay=-0.006 az=+0.958 | R=-0.364 P=-16.851 Y=+0.657
+  ax=+0.288 ay=-0.003 az=+0.965 | R=-0.372 P=-16.850 Y=+0.665
+  ax=+0.292 ay=-0.009 az=+0.959 | R=-0.393 P=-17.081 Y=+0.665
+  ax=+0.296 ay=-0.004 az=+0.960 | R=-0.312 P=-16.996 Y=+0.640
+  ax=+0.298 ay=-0.011 az=+0.955 | R=-0.464 P=-17.225 Y=+0.679
+  ax=+0.298 ay=-0.007 az=+0.958 | R=-0.374 P=-17.059 Y=+0.652
+  ax=+0.296 ay=-0.006 az=+0.960 | R=-0.383 P=-17.130 Y=+0.647
+
+  ---- NOSE-DOWN AVERAGES ----
+    ax=+0.285  ay=-0.006  az=+0.962
+    gx=-0.002  gy=-0.052  gz=+0.003
+    AHRS roll=-0.473  pitch=-15.074  yaw=+0.637
+
+  Return to FLAT for 3 seconds...
+----------------------------------------
+TILT 2: RIGHT SIDE DOWN (~30 degrees)
+  Lift the LEFT side so the RIGHT side dips.
+  Expected: AHRS roll > 0 (right-wing-down = positive)
+  Watch the sign of ay — document what you see.
+----------------------------------------
+
+  >> Tilt RIGHT SIDE DOWN now and hold steady <<
+  (Hold for ~4 seconds)
+
+  Preparing in 3...2...1...SAMPLING
+
+  ax=-0.024 ay=+0.279 az=+1.009 | R=-0.419 P=-16.918 Y=+0.663
+  ax=-0.021 ay=+0.354 az=+0.933 | R=+3.142 P=-16.061 Y=+0.211
+  ax=-0.026 ay=+0.380 az=+0.935 | R=+5.198 P=-15.315 Y=-0.047
+  ax=-0.023 ay=+0.373 az=+0.941 | R=+6.156 P=-14.598 Y=-0.267
+  ax=-0.017 ay=+0.377 az=+0.934 | R=+7.259 P=-13.863 Y=-0.465
+  ax=-0.019 ay=+0.371 az=+0.932 | R=+8.105 P=-13.128 Y=-0.661
+  ax=-0.017 ay=+0.370 az=+0.933 | R=+8.800 P=-12.395 Y=-0.860
+  ax=-0.019 ay=+0.373 az=+0.932 | R=+9.506 P=-11.657 Y=-1.052
+  ax=-0.019 ay=+0.373 az=+0.932 | R=+10.210 P=-10.900 Y=-1.229
+  ax=-0.017 ay=+0.368 az=+0.940 | R=+10.933 P=-10.164 Y=-1.388
+  ax=-0.025 ay=+0.375 az=+0.934 | R=+11.800 P=-9.400 Y=-1.551
+  ax=-0.024 ay=+0.375 az=+0.936 | R=+12.700 P=-8.639 Y=-1.698
+  ax=-0.020 ay=+0.374 az=+0.941 | R=+13.398 P=-7.883 Y=-1.830
+  ax=-0.019 ay=+0.381 az=+0.928 | R=+14.278 P=-7.100 Y=-1.966
+  ax=-0.027 ay=+0.388 az=+0.923 | R=+15.023 P=-6.325 Y=-2.064
+  ax=-0.021 ay=+0.374 az=+0.944 | R=+15.566 P=-5.564 Y=-2.176
+  ax=-0.025 ay=+0.376 az=+0.933 | R=+16.339 P=-4.794 Y=-2.256
+  ax=-0.022 ay=+0.375 az=+0.933 | R=+16.950 P=-4.000 Y=-2.341
+  ax=-0.016 ay=+0.366 az=+0.942 | R=+17.672 P=-3.224 Y=-2.397
+  ax=-0.013 ay=+0.368 az=+0.934 | R=+18.456 P=-2.438 Y=-2.448
+
+  ---- RIGHT-DOWN AVERAGES ----
+    ax=-0.021  ay=+0.371  az=+0.936
+    gx=+0.015  gy=-0.005  gz=-0.001
+    AHRS roll=+11.528  pitch=-9.354  yaw=-1.368
+
+  Return to FLAT for 3 seconds...
+----------------------------------------
+TILT 3: ROTATE CW (viewed from above)
+  Keep board flat, rotate clockwise slowly.
+  Expected: gz < 0 (CW about +Z = negative)
+  AHRS yaw should decrease.
+----------------------------------------
+
+  >> Rotate CLOCKWISE now (keep flat) <<
+  (Hold for ~4 seconds)
+
+  Preparing in 3...2...1...SAMPLING
+
+  ax=-0.025 ay=-0.011 az=+1.007 | R=+19.100 P=-1.660 Y=-2.496
+  ax=-0.023 ay=-0.017 az=+1.008 | R=+18.005 P=-1.539 Y=-2.459
+  ax=-0.030 ay=-0.008 az=+1.007 | R=+16.916 P=-1.413 Y=-2.449
+  ax=-0.025 ay=-0.002 az=+0.993 | R=+15.813 P=-1.141 Y=-3.020
+  ax=-0.066 ay=+0.000 az=+0.987 | R=+14.643 P=-0.832 Y=-4.310
+  ax=-0.045 ay=-0.044 az=+0.975 | R=+13.750 P=+0.159 Y=-7.993
+  ax=-0.001 ay=-0.062 az=+0.969 | R=+12.186 P=+1.138 Y=-11.163
+  ax=-0.049 ay=+0.129 az=+1.054 | R=+10.748 P=+1.816 Y=-14.801
+  ax=-0.017 ay=-0.010 az=+0.972 | R=+9.619 P=+2.292 Y=-18.069
+  ax=-0.021 ay=-0.116 az=+0.994 | R=+8.445 P=+2.945 Y=-22.724
+  ax=+0.086 ay=-0.065 az=+0.875 | R=+6.930 P=+3.316 Y=-29.813
+  ax=+0.038 ay=-0.017 az=+0.981 | R=+5.647 P=+3.131 Y=-36.297
+  ax=-0.020 ay=-0.100 az=+1.027 | R=+4.497 P=+3.059 Y=-42.643
+  ax=-0.015 ay=-0.051 az=+0.951 | R=+3.527 P=+2.792 Y=-48.286
+  ax=-0.032 ay=-0.124 az=+1.004 | R=+2.202 P=+2.224 Y=-53.663
+  ax=+0.023 ay=-0.036 az=+0.959 | R=+1.203 P=+1.944 Y=-63.524
+  ax=-0.021 ay=-0.036 az=+1.058 | R=+0.628 P=+1.415 Y=-68.073
+  ax=+0.021 ay=-0.086 az=+0.913 | R=-0.100 P=+1.300 Y=-73.077
+  ax=+0.061 ay=-0.063 az=+0.871 | R=-0.381 P=+0.702 Y=-80.928
+  ax=-0.025 ay=-0.045 az=+0.903 | R=-0.328 P=+0.629 Y=-86.585
+
+  ---- YAW-CW AVERAGES ----
+    ax=-0.018  ay=-0.020  az=+1.007
+    gx=-0.011  gy=-0.018  gz=-0.391
+    AHRS roll=+7.651  pitch=+1.148  yaw=-35.672
+
+========================================
+TEST 3 COMPLETE — Review above
+========================================
+Compare the sign of each measurement against expected.
+Any sign flip = axis alignment bug in ALIGN_xx macros.
+
+Quick reference (MuJoCo NWU convention):
+  Nose down:     ax>0, pitch<0
+  Right down:    roll>0
+  CW rotation:   gz<0, yaw decreasing
+
+========================================
+TEST 4: AHRS Convergence
+========================================
+Tests that the Madgwick filter converges to correct
+angles and returns to zero after tilting.
+
+Phase A: Place board FLAT and STILL.
+  Resetting AHRS and settling for 3 seconds...
+    R=+2.163 P=+0.825
+    R=+1.818 P=+0.494
+  Final flat: R=+0.526 P=+1.160
+  [PASS] Phase A: AHRS settled near 0,0 when flat
+
+Phase B: Tilt RIGHT SIDE DOWN ~30 degrees.
+  Preparing in 3...2...1...HOLD TILT NOW
+
+  [0] R=+0.502 P=+1.170
+  [20] R=+1.461 P=+1.053
+  [40] R=+6.786 P=+1.180
+  [60] R=+13.066 P=+1.325
+  [80] R=+16.782 P=+1.480
+  [100] R=+15.688 P=+1.317
+  [120] R=+17.356 P=+1.541
+  [140] R=+17.094 P=+1.436
+  [160] R=+16.936 P=+1.425
+  [180] R=+17.464 P=+1.519
+  [200] R=+16.917 P=+1.517
+  [220] R=+17.037 P=+1.483
+  [240] R=+17.072 P=+1.542
+  [260] R=+17.360 P=+1.569
+  [280] R=+17.230 P=+1.571
+  [300] R=+17.150 P=+1.509
+  [320] R=+17.099 P=+1.549
+  [340] R=+17.365 P=+1.434
+  [360] R=+17.280 P=+1.464
+  [380] R=+17.171 P=+1.461
+  [400] R=+17.121 P=+1.470
+  [420] R=+17.148 P=+1.584
+  [440] R=+17.105 P=+1.488
+  [460] R=+16.862 P=+1.477
+  [480] R=+17.058 P=+1.540
+  Final tilted: R=+17.211
+  [PASS] Phase B: Roll > +15 deg — converged in correct direction
+
+Phase C: Return board to FLAT.
+  Preparing in 3...2...1...HOLD FLAT NOW
+
+  [0] R=+17.157 P=+1.491
+  [20] R=+16.054 P=+1.442
+  [40] R=+14.943 P=+1.394
+  [60] R=+13.828 P=+1.349
+  [80] R=+12.709 P=+1.312
+  [100] R=+11.583 P=+1.283
+  [120] R=+10.449 P=+1.256
+  [140] R=+9.310 P=+1.231
+  [160] R=+8.167 P=+1.209
+  [180] R=+7.017 P=+1.207
+  [200] R=+5.860 P=+1.209
+  [220] R=+4.699 P=+1.227
+  [240] R=+3.532 P=+1.255
+  [260] R=+2.362 P=+1.286
+  [280] R=+1.189 P=+1.325
+  [300] R=+0.034 P=+1.447
+  [320] R=-0.607 P=+1.538
+  [340] R=-0.734 P=+1.665
+  [360] R=-0.684 P=+1.650
+  [380] R=-0.642 P=+1.536
+  Final return-flat: R=-0.636
+  [PASS] Phase C: Roll returned near 0 — no accumulated drift
+
+========================================
+TEST 5: Observation Vector Ground Truth
+========================================
+Builds the exact obs[12] fed to the NN and verifies
+each element matches the sim's 'flat on table' values.
+
+Board must be FLAT and STILL.
+  Resetting AHRS, settling 3 sec...
+  Setting baro ground reference...
+  Sampling obs vector for 2 seconds...
+
+  obs[0]  gyro_x   = -0.000   expect +0.000  tol ±+0.010  OK
+  obs[1]  gyro_y   = -0.000   expect +0.000  tol ±+0.010  OK
+  obs[2]  gyro_z   = +0.000   expect +0.000  tol ±+0.010  OK
+  obs[3]  accel_x  = -0.014   expect +0.000  tol ±+0.050  OK
+  obs[4]  accel_y  = -0.006   expect +0.000  tol ±+0.050  OK
+  obs[5]  accel_z  = +0.502   expect +0.500  tol ±+0.080  OK
+  obs[6]  roll_err = -0.017   expect +0.000  tol ±+0.040  OK
+  obs[7]  pitch_er = +0.034   expect +0.000  tol ±+0.040  OK
+  obs[8]  alt_err  = -0.050   expect +0.000  tol ±+0.050  ** FAIL **
+  obs[9]  vvel     = +0.001   expect +0.000  tol ±+0.020  OK
+  obs[10] hvel_x   = +0.000   expect +0.000  tol ±+0.001  OK
+  obs[11] hvel_y   = +0.000   expect +0.000  tol ±+0.001  OK
+
+  Result: 11/12 elements within tolerance.
+  [FAIL] Obs vector mismatch — NN is seeing a world it wasn't trained on
+
+  Note: Baro present. obs[8] = (alt - 0.3m) / 2.0,
+  clamped to ±0.05. On table: alt≈0, so obs[8]≈-0.05 (clamped).
+  This is expected — the P-altitude controller handles the rest.
+
+========================================
+TEST 6: NN Inference Validation
+========================================
+Feeds known obs vectors to nn_forward() and compares
+output against Python reference values.
+
+Vector A: flat on table
+  obs = [0,0,0, 0,0,+0.5, 0,0,0,0,0,0]
+
+  out[0] FL(CCW) = +0.197  expect +0.088  err=+0.109  ** FAIL **
+  out[1] FR(CW)  = -0.214  expect -0.053  err=+0.162  ** FAIL **
+  out[2] RR(CCW) = +0.135  expect +0.033  err=+0.103  ** FAIL **
+  out[3] RL(CW)  = +0.705  expect +0.264  err=+0.442  ** FAIL **
+
+  Motor commands (hover_thr=+0.323, act_scale=+0.400):
+    FL(CCW) cmd=+0.401  pwm=1401 us
+    FR(CW)  cmd=+0.237  pwm=1236 us
+    RR(CCW) cmd=+0.377  pwm=1376 us
+    RL(CW)  cmd=+0.605  pwm=1604 us
+
+Vector B: 10 deg roll
+  obs = [0,0,0, 0,+0.087,+0.492, +0.222,0, 0,0,0,0]
+
+  out[0] FL(CCW) = +0.143  expect +0.024  err=+0.119  ** FAIL **
+  out[1] FR(CW)  = +0.242  expect +0.368  err=+0.127  ** FAIL **
+  out[2] RR(CCW) = +0.563  expect +0.502  err=+0.061  ** FAIL **
+  out[3] RL(CW)  = +0.424  expect +0.230  err=+0.194  ** FAIL **
+
+  Result: 0/8 outputs match Python reference.
+  [FAIL] NN output mismatch — wrong weights.h or computation error
+  Likely causes:
+    1. Stale weights.h (rerun export_weights.py)
+    2. Didn't rebuild after updating weights.h
+    3. Float precision issue (unlikely with same IEEE 754)
+
+========================================
+TEST 7: Hardware-in-the-Loop Closed Loop
+========================================
+Runs the FULL control loop with real sensors,
+but motors OFF. Shows what PWM would be sent.
+
+Board must be FLAT and STILL for 10 seconds.
+
+  Setting baro ground reference...
+  AHRS settling + IMU bias calibration (2 sec)...
+  Bias calibration results:
+    gyro_bias:  gx=-0.002  gy=-0.005  gz=+0.000 rad/s
+    accel_bias: ax=-0.027  ay=-0.012  az=+0.006 g
+    Predicted AHRS error without cal: R=-0.700 deg  P=+1.570 deg
+  AHRS re-initialized. Re-settling with corrected data (1 sec)...
+  Post-cal AHRS: R=+0.021 P=+0.135 (should be ~0,0)
+  Armed. Running NN control loop for 8 seconds...
+
+  [+0.000s] FL:1008 FR:1006 RR:1007 RL:1010 | R=+0.074 P=+0.109 [RAMP]
+  [+0.200s] FL:1194 FR:1116 RR:1152 RL:1261 | R=+0.121 P=-0.019 [RAMP]
+  [+0.400s] FL:1390 FR:1223 RR:1306 RL:1523 | R=+0.013 P=+0.008 [RAMP]
+  [+0.600s] FL:1522 FR:1317 RR:1419 RL:1683 | R=+0.013 P=-0.049
+  [+0.800s] FL:1513 FR:1309 RR:1411 RL:1675 | R=-0.072 P=-0.029
+  [+1.000s] FL:1512 FR:1308 RR:1409 RL:1673 | R=-0.090 P=+0.059
+  [+1.200s] FL:1503 FR:1301 RR:1400 RL:1663 | R=-0.039 P=+0.068
+  [+1.400s] FL:1512 FR:1311 RR:1408 RL:1670 | R=+0.032 P=+0.167
+  [+1.600s] FL:1525 FR:1318 RR:1421 RL:1686 | R=+0.090 P=+0.035
+  [+1.800s] FL:1510 FR:1306 RR:1406 RL:1669 | R=+0.064 P=+0.025
+  [+2.000s] FL:1503 FR:1301 RR:1399 RL:1661 | R=+0.060 P=-0.038
+  [+2.200s] FL:1512 FR:1308 RR:1410 RL:1674 | R=-0.033 P=-0.076
+  [+2.400s] FL:1523 FR:1316 RR:1419 RL:1684 | R=-0.077 P=+0.016
+  [+2.600s] FL:1521 FR:1315 RR:1418 RL:1684 | R=-0.104 P=+0.046
+  [+2.800s] FL:1514 FR:1310 RR:1410 RL:1674 | R=-0.022 P=+0.165
+  [+3.000s] FL:1522 FR:1316 RR:1419 RL:1684 | R=+0.029 P=+0.054
+  [+3.200s] FL:1512 FR:1310 RR:1409 RL:1672 | R=+0.061 P=+0.056
+  [+3.400s] FL:1508 FR:1306 RR:1405 RL:1667 | R=+0.097 P=-0.019
+  [+3.600s] FL:1519 FR:1313 RR:1417 RL:1682 | R=-0.001 P=-0.072
+  [+3.800s] FL:1517 FR:1312 RR:1414 RL:1679 | R=-0.040 P=-0.027
+  [+4.000s] FL:1529 FR:1322 RR:1427 RL:1693 | R=-0.135 P=-0.010
+  [+4.200s] FL:1522 FR:1315 RR:1419 RL:1684 | R=-0.079 P=+0.103
+  [+4.400s] FL:1500 FR:1298 RR:1397 RL:1660 | R=-0.086 P=+0.060
+  [+4.600s] FL:1525 FR:1319 RR:1421 RL:1687 | R=-0.018 P=+0.108
+  [+4.800s] FL:1536 FR:1328 RR:1433 RL:1698 | R=+0.096 P=+0.076
+  [+5.000s] FL:1526 FR:1320 RR:1423 RL:1688 | R=+0.060 P=-0.037
+  [+5.200s] FL:1520 FR:1314 RR:1418 RL:1681 | R=+0.056 P=-0.041
+  [+5.400s] FL:1519 FR:1314 RR:1417 RL:1681 | R=-0.068 P=-0.100
+  [+5.600s] FL:1521 FR:1315 RR:1418 RL:1683 | R=-0.092 P=-0.007
+  [+5.800s] FL:1523 FR:1318 RR:1419 RL:1684 | R=-0.135 P=+0.030
+  [+6.000s] FL:1526 FR:1319 RR:1423 RL:1689 | R=-0.102 P=+0.058
+  [+6.200s] FL:1522 FR:1315 RR:1419 RL:1684 | R=-0.012 P=+0.124
+  [+6.400s] FL:1520 FR:1313 RR:1416 RL:1682 | R=+0.028 P=+0.062
+  [+6.600s] FL:1512 FR:1307 RR:1409 RL:1672 | R=+0.098 P=+0.037
+  [+6.800s] FL:1512 FR:1308 RR:1409 RL:1673 | R=+0.010 P=-0.090
+  [+7.000s] FL:1521 FR:1316 RR:1417 RL:1681 | R=-0.010 P=-0.004
+  [+7.200s] FL:1533 FR:1326 RR:1430 RL:1695 | R=-0.087 P=-0.061
+  [+7.400s] FL:1510 FR:1306 RR:1407 RL:1671 | R=-0.133 P=-0.017
+  [+7.600s] FL:1527 FR:1321 RR:1423 RL:1688 | R=-0.041 P=+0.107
+  [+7.800s] FL:1511 FR:1308 RR:1407 RL:1670 | R=-0.038 P=+0.137
+
+---- STEADY-STATE ANALYSIS (last 2 sec) ----
+
+  FL(CCW)  avg=1520 us  stddev=+8.761 us  range=[1502-1549]
+  FR(CW)   avg=1315 us  stddev=+7.399 us  range=[1301-1340]
+  RR(CCW)  avg=1417 us  stddev=+9.069 us  range=[1399-1447]
+  RL(CW)   avg=1681 us  stddev=+9.747 us  range=[1662-1713]
+
+  Overall avg = 1483 us  (expect ~1323 us)
+  Motor spread = 366 us  (max - min across 4 motors)
+
+  [FAIL] Motor spread > 120 us — large asymmetry, NN is compensating for something
+  [FAIL] Average PWM too high — drone will climb uncontrollably on arm
+         NN is commanding excess thrust at rest.
+  [PASS] All motors stable (stddev < 20 us) — no oscillation
+
+  Yaw balance: CW_avg - CCW_avg = +29.655 us
+    (< 30 us — yaw should be balanced)
+  Diagonal balance: (FL+RR)/2 - (FR+RL)/2 = -29.655 us
+    (< 30 us — roll/pitch balanced)
+
+========================================
+TEST 8: Live Tilt → Motor Response
+========================================
+Tilt the board and see which motors the NN would
+command harder. Catches inverted control loops.
+
+NO MOTORS WILL SPIN. Safe for bench.
+
+  Calibrating (2 sec, keep board FLAT)...
+  Calibrated. R=-0.130 P=+0.024
+
+========================================
+TILT A: Roll RIGHT (right side down, ~20 deg)
+  Preparing in 3...2...1...TILT AND HOLD
+
+  R=-0.188 P=+0.012  FL:1401 FR:1236 RR:1375 RL:1609
+  R=+0.096 P=+0.072  FL:1400 FR:1237 RR:1380 RL:1606
+  R=+0.150 P=-0.430  FL:1389 FR:1232 RR:1382 RL:1608
+  R=+0.060 P=-0.551  FL:1381 FR:1238 RR:1386 RL:1609
+  R=+1.790 P=-0.555  FL:1341 FR:1298 RR:1429 RL:1537
+  R=+7.116 P=-0.910  FL:1325 FR:1413 RR:1538 RL:1482
+  R=+16.169 P=-0.978  FL:1329 FR:1584 RR:1696 RL:1425
+  R=+21.346 P=-2.451  FL:1348 FR:1588 RR:1707 RL:1454
+  R=+25.624 P=-0.227  FL:1358 FR:1655 RR:1715 RL:1471
+  R=+30.470 P=-0.027  FL:1388 FR:1630 RR:1711 RL:1495
+
+  Right tilt avg (138 samples with R>10):
+    FL: 1358 us
+    FR: 1616 us
+    RR: 1707 us
+    RL: 1467 us
+  Right side (FR+RR) avg: 1661   Left side (FL+RL) avg: 1413
+  [PASS] ROLL RIGHT: Right side gets more thrust → corrects tilt
+
+========================================
+TILT B: Pitch NOSE DOWN (~20 deg)
+  Lift the REAR so the nose dips.
+  Return to FLAT first, then...
+  Preparing in 3...2...1...TILT NOSE DOWN AND HOLD
+
+  R=+34.142 P=+0.380  FL:1375 FR:1695 RR:1723 RL:1546
+  R=+32.626 P=+0.372  FL:1370 FR:1689 RR:1723 RL:1535
+  R=+31.091 P=+0.355  FL:1367 FR:1678 RR:1723 RL:1528
+  R=+29.331 P=-0.365  FL:1341 FR:1645 RR:1723 RL:1541
+  R=+27.934 P=-8.452  FL:1294 FR:1570 RR:1723 RL:1525
+  R=+27.062 P=-16.446  FL:1307 FR:1497 RR:1723 RL:1560
+  R=+25.961 P=-21.870  FL:1321 FR:1428 RR:1723 RL:1586
+  R=+24.590 P=-25.662  FL:1316 FR:1422 RR:1723 RL:1591
+  R=+23.435 P=-28.845  FL:1309 FR:1416 RR:1723 RL:1599
+  R=+22.182 P=-31.598  FL:1306 FR:1410 RR:1723 RL:1601
+
+  Nose-down avg (175 samples with P<-10):
+    FL: 1312 us
+    FR: 1441 us
+    RR: 1723 us
+    RL: 1585 us
+  Front (FL+FR) avg: 1376   Rear (RR+RL) avg: 1654
+  [PASS] NOSE DOWN: Rear gets more thrust → pushes nose UP → corrects
+
+========================================
+TILT C: Pitch NOSE UP (~20 deg)
+  Lift the FRONT so the nose rises.
+  Return to FLAT first, then...
+  Preparing in 3...2...1...TILT NOSE UP AND HOLD
+
+  R=+20.452 P=-32.441  FL:1310 FR:1408 RR:1723 RL:1614
+  R=+19.491 P=-31.258  FL:1311 FR:1408 RR:1723 RL:1616
+  R=+18.512 P=-30.083  FL:1312 FR:1408 RR:1723 RL:1616
+  R=+17.275 P=-28.040  FL:1324 FR:1416 RR:1723 RL:1611
+  R=+15.138 P=-12.777  FL:1448 FR:1545 RR:1578 RL:1492
+  R=+14.103 P=+3.877  FL:1470 FR:1566 RR:1530 RL:1480
+  R=+13.495 P=+6.663  FL:1392 FR:1465 RR:1573 RL:1519
+  R=+12.791 P=+7.677  FL:1417 FR:1474 RR:1554 RL:1514
+  R=+12.072 P=+9.810  FL:1460 FR:1501 RR:1524 RL:1507
+  R=+11.342 P=+11.162  FL:1475 FR:1505 RR:1516 RL:1507
+
+  Nose-up avg (56 samples with P>10):
+    FL: 1478 us
+    FR: 1507 us
+    RR: 1514 us
+    RL: 1507 us
+  Front (FL+FR) avg: 1492   Rear (RR+RL) avg: 1510
+  [WARN] No clear front/rear asymmetry. Tilt more?
+
+========================================
+TEST 8 COMPLETE
+========================================
+If any FAIL appeared, the motor mapping or axis signs
+are wrong. The NN correction goes to the wrong side,
+causing the 'compounding errors' behavior.
+
+Most likely fix: swap motor wires or fix NN_TO_MOTOR[].
+The motor that SHOULD get more thrust is printed above.
+Compare against which PHYSICAL motor is at that position.
+
+========================================
+TEST 9: IIR Filter Lag Test
+========================================
+Shows raw NN output vs post-IIR filtered output.
+If the filter adds too much lag, corrections arrive
+too late and the drone tilts further before correcting.
+
+  Calibrating (2 sec, keep FLAT)...
+  Now tilt RIGHT ~20 deg and hold.
+  Preparing in 3...2...1...TILT NOW
+
+  Roll   | Raw NN (FR)  | IIR out (FR) | Alpha | Lag(us)
+  -------+--------------+--------------+-------+--------
+  -0.203 | +0.521      | +0.313      | +0.600 | +83.391
+  -0.232 | +0.562      | +0.498      | +0.080 | +25.552
+  -0.260 | +0.584      | +0.542      | +0.080 | +16.488
+  -0.285 | +0.601      | +0.572      | +0.080 | +11.540
+  -0.319 | +0.619      | +0.595      | +0.080 | +9.591
+  -0.356 | +0.642      | +0.617      | +0.080 | +9.813
+  -0.397 | +0.666      | +0.640      | +0.080 | +10.339
+  -0.440 | +0.690      | +0.663      | +0.080 | +10.844
+  -0.486 | +0.716      | +0.687      | +0.080 | +11.658
+  -0.534 | +0.740      | +0.711      | +0.080 | +11.596
+  -0.585 | +0.765      | +0.735      | +0.080 | +11.942
+  -0.641 | +0.795      | +0.761      | +0.080 | +13.557
+  -0.703 | +0.823      | +0.789      | +0.080 | +13.664
+  -0.769 | +0.849      | +0.817      | +0.080 | +12.872
+  -0.839 | +0.878      | +0.846      | +0.080 | +12.902
+  -0.911 | +0.909      | +0.875      | +0.080 | +13.414
+  -0.989 | +0.926      | +0.901      | +0.080 | +9.915
+  -1.076 | +0.938      | +0.919      | +0.080 | +7.557
+  -1.170 | +0.944      | +0.932      | +0.080 | +4.927
+  -1.270 | +0.950      | +0.941      | +0.080 | +3.752
+  -1.377 | +0.954      | +0.947      | +0.080 | +2.508
+  -1.492 | +0.958      | +0.953      | +0.080 | +2.121
+  -1.615 | +0.957      | +0.956      | +0.080 | +0.679
+  -1.750 | +0.956      | +0.956      | +0.080 | -0.019
+  -1.898 | +0.956      | +0.956      | +0.080 | +0.145
+  -2.062 | +0.955      | +0.955      | +0.080 | -0.166
+  -2.238 | +0.952      | +0.954      | +0.080 | -0.854
+  -2.435 | +0.948      | +0.952      | +0.080 | -1.435
+  -2.650 | +0.948      | +0.950      | +0.080 | -0.893
+  -2.884 | +0.947      | +0.949      | +0.080 | -0.708
+  -3.146 | +0.945      | +0.947      | +0.080 | -0.724
+  -3.441 | +0.942      | +0.944      | +0.080 | -0.891
+  -3.776 | +0.939      | +0.942      | +0.080 | -1.283
+  -4.151 | +0.935      | +0.939      | +0.080 | -1.598
+  -4.581 | +0.932      | +0.936      | +0.080 | -1.576
+  -5.074 | +0.928      | +0.932      | +0.080 | -1.685
+  -5.646 | +0.925      | +0.929      | +0.080 | -1.416
+  -6.322 | +0.921      | +0.925      | +0.080 | -1.706
+  -7.126 | +0.910      | +0.919      | +0.080 | -3.457
+  -8.168 | +0.889      | +0.906      | +0.080 | -6.957
+  -9.352 | +0.881      | +0.895      | +0.080 | -5.651
+  -10.858 | +0.853      | +0.877      | +0.080 | -9.639
+  -12.819 | +0.826      | +0.855      | +0.080 | -11.605
+  -15.542 | +0.801      | +0.832      | +0.080 | -12.229
+  -19.457 | +0.699      | +0.788      | +0.080 | -35.638
+  -25.155 | +0.644      | +0.721      | +0.080 | -30.917
+  -34.522 | +0.541      | +0.645      | +0.080 | -41.741
+  -50.372 | +0.529      | +0.576      | +0.080 | -18.608
+  -74.804 | +0.523      | +0.542      | +0.080 | -7.892
+  -102.300 | +0.527      | +0.531      | +0.080 | -1.367
+
+  Key: if 'Lag' stays large (>50us) and Alpha stays at 0.08,
+  the IIR filter is suppressing corrections. The drone will
+  feel sluggish and tilt further before correcting.
+
+  If Alpha switches to 0.60 quickly, the filter is working
+  as intended — fast tracking for real corrections.
+
+========================================
+TEST 10: Motor Wire Verification
+========================================
+** REMOVE ALL PROPELLERS BEFORE CONTINUING **
+** MOTORS WILL SPIN IN THIS TEST **
+
+Tilt the board → the NN picks the strongest motor →
+that motor pulses briefly. Verify it's on the correct side.
+
+Starting in 5 seconds (remove props NOW)...
+  Calibrating (2 sec, keep FLAT)...
+
+========================================
+TILT RIGHT
+  Tilt RIGHT side down ~20 deg
+  Expected motor: RIGHT side (FR or RR)
+  Preparing in 3...2...1...GO
+
+  R=-0.140 P=-0.071  (waiting for +15.000 deg)
+  R=-0.171 P=-0.135  (waiting for +15.000 deg)
+  R=-0.141 P=+0.005  (waiting for +15.000 deg)
+  R=-0.055 P=+0.003  (waiting for +15.000 deg)
+  R=+0.050 P=+0.048  (waiting for +15.000 deg)
+  R=+0.019 P=-0.050  (waiting for +15.000 deg)
+  R=-0.060 P=-0.001  (waiting for +15.000 deg)
+  R=+0.006 P=+0.046  (waiting for +15.000 deg)
+  R=+0.097 P=+0.011  (waiting for +15.000 deg)
+  R=+0.024 P=-0.019  (waiting for +15.000 deg)
+  R=-0.081 P=-0.078  (waiting for +15.000 deg)
+  R=-0.137 P=+0.004  (waiting for +15.000 deg)
+  R=+0.023 P=+0.028  (waiting for +15.000 deg)
+  R=+0.021 P=-0.036  (waiting for +15.000 deg)
+  R=-0.145 P=-0.056  (waiting for +15.000 deg)
+  R=-0.117 P=+0.031  (waiting for +15.000 deg)
+  R=-0.084 P=+0.020  (waiting for +15.000 deg)
+  R=+0.100 P=+0.021  (waiting for +15.000 deg)
+  R=+0.001 P=-0.012  (waiting for +15.000 deg)
+  R=-0.128 P=-0.041  (waiting for +15.000 deg)
+  [WARN] Tilt threshold not reached in 4 seconds.
+
+  Return board to FLAT.
+�
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+#   Motors OFF — safe for bench use     #
+########################################
+
+IMU WHO_AM_I = 0x0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x0x11)
+
+========================================
+TEST 1: SPI Register Readback
+========================================
+Verifying IMU accepted configuration writes.
+Any MISMATCH means SPI bus or init is broken.
+
+Chip: ICM-42688-P
+
+  GYRO_CONFIG0  (0x0x4F) = 0x0x06  expected 0x0x06  OK
+  ACCEL_CONFIG0 (0x0x50) = 0x0x06  expected 0x0x06  OK
+  PWR_MGMT0     (0x0x4E) = 0x0x0F  expected 0x0x0F  OK
+  GYRO_ACCEL_CF (0x0x52) = 0x0x06  expected 0x0x06  OK
+
+  Result: 4/4 registers match.
+  [PASS] All config registers verified
+
+========================================
+TEST 2: Static IMU Characterization
+========================================
+Board must be FLAT and STILL for 5 seconds.
+Starting in 3 seconds...
+Sampling...
+
+  [0] ax=-0.021 ay=-0.007 az=+1.002 | gx=-0.002 gy=-0.006 gz=-0.001 | raw_az=+2052
+  [50] ax=-0.026 ay=-0.005 az=+1.013 | gx=-0.002 gy=-0.005 gz=+0.000 | raw_az=+2074
+  [100] ax=-0.020 ay=-0.007 az=+1.001 | gx=-0.001 gy=-0.005 gz=-0.001 | raw_az=+2050
+  [150] ax=-0.027 ay=-0.005 az=+1.006 | gx=-0.002 gy=-0.005 gz=+0.000 | raw_az=+2060
+  [200] ax=-0.021 ay=-0.008 az=+1.003 | gx=-0.001 gy=-0.005 gz=+0.000 | raw_az=+2055
+  [250] ax=-0.027 ay=-0.006 az=+1.005 | gx=-0.002 gy=-0.005 gz=+0.000 | raw_az=+2059
+  [300] ax=-0.026 ay=-0.014 az=+1.007 | gx=-0.001 gy=-0.005 gz=+0.000 | raw_az=+2062
+  [350] ax=-0.023 ay=+0.002 az=+1.001 | gx=-0.002 gy=-0.005 gz=+0.000 | raw_az=+2051
+  [400] ax=-0.025 ay=-0.015 az=+1.007 | gx=-0.001 gy=-0.005 gz=+0.000 | raw_az=+2062
+  [450] ax=-0.022 ay=+0.001 az=+0.999 | gx=-0.001 gy=-0.005 gz=+0.000 | raw_az=+2046
+
+---- STATIC RESULTS (500 samples, 5 sec) ----
+
+  Accel averages (g):
+    ax_avg = -0.024   (expect ~0.00)
+    ay_avg = -0.006   (expect ~0.00)
+    az_avg = +1.005   (expect ~+1.00)
+    az_min = +0.995   az_max = +1.017
+    raw_az_avg = +2057   (ICM42688: expect ~+2048, MPU6000: expect ~+4096)
+
+  Gyro averages (rad/s):
+    gx_avg = -0.001   (expect ~0.00)
+    gy_avg = -0.006   (expect ~0.00)
+    gz_avg = -0.000   (expect ~0.00)
+
+---- DIAGNOSTICS ----
+
+  [PASS] az ≈ +1.0g — gravity direction correct
+  [PASS] ax ≈ 0 — X-axis not seeing gravity
+  [PASS] ay ≈ 0 — Y-axis not seeing gravity
+  [PASS] Gyros ≈ 0 — no unexpected rotation bias
+  [PASS] az noise spread < 0.10g — clean signal
+
+========================================
+TEST 3: Dynamic Axis Alignment
+========================================
+This test verifies that physical tilts produce
+the correct signs in both raw accel and AHRS.
+
+You will tilt the board 3 ways, ~30 deg each.
+Follow the prompts.
+
+Step 0: Place board FLAT. AHRS settling (2 sec)...
+  AHRS settled. Roll=-0.422 Pitch=+1.362
+  (Should be near 0,0 if board is flat)
+
+----------------------------------------
+TILT 1: NOSE DOWN (~30 degrees)
+  Lift the REAR of the board so the nose dips.
+  Expected: ax > 0, AHRS pitch < 0
+----------------------------------------
+
+  >> Tilt NOSE DOWN now and hold steady <<
+  (Hold for ~4 seconds)
+
+  Preparing in 3...2...1...SAMPLING
+
+  ax=+0.484 ay=+0.008 az=+0.877 | R=-0.424 P=+1.300 Y=-0.010
+  ax=+0.482 ay=+0.010 az=+0.886 | R=-0.415 P=+0.026 Y=+0.004
+  ax=+0.482 ay=+0.007 az=+0.885 | R=-0.411 P=-1.157 Y=+0.001
+  ax=+0.480 ay=+0.006 az=+0.883 | R=-0.387 P=-2.438 Y=+0.002
+  ax=+0.482 ay=+0.009 az=+0.883 | R=-0.364 P=-3.730 Y=+0.001
+  ax=+0.481 ay=+0.010 az=+0.879 | R=-0.337 P=-5.003 Y=-0.005
+  ax=+0.482 ay=+0.003 az=+0.886 | R=-0.321 P=-6.199 Y=-0.007
+  ax=+0.483 ay=+0.009 az=+0.884 | R=-0.302 P=-7.411 Y=-0.001
+  ax=+0.481 ay=+0.009 az=+0.884 | R=-0.285 P=-8.636 Y=-0.007
+  ax=+0.485 ay=+0.007 az=+0.878 | R=-0.270 P=-9.833 Y=-0.010
+  ax=+0.481 ay=+0.004 az=+0.880 | R=-0.259 P=-10.953 Y=-0.023
+  ax=+0.486 ay=+0.003 az=+0.877 | R=-0.233 P=-12.125 Y=-0.025
+  ax=+0.488 ay=+0.003 az=+0.877 | R=-0.209 P=-13.287 Y=-0.029
+  ax=+0.483 ay=+0.005 az=+0.883 | R=-0.192 P=-14.463 Y=-0.035
+  ax=+0.483 ay=+0.008 az=+0.882 | R=-0.166 P=-15.593 Y=-0.046
+  ax=+0.488 ay=+0.002 az=+0.876 | R=-0.134 P=-16.777 Y=-0.062
+  ax=+0.485 ay=+0.007 az=+0.880 | R=-0.101 P=-17.927 Y=-0.075
+  ax=+0.485 ay=+0.005 az=+0.876 | R=-0.071 P=-19.100 Y=-0.090
+  ax=+0.486 ay=+0.007 az=+0.877 | R=-0.030 P=-20.235 Y=-0.114
+  ax=+0.485 ay=+0.007 az=+0.875 | R=+0.016 P=-21.381 Y=-0.135
+
+  ---- NOSE-DOWN AVERAGES ----
+    ax=+0.485  ay=+0.007  az=+0.879
+    gx=-0.002  gy=-0.006  gz=+0.000
+    AHRS roll=-0.232  pitch=-10.814  yaw=-0.037
+
+  Return to FLAT for 3 seconds...
+----------------------------------------
+TILT 2: RIGHT SIDE DOWN (~30 degrees)
+  Lift the LEFT side so the RIGHT side dips.
+  Expected: AHRS roll > 0 (right-wing-down = positive)
+  Watch the sign of ay — document what you see.
+----------------------------------------
+
+  >> Tilt RIGHT SIDE DOWN now and hold steady <<
+  (Hold for ~4 seconds)
+
+  Preparing in 3...2...1...SAMPLING
+
+  ax=-0.024 ay=+0.481 az=+0.885 | R=+0.110 P=-22.439 Y=-0.172
+  ax=-0.023 ay=+0.468 az=+0.887 | R=+1.006 P=-21.837 Y=-0.545
+  ax=-0.021 ay=+0.485 az=+0.880 | R=+1.939 P=-21.222 Y=-0.909
+  ax=-0.021 ay=+0.483 az=+0.884 | R=+2.862 P=-20.611 Y=-1.270
+  ax=-0.025 ay=+0.478 az=+0.889 | R=+3.690 P=-19.993 Y=-1.612
+  ax=-0.020 ay=+0.473 az=+0.889 | R=+4.500 P=-19.359 Y=-1.954
+  ax=-0.022 ay=+0.480 az=+0.884 | R=+5.402 P=-18.711 Y=-2.272
+  ax=-0.023 ay=+0.473 az=+0.888 | R=+6.367 P=-18.068 Y=-2.576
+  ax=-0.021 ay=+0.479 az=+0.879 | R=+7.345 P=-17.414 Y=-2.862
+  ax=-0.023 ay=+0.479 az=+0.884 | R=+8.160 P=-16.760 Y=-3.138
+  ax=-0.024 ay=+0.479 az=+0.883 | R=+9.052 P=-16.085 Y=-3.412
+  ax=-0.022 ay=+0.474 az=+0.891 | R=+9.904 P=-15.415 Y=-3.675
+  ax=-0.017 ay=+0.481 az=+0.889 | R=+10.897 P=-14.734 Y=-3.932
+  ax=-0.025 ay=+0.477 az=+0.888 | R=+11.727 P=-14.054 Y=-4.163
+  ax=-0.023 ay=+0.481 az=+0.880 | R=+12.605 P=-13.352 Y=-4.396
+  ax=-0.022 ay=+0.478 az=+0.886 | R=+13.423 P=-12.663 Y=-4.606
+  ax=-0.021 ay=+0.476 az=+0.886 | R=+14.274 P=-11.967 Y=-4.812
+  ax=-0.025 ay=+0.485 az=+0.879 | R=+15.186 P=-11.263 Y=-5.006
+  ax=-0.020 ay=+0.479 az=+0.881 | R=+15.977 P=-10.552 Y=-5.190
+  ax=-0.024 ay=+0.481 az=+0.884 | R=+16.786 P=-9.842 Y=-5.357
+
+  ---- RIGHT-DOWN AVERAGES ----
+    ax=-0.024  ay=+0.480  az=+0.885
+    gx=-0.003  gy=-0.006  gz=-0.000
+    AHRS roll=+8.978  pitch=-16.001  yaw=-3.221
+
+  Return to FLAT for 3 seconds...
+----------------------------------------
+TILT 3: ROTATE CW (viewed from above)
+  Keep board flat, rotate clockwise slowly.
+  Expected: gz < 0 (CW about +Z = negative)
+  AHRS yaw should decrease.
+----------------------------------------
+
+  >> Rotate CLOCKWISE now (keep flat) <<
+  (Hold for ~4 seconds)
+
+  Preparing in 3...2...1...SAMPLING
+
+  ax=-0.036 ay=+0.002 az=+1.003 | R=+17.510 P=-9.135 Y=-5.539
+  ax=-0.004 ay=-0.003 az=+1.015 | R=+16.690 P=-8.547 Y=-6.285
+  ax=-0.118 ay=-0.010 az=+0.978 | R=+15.833 P=-7.168 Y=-9.076
+  ax=-0.078 ay=+0.007 az=+0.957 | R=+15.067 P=-5.457 Y=-13.484
+  ax=-0.135 ay=-0.153 az=+1.004 | R=+14.248 P=-3.859 Y=-18.358
+  ax=-0.078 ay=-0.116 az=+0.926 | R=+13.432 P=-2.442 Y=-23.610
+  ax=+0.000 ay=+0.048 az=+1.066 | R=+12.603 P=-0.952 Y=-30.416
+  ax=-0.122 ay=-0.078 az=+1.121 | R=+11.407 P=+0.140 Y=-38.800
+  ax=-0.128 ay=+0.391 az=+1.386 | R=+10.815 P=+0.170 Y=-51.987
+  ax=-0.074 ay=-0.055 az=+1.012 | R=+9.477 P=+2.294 Y=-59.838
+  ax=+0.084 ay=+0.066 az=+1.009 | R=+8.399 P=+3.192 Y=-65.155
+  ax=+0.042 ay=+0.103 az=+0.989 | R=+7.561 P=+3.498 Y=-72.814
+  ax=-0.049 ay=-0.045 az=+0.913 | R=+6.412 P=+3.316 Y=-77.910
+  ax=+0.035 ay=-0.104 az=+0.975 | R=+5.234 P=+3.106 Y=-80.459
+  ax=+0.096 ay=+0.219 az=+1.003 | R=+4.441 P=+3.065 Y=-88.415
+  ax=-0.016 ay=-0.030 az=+1.019 | R=+3.052 P=+2.346 Y=-93.872
+  ax=-0.025 ay=+0.011 az=+0.995 | R=+2.479 P=+2.051 Y=-96.933
+  ax=+0.121 ay=-0.110 az=+0.859 | R=+1.223 P=+2.050 Y=-102.929
+  ax=-0.039 ay=-0.029 az=+1.029 | R=+0.815 P=+1.547 Y=-107.751
+  ax=-0.020 ay=-0.035 az=+0.997 | R=-0.111 P=+1.356 Y=-108.049
+
+  ---- YAW-CW AVERAGES ----
+    ax=-0.006  ay=-0.020  az=+1.006
+    gx=-0.009  gy=-0.020  gz=-0.452
+    AHRS roll=+8.361  pitch=-0.238  yaw=-60.009
+
+========================================
+TEST 3 COMPLETE — Review above
+========================================
+Compare the sign of each measurement against expected.
+Any sign flip = axis alignment bug in ALIGN_xx macros.
+
+Quick reference (MuJoCo NWU convention):
+  Nose down:     ax>0, pitch<0
+  Right down:    roll>0
+  CW rotation:   gz<0, yaw decreasing
+
+========================================
+TEST 4: AHRS Convergence
+========================================
+Tests that the Madgwick filter converges to correct
+angles and returns to zero after tilting.
+
+Phase A: Place board FLAT and STILL.
+  Resetting AHRS and settling for 3 seconds...
+    R=+1.114 P=+1.226
+    R=+0.116 P=+1.047
+  Final flat: R=-0.741 P=+1.559
+  [PASS] Phase A: AHRS settled near 0,0 when flat
+
+Phase B: Tilt RIGHT SIDE DOWN ~30 degrees.
+  Preparing in 3...2...1...HOLD TILT NOW
+
+  [0] R=-0.679 P=+1.547
+  [20] R=-0.022 P=+1.484
+  [40] R=+0.823 P=+1.432
+  [60] R=+1.611 P=+1.340
+  [80] R=+2.625 P=+1.287
+  [100] R=+3.766 P=+1.234
+  [120] R=+4.990 P=+1.204
+  [140] R=+6.074 P=+1.156
+  [160] R=+7.218 P=+1.119
+  [180] R=+8.383 P=+1.081
+  [200] R=+9.440 P=+1.047
+  [220] R=+10.584 P=+1.025
+  [240] R=+11.666 P=+0.999
+  [260] R=+12.824 P=+0.981
+  [280] R=+13.816 P=+0.974
+  [300] R=+14.915 P=+0.965
+  [320] R=+15.975 P=+0.958
+  [340] R=+17.084 P=+0.965
+  [360] R=+18.101 P=+0.971
+  [380] R=+19.169 P=+0.987
+  [400] R=+20.212 P=+1.015
+  [420] R=+21.220 P=+1.057
+  [440] R=+22.346 P=+1.097
+  [460] R=+23.394 P=+1.175
+  [480] R=+24.419 P=+1.263
+  Final tilted: R=+25.396
+  [PASS] Phase B: Roll > +15 deg — converged in correct direction
+
+Phase C: Return board to FLAT.
+  Preparing in 3...2...1...HOLD FLAT NOW
+
+  [0] R=+25.343 P=+1.340
+  [20] R=+24.276 P=+1.294
+  [40] R=+23.205 P=+1.253
+  [60] R=+22.126 P=+1.213
+  [80] R=+21.046 P=+1.174
+  [100] R=+19.961 P=+1.134
+  [120] R=+18.869 P=+1.097
+  [140] R=+17.773 P=+1.063
+  [160] R=+16.671 P=+1.034
+  [180] R=+15.564 P=+1.006
+  [200] R=+14.453 P=+0.986
+  [220] R=+13.337 P=+0.972
+  [240] R=+12.216 P=+0.959
+  [260] R=+11.088 P=+0.953
+  [280] R=+9.955 P=+0.951
+  [300] R=+8.818 P=+0.955
+  [320] R=+7.672 P=+0.970
+  [340] R=+6.521 P=+0.990
+  [360] R=+5.368 P=+1.024
+  [380] R=+4.206 P=+1.066
+  Final return-flat: R=+3.098
+  [PASS] Phase C: Roll returned near 0 — no accumulated drift
+
+========================================
+TEST 5: Observation Vector Ground Truth
+========================================
+Builds the exact obs[12] fed to the NN and verifies
+each element matches the sim's 'flat on table' values.
+
+Board must be FLAT and STILL.
+  Resetting AHRS, settling 3 sec...
+  Setting baro ground reference...
+  Sampling obs vector for 2 seconds...
+
+  obs[0]  gyro_x   = -0.000   expect +0.000  tol ±+0.010  OK
+  obs[1]  gyro_y   = -0.000   expect +0.000  tol ±+0.010  OK
+  obs[2]  gyro_z   = -0.000   expect +0.000  tol ±+0.010  OK
+  obs[3]  accel_x  = -0.013   expect +0.000  tol ±+0.050  OK
+  obs[4]  accel_y  = -0.004   expect +0.000  tol ±+0.050  OK
+  obs[5]  accel_z  = +0.502   expect +0.500  tol ±+0.080  OK
+  obs[6]  roll_err = -0.011   expect +0.000  tol ±+0.040  OK
+  obs[7]  pitch_er = +0.032   expect +0.000  tol ±+0.040  OK
+  obs[8]  alt_err  = -0.050   expect +0.000  tol ±+0.050  ** FAIL **
+  obs[9]  vvel     = +0.000   expect +0.000  tol ±+0.020  OK
+  obs[10] hvel_x   = +0.000   expect +0.000  tol ±+0.001  OK
+  obs[11] hvel_y   = +0.000   expect +0.000  tol ±+0.001  OK
+
+  Result: 11/12 elements within tolerance.
+  [FAIL] Obs vector mismatch — NN is seeing a world it wasn't trained on
+
+  Note: Baro present. obs[8] = (alt - 0.3m) / 2.0,
+  clamped to ±0.05. On table: alt≈0, so obs[8]≈-0.05 (clamped).
+  This is expected — the P-altitude controller handles the rest.
+
+========================================
+TEST 6: NN Inference Validation
+========================================
+Feeds known obs vectors to nn_forward() and compares
+output against Python reference values.
+
+Vector A: flat on table
+  obs = [0,0,0, 0,0,+0.5, 0,0,0,0,0,0]
+
+  out[0] FL(CCW) = +0.197  expect +0.088  err=+0.109  ** FAIL **
+  out[1] FR(CW)  = -0.214  expect -0.053  err=+0.162  ** FAIL **
+  out[2] RR(CCW) = +0.135  expect +0.033  err=+0.103  ** FAIL **
+  out[3] RL(CW)  = +0.705  expect +0.264  err=+0.442  ** FAIL **
+
+  Motor commands (hover_thr=+0.323, act_scale=+0.400):
+    FL(CCW) cmd=+0.401  pwm=1401 us
+    FR(CW)  cmd=+0.237  pwm=1236 us
+    RR(CCW) cmd=+0.377  pwm=1376 us
+    RL(CW)  cmd=+0.605  pwm=1604 us
+
+Vector B: 10 deg roll
+  obs = [0,0,0, 0,+0.087,+0.492, +0.222,0, 0,0,0,0]
+
+  out[0] FL(CCW) = +0.143  expect +0.024  err=+0.119  ** FAIL **
+  out[1] FR(CW)  = +0.242  expect +0.368  err=+0.127  ** FAIL **
+  out[2] RR(CCW) = +0.563  expect +0.502  err=+0.061  ** FAIL **
+  out[3] RL(CW)  = +0.424  expect +0.230  err=+0.194  ** FAIL **
+
+  Result: 0/8 outputs match Python reference.
+  [FAIL] NN output mismatch — wrong weights.h or computation error
+  Likely causes:
+    1. Stale weights.h (rerun export_weights.py)
+    2. Didn't rebuild after updating weights.h
+    3. Float precision issue (unlikely with same IEEE 754)
+
+========================================
+TEST 7: Hardware-in-the-Loop Closed Loop
+========================================
+Runs the FULL control loop with real sensors,
+but motors OFF. Shows what PWM would be sent.
+
+Board must be FLAT and STILL for 10 seconds.
+
+  Setting baro ground reference...
+  AHRS settling + IMU bias calibration (2 sec)...
+  Bias calibration results:
+    gyro_bias:  gx=-0.002  gy=-0.005  gz=-0.000 rad/s
+    accel_bias: ax=-0.026  ay=-0.008  az=+0.004 g
+    Predicted AHRS error without cal: R=-0.461 deg  P=+1.490 deg
+  AHRS re-initialized. Re-settling with corrected data (1 sec)...
+  Post-cal AHRS: R=+0.056 P=+0.065 (should be ~0,0)
+  Armed. Running NN control loop for 8 seconds...
+
+  [+0.000s] FL:1008 FR:1006 RR:1007 RL:1010 | R=-0.002 P=+0.054 [RAMP]
+  [+0.200s] FL:1197 FR:1117 RR:1152 RL:1262 | R=-0.024 P=+0.099 [RAMP]
+  [+0.400s] FL:1386 FR:1221 RR:1300 RL:1516 | R=-0.117 P=-0.051 [RAMP]
+  [+0.600s] FL:1532 FR:1326 RR:1429 RL:1694 | R=+0.005 P=-0.031
+  [+0.800s] FL:1521 FR:1315 RR:1419 RL:1684 | R=-0.024 P=-0.050
+  [+1.000s] FL:1521 FR:1316 RR:1419 RL:1684 | R=+0.016 P=+0.058
+  [+1.200s] FL:1526 FR:1318 RR:1425 RL:1691 | R=+0.027 P=+0.072
+  [+1.400s] FL:1503 FR:1302 RR:1400 RL:1663 | R=-0.045 P=-0.010
+  [+1.600s] FL:1530 FR:1324 RR:1428 RL:1695 | R=-0.148 P=-0.111
+  [+1.800s] FL:1523 FR:1316 RR:1422 RL:1689 | R=-0.075 P=-0.132
+  [+2.000s] FL:1522 FR:1315 RR:1421 RL:1688 | R=-0.010 P=-0.026
+  [+2.200s] FL:1522 FR:1316 RR:1419 RL:1684 | R=+0.079 P=+0.071
+  [+2.400s] FL:1522 FR:1317 RR:1419 RL:1684 | R=+0.021 P=+0.023
+  [+2.600s] FL:1505 FR:1303 RR:1402 RL:1666 | R=-0.084 P=+0.015
+  [+2.800s] FL:1507 FR:1305 RR:1405 RL:1671 | R=-0.177 P=-0.133
+  [+3.000s] FL:1511 FR:1306 RR:1409 RL:1674 | R=+0.013 P=-0.049
+  [+3.200s] FL:1499 FR:1298 RR:1396 RL:1660 | R=-0.038 P=-0.013
+  [+3.400s] FL:1523 FR:1316 RR:1420 RL:1686 | R=+0.020 P=+0.051
+  [+3.600s] FL:1524 FR:1316 RR:1422 RL:1688 | R=+0.004 P=+0.042
+  [+3.800s] FL:1528 FR:1321 RR:1425 RL:1690 | R=-0.114 P=-0.014
+  [+4.000s] FL:1510 FR:1307 RR:1407 RL:1673 | R=-0.133 P=-0.085
+  [+4.200s] FL:1513 FR:1308 RR:1410 RL:1675 | R=-0.004 P=+0.041
+  [+4.400s] FL:1504 FR:1303 RR:1401 RL:1664 | R=+0.081 P=+0.110
+  [+4.600s] FL:1514 FR:1310 RR:1411 RL:1676 | R=-0.025 P=+0.035
+  [+4.800s] FL:1512 FR:1307 RR:1409 RL:1673 | R=-0.010 P=+0.032
+  [+5.000s] FL:1522 FR:1316 RR:1420 RL:1685 | R=-0.050 P=-0.040
+  [+5.200s] FL:1505 FR:1301 RR:1403 RL:1666 | R=-0.028 P=-0.064
+  [+5.400s] FL:1520 FR:1315 RR:1418 RL:1682 | R=+0.029 P=+0.036
+  [+5.600s] FL:1529 FR:1323 RR:1427 RL:1692 | R=+0.055 P=+0.009
+  [+5.800s] FL:1510 FR:1310 RR:1408 RL:1671 | R=-0.070 P=-0.027
+  [+6.000s] FL:1508 FR:1304 RR:1406 RL:1670 | R=-0.051 P=-0.043
+  [+6.200s] FL:1508 FR:1305 RR:1405 RL:1669 | R=-0.034 P=-0.115
+  [+6.400s] FL:1509 FR:1306 RR:1407 RL:1672 | R=-0.036 P=-0.044
+  [+6.600s] FL:1519 FR:1314 RR:1417 RL:1683 | R=+0.057 P=+0.025
+  [+6.800s] FL:1502 FR:1301 RR:1400 RL:1664 | R=-0.049 P=+0.022
+  [+7.000s] FL:1497 FR:1296 RR:1395 RL:1659 | R=-0.135 P=-0.122
+  [+7.200s] FL:1514 FR:1310 RR:1413 RL:1678 | R=-0.050 P=-0.040
+  [+7.400s] FL:1514 FR:1311 RR:1411 RL:1676 | R=-0.071 P=-0.012
+  [+7.600s] FL:1501 FR:1299 RR:1398 RL:1661 | R=+0.032 P=+0.058
+  [+7.800s] FL:1524 FR:1317 RR:1421 RL:1687 | R=-0.006 P=+0.091
+
+---- STEADY-STATE ANALYSIS (last 2 sec) ----
+
+  FL(CCW)  avg=1513 us  stddev=+7.053 us  range=[1497-1530]
+  FR(CW)   avg=1308 us  stddev=+5.745 us  range=[1296-1323]
+  RR(CCW)  avg=1410 us  stddev=+7.185 us  range=[1395-1429]
+  RL(CW)   avg=1675 us  stddev=+7.953 us  range=[1657-1697]
+
+  Overall avg = 1476 us  (expect ~1323 us)
+  Motor spread = 367 us  (max - min across 4 motors)
+
+  [FAIL] Motor spread > 120 us — large asymmetry, NN is compensating for something
+  [FAIL] Average PWM too high — drone will climb uncontrollably on arm
+         NN is commanding excess thrust at rest.
+  [PASS] All motors stable (stddev < 20 us) — no oscillation
+
+  Yaw balance: CW_avg - CCW_avg = +30.242 us
+    (> 30 us — NN is commanding a yaw trim. CW motors hotter → yaw CCW)
+  Diagonal balance: (FL+RR)/2 - (FR+RL)/2 = -30.242 us
+    (> 30 us — NN is commanding a roll/pitch trim)
+
+========================================
+TEST 8: Live Tilt → Motor Response
+========================================
+Tilt the board and see which motors the NN would
+command harder. Catches inverted control loops.
+
+NO MOTORS WILL SPIN. Safe for bench.
+
+  Calibrating (2 sec, keep board FLAT)...
+  Calibrated. R=+0.098 P=+0.075
+
+========================================
+TILT A: Roll RIGHT (right side down, ~20 deg)
+  Preparing in 3...2...1...TILT AND HOLD
+
+  R=+0.142 P=+0.035  FL:1402 FR:1238 RR:1378 RL:1602
+  R=+0.148 P=+0.151  FL:1402 FR:1239 RR:1379 RL:1601
+  R=+0.896 P=-0.347  FL:1386 FR:1240 RR:1391 RL:1591
+  R=+4.494 P=-0.386  FL:1353 FR:1341 RR:1474 RL:1495
+  R=+10.760 P=-0.364  FL:1332 FR:1497 RR:1633 RL:1459
+  R=+17.182 P=-0.089  FL:1340 FR:1573 RR:1681 RL:1444
+  R=+23.636 P=-0.037  FL:1353 FR:1620 RR:1704 RL:1456
+  R=+26.559 P=+0.103  FL:1365 FR:1621 RR:1706 RL:1473
+  R=+28.619 P=-0.013  FL:1387 FR:1593 RR:1690 RL:1499
+  R=+27.057 P=-0.019  FL:1376 FR:1597 RR:1691 RL:1486
+
+  Right tilt avg (183 samples with R>10):
+    FL: 1362 us
+    FR: 1592 us
+    RR: 1690 us
+    RL: 1471 us
+  Right side (FR+RR) avg: 1641   Left side (FL+RL) avg: 1416
+  [PASS] ROLL RIGHT: Right side gets more thrust → corrects tilt
+
+========================================
+TILT B: Pitch NOSE DOWN (~20 deg)
+  Lift the REAR so the nose dips.
+  Return to FLAT first, then...
+  Preparing in 3...2...1...TILT NOSE DOWN AND HOLD
+
+  R=+27.316 P=+0.006  FL:1358 FR:1643 RR:1723 RL:1516
+  R=+25.677 P=+0.083  FL:1360 FR:1626 RR:1723 RL:1515
+  R=+24.476 P=-4.224  FL:1288 FR:1572 RR:1723 RL:1532
+  R=+23.201 P=-10.669  FL:1303 FR:1530 RR:1723 RL:1528
+  R=+22.383 P=-17.942  FL:1299 FR:1417 RR:1723 RL:1583
+  R=+21.605 P=-23.729  FL:1315 FR:1412 RR:1723 RL:1589
+  R=+20.651 P=-23.444  FL:1326 FR:1417 RR:1723 RL:1581
+  R=+18.946 P=-24.049  FL:1323 FR:1402 RR:1723 RL:1583
+  R=+17.192 P=-24.371  FL:1321 FR:1385 RR:1723 RL:1591
+  R=+15.397 P=-24.425  FL:1326 FR:1372 RR:1723 RL:1591
+
+  Nose-down avg (212 samples with P<-10):
+    FL: 1318 us
+    FR: 1408 us
+    RR: 1723 us
+    RL: 1581 us
+  Front (FL+FR) avg: 1363   Rear (RR+RL) avg: 1652
+  [PASS] NOSE DOWN: Rear gets more thrust → pushes nose UP → corrects
+
+========================================
+TILT C: Pitch NOSE UP (~20 deg)
+  Lift the FRONT so the nose rises.
+  Return to FLAT first, then...
+  Preparing in 3...2...1...TILT NOSE UP AND HOLD
+
+  R=+13.611 P=-24.798  FL:1322 FR:1388 RR:1723 RL:1614
+  R=+12.778 P=-23.398  FL:1325 FR:1382 RR:1723 RL:1612
+  R=+11.948 P=-21.983  FL:1328 FR:1376 RR:1723 RL:1610
+  R=+11.020 P=-20.539  FL:1333 FR:1371 RR:1723 RL:1606
+  R=+9.503 P=-15.131  FL:1381 FR:1363 RR:1635 RL:1569
+  R=+8.480 P=-3.655  FL:1410 FR:1394 RR:1482 RL:1491
+  R=+7.809 P=+5.616  FL:1515 FR:1522 RR:1462 RL:1466
+  R=+7.208 P=+11.402  FL:1525 FR:1516 RR:1480 RL:1501
+  R=+6.538 P=+14.316  FL:1555 FR:1532 RR:1469 RL:1520
+  R=+5.870 P=+16.065  FL:1556 FR:1524 RR:1477 RL:1542
+
+  Nose-up avg (100 samples with P>10):
+    FL: 1546 us
+    FR: 1520 us
+    RR: 1478 us
+    RL: 1529 us
+  Front (FL+FR) avg: 1533   Rear (RR+RL) avg: 1503
+  [PASS] NOSE UP: Front gets more thrust → pushes nose DOWN → corrects
+
+========================================
+TEST 8 COMPLETE
+========================================
+If any FAIL appeared, the motor mapping or axis signs
+are wrong. The NN correction goes to the wrong side,
+causing the 'compounding errors' behavior.
+
+Most likely fix: swap motor wires or fix NN_TO_MOTOR[].
+The motor that SHOULD get more thrust is printed above.
+Compare against which PHYSICAL motor is at that position.
+
+========================================
+TEST 9: IIR Filter Lag Test
+========================================
+Shows raw NN output vs post-IIR filtered output.
+If the filter adds too much lag, corrections arrive
+too late and the drone tilts further before correcting.
+
+  Calibrating (2 sec, keep FLAT)...
+  Now tilt RIGHT ~20 deg and hold.
+  Preparing in 3...2...1...TILT NOW
+
+  Roll   | Raw NN (FR)  | IIR out (FR) | Alpha | Lag(us)
+  -------+--------------+--------------+-------+--------
+  -0.406 | +0.444      | +0.266      | +0.600 | +70.977
+  +0.037 | +0.497      | +0.431      | +0.080 | +26.566
+  +0.442 | +0.530      | +0.481      | +0.080 | +19.596
+  +0.705 | +0.577      | +0.524      | +0.080 | +21.104
+  +1.050 | +0.629      | +0.572      | +0.080 | +22.794
+  +1.395 | +0.667      | +0.617      | +0.080 | +20.277
+  +1.736 | +0.701      | +0.658      | +0.080 | +17.445
+  +2.073 | +0.723      | +0.690      | +0.080 | +13.230
+  +2.374 | +0.747      | +0.718      | +0.080 | +11.722
+  +2.655 | +0.758      | +0.738      | +0.080 | +7.670
+  +2.918 | +0.766      | +0.752      | +0.080 | +5.410
+  +3.248 | +0.782      | +0.765      | +0.080 | +6.425
+  +3.593 | +0.782      | +0.775      | +0.080 | +2.880
+  +3.771 | +0.799      | +0.785      | +0.080 | +5.831
+  +3.994 | +0.813      | +0.798      | +0.080 | +6.098
+  +4.282 | +0.822      | +0.809      | +0.080 | +5.212
+  +4.540 | +0.831      | +0.820      | +0.080 | +4.475
+  +4.792 | +0.842      | +0.830      | +0.080 | +4.900
+  +5.038 | +0.854      | +0.841      | +0.080 | +5.321
+  +5.303 | +0.866      | +0.853      | +0.080 | +5.374
+  +5.541 | +0.882      | +0.865      | +0.080 | +6.881
+  +5.887 | +0.888      | +0.878      | +0.080 | +3.993
+  +6.136 | +0.891      | +0.884      | +0.080 | +2.557
+  +6.338 | +0.900      | +0.891      | +0.080 | +3.224
+  +6.641 | +0.900      | +0.898      | +0.080 | +0.849
+  +6.948 | +0.895      | +0.898      | +0.080 | -0.990
+  +7.235 | +0.892      | +0.895      | +0.080 | -1.165
+  +7.541 | +0.893      | +0.894      | +0.080 | -0.315
+  +7.886 | +0.886      | +0.890      | +0.080 | -1.628
+  +8.217 | +0.884      | +0.886      | +0.080 | -0.939
+  +8.650 | +0.881      | +0.885      | +0.080 | -1.666
+  +9.073 | +0.868      | +0.877      | +0.080 | -3.445
+  +9.394 | +0.870      | +0.872      | +0.080 | -0.886
+  +9.840 | +0.869      | +0.871      | +0.080 | -0.851
+  +10.353 | +0.858      | +0.864      | +0.080 | -2.739
+  +10.861 | +0.853      | +0.859      | +0.080 | -2.766
+  +11.445 | +0.847      | +0.854      | +0.080 | -2.758
+  +12.080 | +0.840      | +0.847      | +0.080 | -2.863
+  +12.796 | +0.832      | +0.840      | +0.080 | -3.187
+  +13.599 | +0.827      | +0.834      | +0.080 | -3.019
+  +14.583 | +0.802      | +0.820      | +0.080 | -7.341
+  +15.519 | +0.797      | +0.808      | +0.080 | -4.549
+  +16.707 | +0.783      | +0.797      | +0.080 | -5.552
+  +18.110 | +0.764      | +0.782      | +0.080 | -7.396
+  +19.752 | +0.751      | +0.767      | +0.080 | -6.336
+  +21.720 | +0.744      | +0.755      | +0.080 | -4.356
+  +24.117 | +0.751      | +0.751      | +0.080 | -0.157
+  +27.157 | +0.752      | +0.752      | +0.080 | +0.331
+  +30.902 | +0.773      | +0.758      | +0.080 | +6.140
+  +36.027 | +0.772      | +0.769      | +0.080 | +1.143
+
+  Key: if 'Lag' stays large (>50us) and Alpha stays at 0.08,
+  the IIR filter is suppressing corrections. The drone will
+  feel sluggish and tilt further before correcting.
+
+  If Alpha switches to 0.60 quickly, the filter is working
+  as intended — fast tracking for real corrections.
+
+========================================
+TEST 10: Motor Wire Verification
+========================================
+** REMOVE ALL PROPELLERS BEFORE CONTINUING **
+** MOTORS WILL SPIN IN THIS TEST **
+
+Tilt the board → the NN picks the strongest motor →
+that motor pulses briefly. Verify it's on the correct side.
+
+Starting in 5 seconds (remove props NOW)...
+  Calibrating (2 sec, keep FLAT)...
+
+========================================
+TILT RIGHT
+  Tilt RIGHT side down ~20 deg
+  Expected motor: RIGHT side (FR or RR)
+  Preparing in 3...2...1...GO
+
+  R=+0.067 P=-0.051  (waiting for +15.000 deg)
+  R=+0.328 P=-0.320  (waiting for +15.000 deg)
+  R=+0.301 P=-0.411  (waiting for +15.000 deg)
+  R=+1.711 P=-0.267  (waiting for +15.000 deg)
+  R=+5.690 P=-0.132  (waiting for +15.000 deg)
+  R=+9.046 P=-0.280  (waiting for +15.000 deg)
+  R=+12.222 P=+0.319  (waiting for +15.000 deg)
+
+  ** TRIGGERED at +15.066 deg **
+  NN outputs: FL(nn0)=+0.068  FR(nn1)=+0.569  RR(nn2)=+0.826  RL(nn3)=+0.334  
+  Strongest: RR(nn2) → motor_set(1)
+  Expected position: RIGHT side (FR or RR)
+
+  >>> PULSING MOTOR NOW — watch which one spins <<<
+  >>> DONE — was it on the RIGHT side (FR or RR)? <<<
+
+  Return board to FLAT.
+
+========================================
+NOSE DOWN
+  Tilt NOSE DOWN ~20 deg
+  Expected motor: REAR (RR or RL)
+  Preparing in 3...2...1...GO
+
+  R=+15.024 P=+0.291  (waiting for -15.000 deg)
+  R=+14.338 P=-4.842  (waiting for -15.000 deg)
+  R=+13.259 P=-7.457  (waiting for -15.000 deg)
+  R=+12.188 P=-7.535  (waiting for -15.000 deg)
+  R=+11.442 P=-8.682  (waiting for -15.000 deg)
+  R=+11.013 P=-10.688  (waiting for -15.000 deg)
+  R=+10.870 P=-11.357  (waiting for -15.000 deg)
+  R=+10.145 P=-12.155  (waiting for -15.000 deg)
+  R=+9.376 P=-13.026  (waiting for -15.000 deg)
+  R=+8.578 P=-13.923  (waiting for -15.000 deg)
+  R=+7.799 P=-14.926  (waiting for -15.000 deg)
+
+  ** TRIGGERED at -15.002 deg **
+  NN outputs: FL(nn0)=+0.089  FR(nn1)=-0.119  RR(nn2)=+0.826  RL(nn3)=+0.742  
+  Strongest: RR(nn2) → motor_set(1)
+  Expected position: REAR (RR or RL)
+
+  >>> PULSING MOTOR NOW — watch which one spins <<<
+  >>> DONE — was it on the REAR (RR or RL)? <<<
+
+  Return board to FLAT.
+
+========================================
+NOSE UP
+  Tilt NOSE UP ~20 deg
+  Expected motor: FRONT (FL or FR)
+  Preparing in 3...2...1...GO
+
+  R=+7.706 P=-14.950  (waiting for +15.000 deg)
+  R=+7.474 P=-13.909  (waiting for +15.000 deg)
+  R=+7.237 P=-12.846  (waiting for +15.000 deg)
+  R=+7.013 P=-11.464  (waiting for +15.000 deg)
+  R=+6.781 P=-10.309  (waiting for +15.000 deg)
+  R=+6.548 P=-8.913  (waiting for +15.000 deg)
+  R=+6.320 P=-7.848  (waiting for +15.000 deg)
+  R=+6.094 P=-6.579  (waiting for +15.000 deg)
+  R=+5.861 P=-5.580  (waiting for +15.000 deg)
+  R=+5.634 P=-4.136  (waiting for +15.000 deg)
+  R=+5.410 P=-3.014  (waiting for +15.000 deg)
+  R=+5.190 P=-1.774  (waiting for +15.000 deg)
+  R=+4.960 P=-0.560  (waiting for +15.000 deg)
+  R=+4.727 P=+0.647  (waiting for +15.000 deg)
+  R=+4.508 P=+2.054  (waiting for +15.000 deg)
+  R=+4.281 P=+3.141  (waiting for +15.000 deg)
+  R=+4.058 P=+4.486  (waiting for +15.000 deg)
+  R=+3.827 P=+5.570  (waiting for +15.000 deg)
+  R=+3.597 P=+6.896  (waiting for +15.000 deg)
+  R=+3.368 P=+8.042  (waiting for +15.000 deg)
+  [WARN] Tilt threshold not reached in 4 seconds.
+
+  Return board to FLAT.
+
+========================================
+TEST 10 COMPLETE
+========================================
+For each tilt, verify the pulsing motor is at the
+expected position on the frame.
+
+If the wrong motor pulsed:
+  1. Note which nn output → which motor index → which pin
+  2. Swap the ESC wires so the correct physical motor
+     is connected to the correct pin
+  3. OR fix NN_TO_MOTOR[] in main.c
+
+========================================
+TEST 11: IIR Limit-Cycle Stress Test
+========================================
+Feeds synthetic NN outputs into the IIR filter.
+Detects limit cycles that cause motor pulsing.
+No hardware needed — runs immediately (~2 sec).
+
+  Current parameters:
+    ALPHA_SLOW  = +0.080
+    ALPHA_FAST  = +0.600
+    SNAP_THRESH = +0.150
+
+Scenario A: small noise  (0.05↔0.15, amp=0.05, center=0.10)
+  Expected: <10 PWM swings, ALPHA_SLOW throughout
+
+  [0] nn=+0.150 iir=+0.090 pwm=1359 a=+0.600
+  [100] nn=+0.150 iir=+0.095 pwm=1360 a=+0.080
+  [200] nn=+0.150 iir=+0.095 pwm=1360 a=+0.080
+  [300] nn=+0.150 iir=+0.095 pwm=1360 a=+0.080
+  [400] nn=+0.150 iir=+0.095 pwm=1360 a=+0.080
+
+  Toggles>5us: 0   FAST-alpha ticks: 1
+  [PASS] Scenario A: stable — small noise absorbed by ALPHA_SLOW
+
+Scenario B: on-threshold noise  (0.07↔0.23, amp=0.08, center=0.15)
+  This is the vibration scenario in flight.
+  Expected: FAIL if SNAP_THRESH too close to noise floor
+
+  [0] nn=+0.230 iir=+0.138 pwm=1378 a=+0.600
+  [100] nn=+0.230 iir=+0.141 pwm=1379 a=+0.080
+  [200] nn=+0.230 iir=+0.141 pwm=1379 a=+0.080
+  [300] nn=+0.230 iir=+0.141 pwm=1379 a=+0.080
+  [400] nn=+0.230 iir=+0.141 pwm=1379 a=+0.080
+
+  Toggles>5us: 0   FAST-ticks: 1   Alpha-flips: 1
+  [PASS] Scenario B: stable — no limit cycle at snap threshold
+
+Scenario C: large step 0.0 → +0.5  (should converge in <15 ticks)
+
+  [0] iir=+0.000 err=-0.500 a=+0.080
+  [5] iir=+0.300 err=-0.200 a=+0.600
+  [10] iir=+0.443 err=-0.057 a=+0.080
+  [20] iir=+0.475 err=-0.025 a=+0.080
+  [30] iir=+0.489 err=-0.011 a=+0.080
+  [40] iir=+0.495 err=-0.005 a=+0.080
+  [50] iir=+0.498 err=-0.002 a=+0.080
+  [60] iir=+0.499 err=-0.001 a=+0.080
+  [70] iir=+0.500 err=-0.000 a=+0.080
+  Converged in 7 ticks after step
+  [PASS] Scenario C: FAST path working — large corrections track quickly
+
+---- IIR TUNING GUIDE ----
+  If Scenario B FAILED: raise SNAP_THRESH from 0.15 → 0.25.
+  If motors still pulse: lower ALPHA_SLOW from 0.08 → 0.05.
+  If drone feels sluggish after fix: lower ALPHA_SLOW to 0.10.
+  Nuclear option: remove adaptive IIR, use fixed ALPHA = 0.20.
+
+========================================
+TEST 12: Loop Timing Jitter & Overrun Detector
+========================================
+Measures real SysTick period variance and per-phase cost.
+Overruns cause AHRS spikes → NN commands → motor pulses.
+
+Board flat. Running 500 ticks (5 sec)...
+
+  [0] period=10000 imu=29 ahrs=3 baro=0 tot=33 us
+  [100] period=10000 imu=29 ahrs=3 baro=0 tot=32 us
+  [200] period=10000 imu=29 ahrs=3 baro=0 tot=32 us
+  [300] period=10000 imu=29 ahrs=3 baro=0 tot=32 us
+  [400] period=10000 imu=29 ahrs=3 baro=0 tot=32 us
+
+---- TIMING SUMMARY (500 ticks) ----
+
+  Tick period:   avg=10000 min=10000 max=10000 jitter=0 us
+  Overruns (>10500us): 0
+  Worst IMU read:   29 us
+  Worst AHRS:       3 us
+  Worst baro read:  310 us  (fires every 4 ticks — baro I2C blocking cost)
+  Worst total tick: 342 us  (budget = 10000 us)
+  Budget margin:    9658 us free
+
+---- DIAGNOSTICS ----
+
+  [PASS] No tick overruns — loop body fits within 10 ms period
+  [PASS] Tick jitter < 600 us — timing is clean
+  [PASS] Baro I2C read < 1500 us — within loop budget
+
+  Note: NN forward pass (~15 us) not included here. Add to tot.
+
+========================================
+TEST 13: Baro Throttle Noise Characterization
+========================================
+Measures throttle noise injected by the baro P+D controller.
+Large values here = direct cause of motor pulsing.
+
+  Settling baro (2 sec)...
+  Ground reference set. Bench offset will appear as DC in Kp term.
+
+  AHRS settling (1 sec)...
+  Sampling 5 sec — board FLAT, DO NOT MOVE.
+
+  alt(m) | vvel(m/s) | Kp_term  | Kd_term  | adj_total
+  -------+-----------+----------+----------+----------
+  +0.029 | +0.081 | +0.041 | -0.006 | +0.034
+  -0.003 | -0.001 | +0.045 | +0.000 | +0.046
+  -0.025 | -0.049 | +0.049 | +0.004 | +0.053
+  -0.007 | -0.003 | +0.046 | +0.000 | +0.046
+  -0.007 | -0.004 | +0.046 | +0.000 | +0.046
+  -0.007 | +0.003 | +0.046 | -0.000 | +0.046
+  -0.005 | +0.005 | +0.046 | -0.000 | +0.045
+  -0.026 | -0.053 | +0.049 | +0.004 | +0.053
+  +0.011 | +0.045 | +0.043 | -0.004 | +0.040
+  -0.007 | -0.003 | +0.046 | +0.000 | +0.046
+  -0.023 | -0.043 | +0.048 | +0.003 | +0.052
+  -0.005 | +0.006 | +0.046 | -0.000 | +0.045
+  +0.012 | +0.050 | +0.043 | -0.004 | +0.039
+  -0.002 | +0.004 | +0.045 | -0.000 | +0.045
+  -0.021 | -0.045 | +0.048 | +0.004 | +0.052
+  +0.034 | +0.092 | +0.040 | -0.007 | +0.033
+  -0.001 | -0.008 | +0.045 | +0.001 | +0.046
+  -0.001 | -0.002 | +0.045 | +0.000 | +0.045
+  -0.020 | -0.055 | +0.048 | +0.004 | +0.052
+  -0.001 | +0.003 | +0.045 | -0.000 | +0.045
+  -0.002 | +0.004 | +0.045 | -0.000 | +0.045
+  -0.005 | -0.004 | +0.046 | +0.000 | +0.046
+  -0.020 | -0.048 | +0.048 | +0.004 | +0.052
+  +0.014 | +0.038 | +0.043 | -0.003 | +0.040
+  +0.015 | +0.029 | +0.043 | -0.002 | +0.040
+  -0.018 | -0.049 | +0.048 | +0.004 | +0.052
+  -0.001 | -0.005 | +0.045 | +0.000 | +0.045
+  -0.003 | -0.014 | +0.045 | +0.001 | +0.047
+  -0.005 | -0.019 | +0.046 | +0.001 | +0.047
+  -0.001 | -0.012 | +0.045 | +0.001 | +0.046
+  -0.020 | -0.049 | +0.048 | +0.004 | +0.052
+  -0.017 | -0.033 | +0.048 | +0.003 | +0.050
+  -0.004 | +0.001 | +0.046 | -0.000 | +0.046
+  -0.007 | -0.002 | +0.046 | +0.000 | +0.046
+  +0.033 | +0.092 | +0.040 | -0.007 | +0.033
+  +0.001 | +0.002 | +0.045 | -0.000 | +0.045
+  -0.020 | -0.049 | +0.048 | +0.004 | +0.052
+  -0.021 | -0.040 | +0.048 | +0.003 | +0.051
+  -0.020 | -0.025 | +0.048 | +0.002 | +0.050
+  -0.001 | +0.020 | +0.045 | -0.002 | +0.044
+  +0.001 | +0.025 | +0.045 | -0.002 | +0.043
+  -0.019 | -0.033 | +0.048 | +0.003 | +0.050
+  -0.019 | -0.028 | +0.048 | +0.002 | +0.050
+  -0.018 | -0.021 | +0.048 | +0.002 | +0.049
+  -0.001 | +0.017 | +0.045 | -0.001 | +0.044
+  -0.021 | -0.032 | +0.048 | +0.003 | +0.051
+  -0.003 | +0.018 | +0.045 | -0.001 | +0.044
+  -0.017 | -0.015 | +0.048 | +0.001 | +0.049
+  +0.013 | +0.060 | +0.043 | -0.005 | +0.038
+  -0.001 | +0.022 | +0.045 | -0.002 | +0.043
+
+---- BARO THROTTLE NOISE RESULTS ----
+
+  alt_throttle_adj (throttle fraction):
+    avg=+0.046  min=+0.033  max=+0.058  stddev=+0.005
+    peak-to-peak = 25 us  (direct PWM oscillation caused by baro)
+
+  vvel range: min=-0.088 max=+0.092 m/s
+  KD noise contribution: ALT_KD * vvel_range * 1000 = 14 us
+
+---- DIAGNOSTICS ----
+
+  [WARN] Baro throttle range = 25 us — marginal on bench.
+  In flight, motor downwash will make this 5-10x worse.
+  KP term dominates (drone not at 0.3m on bench — DC offset expected).
+
+========================================
+TEST 14: Throttle Staircase (REAL hover point)
+========================================
+** PROPS ON — DRONE MUST BE STRAPPED DOWN / ON A SCALE **
+** IT WILL PULL HARD AT THE TOP STEPS. SECURE IT. **
+
+Procedure: note scale reading at idle, then at each step.
+  thrust(g) = idle_reading - reading
+  hover PWM = step where thrust = takeoff weight
+
+Starting in 15 seconds (power off NOW to skip)...
+15... 14... 13... 12... 11... 10... 9... 8... 

@@ -66,6 +66,7 @@
 #include "uart.h"
 #include "motor.h"
 #include "ahrs.h"
+#include "flight_safety.h"
 #include "nn.h"        /* Also provides NN_HOVER_THROTTLE, NN_ACTION_SCALE */
 #include "i2c.h"
 #include "baro.h"
@@ -701,12 +702,10 @@ int main(void)
             continue;
         }
 
-		/* ── E: Safety — tilt limit ───────────────────────── */
-		if (my_fabsf(roll_deg) > TILT_LIMIT_DEG ||
-			my_fabsf(pitch_deg) > TILT_LIMIT_DEG)
-		{
-			motor_all_stop();
-			// continue;
+		/* A fault must bypass this tick's computation AND all future outputs. */
+		if (!ahrs_is_valid()) flight_safety_latch();
+		if (!flight_safety_check(roll_deg, pitch_deg, TILT_LIMIT_DEG)) {
+			continue;
 		}
 
 		/* ── F: Build observation vector (matches drone_env.py) */
@@ -863,9 +862,7 @@ int main(void)
 		uint32_t t8 = dwt_cycle_now();  /* after motor command mapping */
 
 		/* ── I: Write to motors (NN→Betaflight mapping) ─── */
-		for (int i = 0; i < 4; i++) {
-			motor_set(NN_TO_MOTOR[i], motor_cmd[i]);
-		}
+		flight_safety_write_motors(NN_TO_MOTOR, motor_cmd);
 
 		/* ── Full telemetry log (10 Hz) ──────────────────────
 		 * Format: TEL,gx,gy,gz,ax,ay,az,roll,pitch,

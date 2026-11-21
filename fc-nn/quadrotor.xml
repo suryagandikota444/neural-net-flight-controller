@@ -58,7 +58,9 @@
     <body name="drone" pos="0 0 1">
       <freejoint name="root"/>
 
-      <!-- Inertial: 1118g F450 with 1400KV motors + 8045 props -->
+      <!-- Whole rigid aircraft: nominal TOTAL mass and inertia, including motors.
+           Inertia remains an estimate awaiting physical calibration.
+           Child motor/prop geoms are visual/contact geometry with zero mass. -->
       <inertial pos="0 0 0" mass="1.118"
                 diaginertia="0.018 0.018 0.035"/>
 
@@ -82,7 +84,7 @@
             size="0.008" material="arm_mat" mass="0.0"/>
       <body name="motor_fl" pos="0.16 0.16 0.01">
         <geom name="motor_fl_can" type="cylinder" size="0.014 0.012"
-              material="motor_mat" mass="0.055"/>
+              material="motor_mat" mass="0.0"/>
         <geom name="prop_fl" type="cylinder" size="0.102 0.002"
               pos="0 0 0.014" material="prop_ccw"
               contype="0" conaffinity="0" mass="0.0"/>
@@ -95,7 +97,7 @@
             size="0.008" material="arm_mat" mass="0.0"/>
       <body name="motor_fr" pos="0.16 -0.16 0.01">
         <geom name="motor_fr_can" type="cylinder" size="0.014 0.012"
-              material="motor_mat" mass="0.055"/>
+              material="motor_mat" mass="0.0"/>
         <geom name="prop_fr" type="cylinder" size="0.102 0.002"
               pos="0 0 0.014" material="prop_cw"
               contype="0" conaffinity="0" mass="0.0"/>
@@ -107,7 +109,7 @@
             size="0.008" material="arm_mat" mass="0.0"/>
       <body name="motor_rr" pos="-0.16 -0.16 0.01">
         <geom name="motor_rr_can" type="cylinder" size="0.014 0.012"
-              material="motor_mat" mass="0.055"/>
+              material="motor_mat" mass="0.0"/>
         <geom name="prop_rr" type="cylinder" size="0.102 0.002"
               pos="0 0 0.014" material="prop_ccw"
               contype="0" conaffinity="0" mass="0.0"/>
@@ -119,7 +121,7 @@
             size="0.008" material="arm_mat" mass="0.0"/>
       <body name="motor_rl" pos="-0.16 0.16 0.01">
         <geom name="motor_rl_can" type="cylinder" size="0.014 0.012"
-              material="motor_mat" mass="0.055"/>
+              material="motor_mat" mass="0.0"/>
         <geom name="prop_rl" type="cylinder" size="0.102 0.002"
               pos="0 0 0.014" material="prop_cw"
               contype="0" conaffinity="0" mass="0.0"/>

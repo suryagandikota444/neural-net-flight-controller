@@ -1,0 +1,1276 @@
+{
+  "criteria": [
+    {
+      "name": "hover30",
+      "seconds": 30,
+      "tilt": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "wind": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "randomized": false,
+      "altitude_band_m": 0.05,
+      "altitude_rmse_limit_m": 0.05,
+      "time_in_band_min": 0.9,
+      "attitude_rms_limit_deg": 2.0,
+      "max_drift_m": 2.0,
+      "recovery_deadline_s": 2.0,
+      "recovery_dwell_s": 1.0,
+      "max_altitude_loss_m": 0.5
+    },
+    {
+      "name": "roll_plus30",
+      "seconds": 5,
+      "tilt": [
+        30,
+        0,
+        0
+      ],
+      "wind": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "randomized": false,
+      "altitude_band_m": 0.05,
+      "altitude_rmse_limit_m": 0.05,
+      "time_in_band_min": 0.9,
+      "attitude_rms_limit_deg": 2.0,
+      "max_drift_m": 2.0,
+      "recovery_deadline_s": 2.0,
+      "recovery_dwell_s": 1.0,
+      "max_altitude_loss_m": 0.5
+    },
+    {
+      "name": "roll_minus30",
+      "seconds": 5,
+      "tilt": [
+        -30,
+        0,
+        0
+      ],
+      "wind": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "randomized": false,
+      "altitude_band_m": 0.05,
+      "altitude_rmse_limit_m": 0.05,
+      "time_in_band_min": 0.9,
+      "attitude_rms_limit_deg": 2.0,
+      "max_drift_m": 2.0,
+      "recovery_deadline_s": 2.0,
+      "recovery_dwell_s": 1.0,
+      "max_altitude_loss_m": 0.5
+    },
+    {
+      "name": "pitch_plus30",
+      "seconds": 5,
+      "tilt": [
+        0,
+        30,
+        0
+      ],
+      "wind": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "randomized": false,
+      "altitude_band_m": 0.05,
+      "altitude_rmse_limit_m": 0.05,
+      "time_in_band_min": 0.9,
+      "attitude_rms_limit_deg": 2.0,
+      "max_drift_m": 2.0,
+      "recovery_deadline_s": 2.0,
+      "recovery_dwell_s": 1.0,
+      "max_altitude_loss_m": 0.5
+    },
+    {
+      "name": "pitch_minus30",
+      "seconds": 5,
+      "tilt": [
+        0,
+        -30,
+        0
+      ],
+      "wind": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "randomized": false,
+      "altitude_band_m": 0.05,
+      "altitude_rmse_limit_m": 0.05,
+      "time_in_band_min": 0.9,
+      "attitude_rms_limit_deg": 2.0,
+      "max_drift_m": 2.0,
+      "recovery_deadline_s": 2.0,
+      "recovery_dwell_s": 1.0,
+      "max_altitude_loss_m": 0.5
+    },
+    {
+      "name": "wind10",
+      "seconds": 10,
+      "tilt": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "wind": [
+        0.5,
+        0,
+        0
+      ],
+      "randomized": false,
+      "altitude_band_m": 0.1,
+      "altitude_rmse_limit_m": 0.1,
+      "time_in_band_min": 0.8,
+      "attitude_rms_limit_deg": 5,
+      "max_drift_m": 2.0,
+      "recovery_deadline_s": 2.0,
+      "recovery_dwell_s": 1.0,
+      "max_altitude_loss_m": 0.5
+    },
+    {
+      "name": "randomized_hover30",
+      "seconds": 30,
+      "tilt": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "wind": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "randomized": true,
+      "altitude_band_m": 0.05,
+      "altitude_rmse_limit_m": 0.05,
+      "time_in_band_min": 0.9,
+      "attitude_rms_limit_deg": 2.0,
+      "max_drift_m": 2.0,
+      "recovery_deadline_s": 2.0,
+      "recovery_dwell_s": 1.0,
+      "max_altitude_loss_m": 0.5
+    }
+  ],
+  "episodes": [
+    {
+      "steps": 3000,
+      "seconds": 30.000000000052232,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.023482303093818647,
+      "altitude_bias_m": -0.02218593042057739,
+      "max_altitude_error_m": 0.032242017244925814,
+      "altitude_loss_m": 0.032242017244925814,
+      "time_in_altitude_band": 1.0,
+      "attitude_rms_deg": 0.6849576724731502,
+      "max_drift_m": 4.0369497181780725,
+      "recovery_s": 0.38999999999998475,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": false,
+      "failures": [
+        "horizontal_envelope"
+      ],
+      "seed": 100,
+      "scenario": "hover30",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 3000,
+      "seconds": 30.000000000052232,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.02222728189376733,
+      "altitude_bias_m": -0.0176861545740588,
+      "max_altitude_error_m": 0.037614506199268316,
+      "altitude_loss_m": 0.037614506199268316,
+      "time_in_altitude_band": 1.0,
+      "attitude_rms_deg": 1.5654630305866775,
+      "max_drift_m": 4.080823783396462,
+      "recovery_s": 0.47999999999997484,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": false,
+      "failures": [
+        "horizontal_envelope"
+      ],
+      "seed": 101,
+      "scenario": "hover30",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 3000,
+      "seconds": 30.000000000052232,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.023860575123351112,
+      "altitude_bias_m": -0.02238732977513596,
+      "max_altitude_error_m": 0.038517483822661625,
+      "altitude_loss_m": 0.038517483822661625,
+      "time_in_altitude_band": 1.0,
+      "attitude_rms_deg": 0.8547041573126622,
+      "max_drift_m": 4.096272148278955,
+      "recovery_s": 0.759999999999944,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": false,
+      "failures": [
+        "horizontal_envelope"
+      ],
+      "seed": 102,
+      "scenario": "hover30",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 3000,
+      "seconds": 30.000000000052232,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.02242804289981525,
+      "altitude_bias_m": -0.020765299369849978,
+      "max_altitude_error_m": 0.03242797103774819,
+      "altitude_loss_m": 0.03242797103774819,
+      "time_in_altitude_band": 1.0,
+      "attitude_rms_deg": 1.1190390669011852,
+      "max_drift_m": 4.086879579865005,
+      "recovery_s": 0.7999999999999396,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": false,
+      "failures": [
+        "horizontal_envelope"
+      ],
+      "seed": 103,
+      "scenario": "hover30",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 3000,
+      "seconds": 30.000000000052232,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.02605278542256767,
+      "altitude_bias_m": -0.01360845115146671,
+      "max_altitude_error_m": 0.0783972462452509,
+      "altitude_loss_m": 0.033487372117102066,
+      "time_in_altitude_band": 0.960333333333213,
+      "attitude_rms_deg": 2.0630007854976573,
+      "max_drift_m": 4.082612327416362,
+      "recovery_s": 0.7499999999999452,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": false,
+      "failures": [
+        "horizontal_envelope",
+        "attitude_rms"
+      ],
+      "seed": 104,
+      "scenario": "hover30",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 500,
+      "seconds": 5.000000000000365,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.15093164704634165,
+      "altitude_bias_m": 0.08481597391932376,
+      "max_altitude_error_m": 0.34644100032541947,
+      "altitude_loss_m": 0.025287200763763784,
+      "time_in_altitude_band": 0.5680000000000329,
+      "attitude_rms_deg": 8.523604248525405,
+      "max_drift_m": 0.7673924015596678,
+      "recovery_s": 2.1600000000001627,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": false,
+      "failures": [
+        "sustained_recovery"
+      ],
+      "seed": 100,
+      "scenario": "roll_plus30",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 500,
+      "seconds": 5.000000000000365,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.15638608001121923,
+      "altitude_bias_m": 0.08808597855246088,
+      "max_altitude_error_m": 0.3614412790655648,
+      "altitude_loss_m": 0.024290616838050894,
+      "time_in_altitude_band": 0.5640000000000346,
+      "attitude_rms_deg": 8.678455123780276,
+      "max_drift_m": 0.7911360110450278,
+      "recovery_s": 1.9600000000002382,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": true,
+      "failures": [],
+      "seed": 101,
+      "scenario": "roll_plus30",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 500,
+      "seconds": 5.000000000000365,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.1561534326242725,
+      "altitude_bias_m": 0.08480732468436118,
+      "max_altitude_error_m": 0.3606067585439605,
+      "altitude_loss_m": 0.03140623267428966,
+      "time_in_altitude_band": 0.5740000000000283,
+      "attitude_rms_deg": 8.605950486178314,
+      "max_drift_m": 0.7942088165624719,
+      "recovery_s": 1.780000000000178,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": true,
+      "failures": [],
+      "seed": 102,
+      "scenario": "roll_plus30",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 500,
+      "seconds": 5.000000000000365,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.15673677770672295,
+      "altitude_bias_m": 0.08674877924239371,
+      "max_altitude_error_m": 0.36110482372530406,
+      "altitude_loss_m": 0.02532112392541086,
+      "time_in_altitude_band": 0.5740000000000283,
+      "attitude_rms_deg": 8.595128348505343,
+      "max_drift_m": 0.7744322435420035,
+      "recovery_s": 2.0500000000002236,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": false,
+      "failures": [
+        "sustained_recovery"
+      ],
+      "seed": 103,
+      "scenario": "roll_plus30",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 500,
+      "seconds": 5.000000000000365,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.15973855665074543,
+      "altitude_bias_m": 0.09003877024955084,
+      "max_altitude_error_m": 0.3649939874390038,
+      "altitude_loss_m": 0.02659290085871302,
+      "time_in_altitude_band": 0.568000000000032,
+      "attitude_rms_deg": 8.61239111849843,
+      "max_drift_m": 0.7870835573741275,
+      "recovery_s": 1.7700000000001748,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": true,
+      "failures": [],
+      "seed": 104,
+      "scenario": "roll_plus30",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 500,
+      "seconds": 5.000000000000365,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.17214820240612222,
+      "altitude_bias_m": 0.1009051916269928,
+      "max_altitude_error_m": 0.3818647501188832,
+      "altitude_loss_m": 0.025630937199805692,
+      "time_in_altitude_band": 0.5440000000000453,
+      "attitude_rms_deg": 9.597643261392795,
+      "max_drift_m": 0.7454775839160122,
+      "recovery_s": 2.060000000000218,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": false,
+      "failures": [
+        "sustained_recovery"
+      ],
+      "seed": 100,
+      "scenario": "roll_minus30",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 500,
+      "seconds": 5.000000000000365,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.17381425553176494,
+      "altitude_bias_m": 0.10385159687457322,
+      "max_altitude_error_m": 0.37918794845839177,
+      "altitude_loss_m": 0.024451828086208827,
+      "time_in_altitude_band": 0.5320000000000529,
+      "attitude_rms_deg": 9.904443152484985,
+      "max_drift_m": 0.7847350024137737,
+      "recovery_s": 2.1100000000001904,
+      "saturation_fraction": 0.007999999999998534,
+      "longest_saturation_s": 0.039999999999995595,
+      "passed": false,
+      "failures": [
+        "sustained_recovery"
+      ],
+      "seed": 101,
+      "scenario": "roll_minus30",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 500,
+      "seconds": 5.000000000000365,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.17409171943902485,
+      "altitude_bias_m": 0.102720179457868,
+      "max_altitude_error_m": 0.3794005596041423,
+      "altitude_loss_m": 0.03131717957769975,
+      "time_in_altitude_band": 0.5240000000000579,
+      "attitude_rms_deg": 9.813656152457776,
+      "max_drift_m": 0.7872030984213602,
+      "recovery_s": 2.4000000000000297,
+      "saturation_fraction": 0.003999999999999267,
+      "longest_saturation_s": 0.019999999999997797,
+      "passed": false,
+      "failures": [
+        "sustained_recovery"
+      ],
+      "seed": 102,
+      "scenario": "roll_minus30",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 500,
+      "seconds": 5.000000000000365,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.1654038031733181,
+      "altitude_bias_m": 0.09602304213652119,
+      "max_altitude_error_m": 0.37047750342929553,
+      "altitude_loss_m": 0.024657938860216166,
+      "time_in_altitude_band": 0.5500000000000416,
+      "attitude_rms_deg": 9.532915661890632,
+      "max_drift_m": 0.7539393853355676,
+      "recovery_s": 2.0900000000002015,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": false,
+      "failures": [
+        "sustained_recovery"
+      ],
+      "seed": 103,
+      "scenario": "roll_minus30",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 500,
+      "seconds": 5.000000000000365,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.15815322427406656,
+      "altitude_bias_m": 0.09166992931968801,
+      "max_altitude_error_m": 0.3484638931165831,
+      "altitude_loss_m": 0.026857286194000296,
+      "time_in_altitude_band": 0.5560000000000378,
+      "attitude_rms_deg": 9.445900397186856,
+      "max_drift_m": 0.784406458347308,
+      "recovery_s": 2.060000000000218,
+      "saturation_fraction": 0.0019999999999996336,
+      "longest_saturation_s": 0.009999999999998899,
+      "passed": false,
+      "failures": [
+        "sustained_recovery"
+      ],
+      "seed": 104,
+      "scenario": "roll_minus30",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 500,
+      "seconds": 5.000000000000365,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.11148560952975285,
+      "altitude_bias_m": 0.054055003185736486,
+      "max_altitude_error_m": 0.27992128111896,
+      "altitude_loss_m": 0.026180010114556396,
+      "time_in_altitude_band": 0.6559999999999875,
+      "attitude_rms_deg": 7.751221955596783,
+      "max_drift_m": 0.9133901993605724,
+      "recovery_s": 1.8000000000001848,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": true,
+      "failures": [],
+      "seed": 100,
+      "scenario": "pitch_plus30",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 500,
+      "seconds": 5.000000000000365,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.11087049127268174,
+      "altitude_bias_m": 0.05452204357582712,
+      "max_altitude_error_m": 0.2765699117596354,
+      "altitude_loss_m": 0.026305522044558716,
+      "time_in_altitude_band": 0.6459999999999911,
+      "attitude_rms_deg": 7.822024312252672,
+      "max_drift_m": 0.9462078883564111,
+      "recovery_s": 1.3900000000000479,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": true,
+      "failures": [],
+      "seed": 101,
+      "scenario": "pitch_plus30",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 500,
+      "seconds": 5.000000000000365,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.11139008497607535,
+      "altitude_bias_m": 0.052029829888801005,
+      "max_altitude_error_m": 0.2786750973731382,
+      "altitude_loss_m": 0.03180240993745875,
+      "time_in_altitude_band": 0.65199999999999,
+      "attitude_rms_deg": 7.789794002121512,
+      "max_drift_m": 0.942986174901749,
+      "recovery_s": 1.7600000000001714,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": true,
+      "failures": [],
+      "seed": 102,
+      "scenario": "pitch_plus30",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 500,
+      "seconds": 5.000000000000365,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.10734065425263367,
+      "altitude_bias_m": 0.04998695679009266,
+      "max_altitude_error_m": 0.26942021866559407,
+      "altitude_loss_m": 0.025658936578921487,
+      "time_in_altitude_band": 0.6619999999999828,
+      "attitude_rms_deg": 7.453661148429568,
+      "max_drift_m": 0.907313405755074,
+      "recovery_s": 1.3500000000000345,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": true,
+      "failures": [],
+      "seed": 103,
+      "scenario": "pitch_plus30",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 500,
+      "seconds": 5.000000000000365,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.10072738755678748,
+      "altitude_bias_m": 0.046671683943578936,
+      "max_altitude_error_m": 0.2538424771155774,
+      "altitude_loss_m": 0.026602971323790303,
+      "time_in_altitude_band": 0.6699999999999796,
+      "attitude_rms_deg": 7.425919323298995,
+      "max_drift_m": 0.9244790740160854,
+      "recovery_s": 1.3900000000000479,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": true,
+      "failures": [],
+      "seed": 104,
+      "scenario": "pitch_plus30",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 500,
+      "seconds": 5.000000000000365,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.14062858444143228,
+      "altitude_bias_m": 0.06744199664160172,
+      "max_altitude_error_m": 0.36471676529544483,
+      "altitude_loss_m": 0.02683832405995712,
+      "time_in_altitude_band": 0.6459999999999796,
+      "attitude_rms_deg": 7.875679398124532,
+      "max_drift_m": 0.5198956524627009,
+      "recovery_s": 1.510000000000088,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": true,
+      "failures": [],
+      "seed": 100,
+      "scenario": "pitch_minus30",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 500,
+      "seconds": 5.000000000000365,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.14540800459791878,
+      "altitude_bias_m": 0.07089475422439959,
+      "max_altitude_error_m": 0.37551381038751463,
+      "altitude_loss_m": 0.027309322618633947,
+      "time_in_altitude_band": 0.6379999999999846,
+      "attitude_rms_deg": 7.879130978911141,
+      "max_drift_m": 0.5411800808007615,
+      "recovery_s": 1.4000000000000512,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": true,
+      "failures": [],
+      "seed": 101,
+      "scenario": "pitch_minus30",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 500,
+      "seconds": 5.000000000000365,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.14682480142672621,
+      "altitude_bias_m": 0.07166408976839764,
+      "max_altitude_error_m": 0.3722439644095912,
+      "altitude_loss_m": 0.03161132882767126,
+      "time_in_altitude_band": 0.6299999999999896,
+      "attitude_rms_deg": 7.921825086422814,
+      "max_drift_m": 0.5460841720097942,
+      "recovery_s": 1.4600000000000712,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": true,
+      "failures": [],
+      "seed": 102,
+      "scenario": "pitch_minus30",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 500,
+      "seconds": 5.000000000000365,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.14461557246676482,
+      "altitude_bias_m": 0.07103463490566238,
+      "max_altitude_error_m": 0.37005478487446886,
+      "altitude_loss_m": 0.024432024653370688,
+      "time_in_altitude_band": 0.6339999999999871,
+      "attitude_rms_deg": 7.857775880756275,
+      "max_drift_m": 0.53356120271415,
+      "recovery_s": 1.4200000000000579,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": true,
+      "failures": [],
+      "seed": 103,
+      "scenario": "pitch_minus30",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 500,
+      "seconds": 5.000000000000365,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.14424439939373088,
+      "altitude_bias_m": 0.07161207141997919,
+      "max_altitude_error_m": 0.36702000549198743,
+      "altitude_loss_m": 0.026667793042913,
+      "time_in_altitude_band": 0.6339999999999871,
+      "attitude_rms_deg": 7.994463335922569,
+      "max_drift_m": 0.5471275314023728,
+      "recovery_s": 1.480000000000078,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": true,
+      "failures": [],
+      "seed": 104,
+      "scenario": "pitch_minus30",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 1000,
+      "seconds": 9.99999999999937,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.038204514391518535,
+      "altitude_bias_m": -0.035657299809741375,
+      "max_altitude_error_m": 0.049029694630699616,
+      "altitude_loss_m": 0.049029694630699616,
+      "time_in_altitude_band": 1.0,
+      "attitude_rms_deg": 2.3946340420272065,
+      "max_drift_m": 1.5440292622423586,
+      "recovery_s": 0.769999999999943,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": true,
+      "failures": [],
+      "seed": 100,
+      "scenario": "wind10",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 1000,
+      "seconds": 9.99999999999937,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.03816261035462808,
+      "altitude_bias_m": -0.03527197118813089,
+      "max_altitude_error_m": 0.04947547668475849,
+      "altitude_loss_m": 0.04947547668475849,
+      "time_in_altitude_band": 1.0,
+      "attitude_rms_deg": 2.4068588319092505,
+      "max_drift_m": 1.5687463027783846,
+      "recovery_s": 0.47999999999997484,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": true,
+      "failures": [],
+      "seed": 101,
+      "scenario": "wind10",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 1000,
+      "seconds": 9.99999999999937,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.039063955876263906,
+      "altitude_bias_m": -0.03589398149446667,
+      "max_altitude_error_m": 0.054048391966412646,
+      "altitude_loss_m": 0.054048391966412646,
+      "time_in_altitude_band": 1.0,
+      "attitude_rms_deg": 2.450710709697085,
+      "max_drift_m": 1.5816326397059752,
+      "recovery_s": 0.7399999999999463,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": true,
+      "failures": [],
+      "seed": 102,
+      "scenario": "wind10",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 1000,
+      "seconds": 9.99999999999937,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.038096323858886956,
+      "altitude_bias_m": -0.03510026949302315,
+      "max_altitude_error_m": 0.046780907648197756,
+      "altitude_loss_m": 0.046780907648197756,
+      "time_in_altitude_band": 1.0,
+      "attitude_rms_deg": 2.420995278412569,
+      "max_drift_m": 1.579146169674547,
+      "recovery_s": 0.7999999999999396,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": true,
+      "failures": [],
+      "seed": 103,
+      "scenario": "wind10",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 1000,
+      "seconds": 9.99999999999937,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.03727678831147795,
+      "altitude_bias_m": -0.034804609730919187,
+      "max_altitude_error_m": 0.04767735872021972,
+      "altitude_loss_m": 0.04767735872021972,
+      "time_in_altitude_band": 1.0,
+      "attitude_rms_deg": 2.393303593419036,
+      "max_drift_m": 1.593193143330514,
+      "recovery_s": 0.7499999999999452,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": true,
+      "failures": [],
+      "seed": 104,
+      "scenario": "wind10",
+      "plant": {
+        "mass_kg": 1.338,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 3000,
+      "seconds": 30.000000000052232,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.21832731096274582,
+      "altitude_bias_m": 0.12028475482464858,
+      "max_altitude_error_m": 0.6029819371491163,
+      "altitude_loss_m": 0.06152887245891614,
+      "time_in_altitude_band": 0.37333333333315616,
+      "attitude_rms_deg": 9.214176172669406,
+      "max_drift_m": 3.551579430624435,
+      "recovery_s": 0.45999999999997704,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": false,
+      "failures": [
+        "horizontal_envelope",
+        "altitude_rmse",
+        "time_in_altitude_band",
+        "attitude_rms"
+      ],
+      "seed": 100,
+      "scenario": "randomized_hover30",
+      "plant": {
+        "mass_kg": 1.3590356672407573,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 3000,
+      "seconds": 30.000000000052232,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.16773845418727978,
+      "altitude_bias_m": 0.10895477776792019,
+      "max_altitude_error_m": 0.4715870283331902,
+      "altitude_loss_m": 0.03956540474243264,
+      "time_in_altitude_band": 0.41266666666590096,
+      "attitude_rms_deg": 8.013239140740342,
+      "max_drift_m": 4.848525306710356,
+      "recovery_s": 0.7199999999999485,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": false,
+      "failures": [
+        "horizontal_envelope",
+        "altitude_rmse",
+        "time_in_altitude_band",
+        "attitude_rms"
+      ],
+      "seed": 101,
+      "scenario": "randomized_hover30",
+      "plant": {
+        "mass_kg": 1.3909011678759577,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 3000,
+      "seconds": 30.000000000052232,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.09023079459429255,
+      "altitude_bias_m": -0.0006515087262693249,
+      "max_altitude_error_m": 0.2736884212540114,
+      "altitude_loss_m": 0.11037376698569423,
+      "time_in_altitude_band": 0.25333333333375563,
+      "attitude_rms_deg": 6.6191683340890695,
+      "max_drift_m": 4.791371077644982,
+      "recovery_s": 1.0799999999999443,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": false,
+      "failures": [
+        "horizontal_envelope",
+        "altitude_rmse",
+        "time_in_altitude_band",
+        "attitude_rms"
+      ],
+      "seed": 102,
+      "scenario": "randomized_hover30",
+      "plant": {
+        "mass_kg": 1.3931388646618743,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 3000,
+      "seconds": 30.000000000052232,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.07358544683139231,
+      "altitude_bias_m": -0.0617724363363612,
+      "max_altitude_error_m": 0.09175491493157084,
+      "altitude_loss_m": 0.09175491493157084,
+      "time_in_altitude_band": 0.18700000000038616,
+      "attitude_rms_deg": 2.7003533033806537,
+      "max_drift_m": 4.591588806472231,
+      "recovery_s": 0.7799999999999419,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": false,
+      "failures": [
+        "horizontal_envelope",
+        "altitude_rmse",
+        "time_in_altitude_band",
+        "attitude_rms"
+      ],
+      "seed": 103,
+      "scenario": "randomized_hover30",
+      "plant": {
+        "mass_kg": 1.3605048663737493,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "steps": 3000,
+      "seconds": 30.000000000052232,
+      "completed": true,
+      "termination_reason": null,
+      "altitude_rmse_m": 0.020190517279531132,
+      "altitude_bias_m": -0.01890670161777108,
+      "max_altitude_error_m": 0.03203792088922197,
+      "altitude_loss_m": 0.03203792088922197,
+      "time_in_altitude_band": 1.0,
+      "attitude_rms_deg": 1.1419751503947628,
+      "max_drift_m": 3.3885508664775186,
+      "recovery_s": 0.7499999999999452,
+      "saturation_fraction": 0.0,
+      "longest_saturation_s": 0.0,
+      "passed": false,
+      "failures": [
+        "horizontal_envelope"
+      ],
+      "seed": 104,
+      "scenario": "randomized_hover30",
+      "plant": {
+        "mass_kg": 1.3542033271050664,
+        "cog_offset_m": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    }
+  ],
+  "summary": {
+    "hover30": {
+      "episodes": 5,
+      "completed": 5,
+      "passed": 0,
+      "completed_mean_altitude_rmse_m": 0.023610197686664,
+      "completed_mean_attitude_rms_deg": 1.2574329425542665,
+      "completed_mean_max_drift_m": 4.076707511426972,
+      "failure_counts": {
+        "attitude_rms": 1,
+        "horizontal_envelope": 5
+      }
+    },
+    "roll_plus30": {
+      "episodes": 5,
+      "completed": 5,
+      "passed": 3,
+      "completed_mean_altitude_rmse_m": 0.15598929880786033,
+      "completed_mean_attitude_rms_deg": 8.603105865097554,
+      "completed_mean_max_drift_m": 0.7828506060166596,
+      "failure_counts": {
+        "sustained_recovery": 2
+      }
+    },
+    "roll_minus30": {
+      "episodes": 5,
+      "completed": 5,
+      "passed": 0,
+      "completed_mean_altitude_rmse_m": 0.16872224096485933,
+      "completed_mean_attitude_rms_deg": 9.658911725082609,
+      "completed_mean_max_drift_m": 0.7711523056868044,
+      "failure_counts": {
+        "sustained_recovery": 5
+      }
+    },
+    "pitch_plus30": {
+      "episodes": 5,
+      "completed": 5,
+      "passed": 5,
+      "completed_mean_altitude_rmse_m": 0.10836284551758621,
+      "completed_mean_attitude_rms_deg": 7.648524148339905,
+      "completed_mean_max_drift_m": 0.9268753484779785,
+      "failure_counts": {}
+    },
+    "pitch_minus30": {
+      "episodes": 5,
+      "completed": 5,
+      "passed": 5,
+      "completed_mean_altitude_rmse_m": 0.1443442724653146,
+      "completed_mean_attitude_rms_deg": 7.905774936027467,
+      "completed_mean_max_drift_m": 0.5375697278779559,
+      "failure_counts": {}
+    },
+    "wind10": {
+      "episodes": 5,
+      "completed": 5,
+      "passed": 5,
+      "completed_mean_altitude_rmse_m": 0.03816083855855509,
+      "completed_mean_attitude_rms_deg": 2.4133004910930294,
+      "completed_mean_max_drift_m": 1.5733495035463558,
+      "failure_counts": {}
+    },
+    "randomized_hover30": {
+      "episodes": 5,
+      "completed": 5,
+      "passed": 0,
+      "completed_mean_altitude_rmse_m": 0.11401450477104833,
+      "completed_mean_attitude_rms_deg": 5.537782420254847,
+      "completed_mean_max_drift_m": 4.234323097585905,
+      "failure_counts": {
+        "altitude_rmse": 4,
+        "attitude_rms": 4,
+        "horizontal_envelope": 5,
+        "time_in_altitude_band": 4
+      }
+    }
+  },
+  "experiment": {
+    "plant": "legacy",
+    "model": "/Users/sg/Documents/Projects/FC/fc-nn/runs/quad_hover/best_model.zip",
+    "model_sha256": "3269a9caaeb22a6ed0e6d5e1d43cb17e4979f52a57e0a51492e793326d1d0d0c"
+  }
+}

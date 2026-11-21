@@ -97,9 +97,14 @@
  * without linking against libm. Single-precision, ~14 cycles. */
 static inline float sqrtf_hw(float x)
 {
+#if defined(__arm__) || defined(__thumb__)
     float result;
     __asm__ volatile ("vsqrt.f32 %0, %1" : "=t"(result) : "t"(x));
     return result;
+#else
+    /* Native regression tests execute the same estimator arithmetic. */
+    return __builtin_sqrtf(x);
+#endif
 }
 
 /* Inverse square root: 1/sqrt(x).
@@ -189,6 +194,12 @@ static float asin_approx(float x)
  *   As the drone tilts, the quaternion components change.
  */
 static float q0 = 1.0f, q1 = 0.0f, q2 = 0.0f, q3 = 0.0f;
+static int update_valid = 1;
+
+int ahrs_is_valid(void)
+{
+    return update_valid;
+}
 
 
 /* ============================================================
@@ -206,6 +217,7 @@ static float q0 = 1.0f, q1 = 0.0f, q2 = 0.0f, q3 = 0.0f;
  */
 void ahrs_init(void)
 {
+    update_valid = 1;
     q0 = 1.0f;
     q1 = 0.0f;
     q2 = 0.0f;
@@ -254,6 +266,13 @@ void ahrs_update(float gx, float gy, float gz,
     float s0, s1, s2, s3;
     float qDot1, qDot2, qDot3, qDot4;
 
+    update_valid = 0;
+    if (!__builtin_isfinite(gx) || !__builtin_isfinite(gy) || !__builtin_isfinite(gz) ||
+        !__builtin_isfinite(ax) || !__builtin_isfinite(ay) || !__builtin_isfinite(az) ||
+        !__builtin_isfinite(dt) || dt <= 0.0f) return;
+    const float accel_norm_sq = ax * ax + ay * ay + az * az;
+    if (!__builtin_isfinite(accel_norm_sq)) return;
+
     /* ── Phase 1: Quaternion rate from gyroscope ────────────────
      *
      * The quaternion derivative for pure rotation is:
@@ -279,13 +298,13 @@ void ahrs_update(float gx, float gy, float gz,
      * Only apply correction if accelerometer data is valid.
      * If accel magnitude is zero, we can't determine gravity direction.
      */
-    if (!((ax == 0.0f) && (ay == 0.0f) && (az == 0.0f))) {
+    if (accel_norm_sq > 1e-20f) {
 
         /* Normalize accelerometer — we only care about DIRECTION,
          * not magnitude. After normalization, [ax, ay, az] is a
          * unit vector pointing in the direction of gravity (as
          * measured in the sensor frame). */
-        recipNorm = inv_sqrtf(ax * ax + ay * ay + az * az);
+        recipNorm = inv_sqrtf(accel_norm_sq);
         ax *= recipNorm;
         ay *= recipNorm;
         az *= recipNorm;
@@ -338,11 +357,18 @@ void ahrs_update(float gx, float gy, float gz,
         /* Normalize the gradient direction.
          * We don't need the gradient MAGNITUDE (that's controlled
          * by beta), just the DIRECTION. */
-        recipNorm = inv_sqrtf(s0 * s0 + s1 * s1 + s2 * s2 + s3 * s3);
-        s0 *= recipNorm;
-        s1 *= recipNorm;
-        s2 *= recipNorm;
-        s3 *= recipNorm;
+        const float gradient_norm_sq = s0 * s0 + s1 * s1 + s2 * s2 + s3 * s3;
+        if (!__builtin_isfinite(gradient_norm_sq)) return;
+        if (gradient_norm_sq > 1e-20f) {
+            recipNorm = inv_sqrtf(gradient_norm_sq);
+            s0 *= recipNorm;
+            s1 *= recipNorm;
+            s2 *= recipNorm;
+            s3 *= recipNorm;
+        } else {
+            /* Exact agreement with gravity needs no correction, not 0/0. */
+            s0 = s1 = s2 = s3 = 0.0f;
+        }
 
         /* Subtract the correction from the gyro-predicted rate.
          * beta controls how fast the accel correction pulls the
@@ -365,10 +391,10 @@ void ahrs_update(float gx, float gy, float gz,
      * At 100 Hz (dt = 0.01), Euler integration is accurate enough.
      * Higher-order methods (RK4) would only matter at much lower
      * update rates or extreme rotation speeds. */
-    q0 += qDot1 * dt;
-    q1 += qDot2 * dt;
-    q2 += qDot3 * dt;
-    q3 += qDot4 * dt;
+    const float n0 = q0 + qDot1 * dt;
+    const float n1 = q1 + qDot2 * dt;
+    const float n2 = q2 + qDot3 * dt;
+    const float n3 = q3 + qDot4 * dt;
 
     /* ── Normalize the quaternion ──────────────────────────────
      *
@@ -377,11 +403,14 @@ void ahrs_update(float gx, float gy, float gz,
      * from 1.0 each iteration. Re-normalizing keeps it valid.
      * Without this, the quaternion gradually grows or shrinks and
      * the orientation estimate becomes meaningless. */
-    recipNorm = inv_sqrtf(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
-    q0 *= recipNorm;
-    q1 *= recipNorm;
-    q2 *= recipNorm;
-    q3 *= recipNorm;
+    const float quat_norm_sq = n0 * n0 + n1 * n1 + n2 * n2 + n3 * n3;
+    if (!__builtin_isfinite(quat_norm_sq) || quat_norm_sq <= 1e-20f) return;
+    recipNorm = inv_sqrtf(quat_norm_sq);
+    q0 = n0 * recipNorm;
+    q1 = n1 * recipNorm;
+    q2 = n2 * recipNorm;
+    q3 = n3 * recipNorm;
+    update_valid = 1;
 }
 
 

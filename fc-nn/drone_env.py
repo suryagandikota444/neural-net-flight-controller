@@ -253,6 +253,10 @@ class QuadrotorEnv(gym.Env):
         # Curriculum progress: 0.0 = easy (small tilts, gentle penalties),
         # 1.0 = full difficulty.  Updated externally via set_curriculum().
         self._curriculum = 0.0
+        self._nominal_mass = float(self._model.body_mass[self._drone_body_id])
+        self._nominal_inertia = self._model.body_inertia[self._drone_body_id].copy()
+        self._sensor_noise_enabled = True
+        self._episode_randomize_setpoints = True
 
     # ---- Curriculum API (called by CurriculumCallback) -------------------
 
@@ -290,6 +294,11 @@ class QuadrotorEnv(gym.Env):
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
         rng = self.np_random
+        options = dict(options or {})
+        self._episode_randomize_setpoints = bool(options.get(
+            "randomize_setpoints", self._randomize_setpoints))
+        self._sensor_noise_enabled = bool(options.get("sensor_noise", True))
+        self._max_ep_steps = int(options.get("max_steps", self._max_ep_steps))
 
         # --- Domain randomisation -----------------------------------------
         self._max_thrust = MAX_THRUST * rng.uniform(0.9, 1.1, size=4)
@@ -301,12 +310,36 @@ class QuadrotorEnv(gym.Env):
         wind_dir        /= (np.linalg.norm(wind_dir) + 1e-8)
         self._wind_force = wind_dir * float(rng.uniform(0.0, 0.5))
 
+        # Public deterministic-reset interface for validation and experiments.
+        # Still consume the usual domain draws, preserving the noise sequence.
+        if not options.get("domain_randomization", True):
+            self._max_thrust = np.full(4, MAX_THRUST)
+            self._km_kf = np.full(4, KM_KF_RATIO)
+            mass = BASE_MASS
+            cog_offset = np.zeros(3)
+            self._wind_force = np.zeros(3)
+        mass = float(options.get("mass", mass))
+        cog_offset = np.asarray(options.get("cog_offset", cog_offset), dtype=float)
+        self._wind_force = np.asarray(options.get("wind_force", self._wind_force), dtype=float)
+        if not np.isfinite(mass) or mass <= 0 or cog_offset.shape != (3,) or not np.all(np.isfinite(cog_offset)):
+            raise ValueError("mass must be positive and CoG a finite three-vector")
+        if self._wind_force.shape != (3,) or not np.all(np.isfinite(self._wind_force)) or self._max_ep_steps <= 0:
+            raise ValueError("wind must be a finite three-vector and max_steps positive")
+
         # --- Reset MuJoCo ------------------------------------------------
         mujoco.mj_resetData(self._model, self._data)
 
         # Apply randomised mass & CoG
         self._model.body_mass[self._drone_body_id] = mass
         self._model.body_ipos[self._drone_body_id] = cog_offset
+        # Nominal XML inertia describes the entire aircraft. Density variation
+        # scales mass and inertia together, never cumulatively across resets.
+        self._model.body_inertia[self._drone_body_id] = self._nominal_inertia * (mass / self._nominal_mass)
+        # Compiled same-frame optimization otherwise ignores nonzero body_ipos.
+        self._model.body_sameframe[self._drone_body_id] = 0
+        mujoco.mj_setConst(self._model, self._data)
+        for i, aid in enumerate(self._act_ids):
+            self._model.actuator_gear[aid, 2] = self._max_thrust[i]
 
         # Random initial tilt — range grows with curriculum progress
         _tilt_max = CURRIC_TILT_START + (CURRIC_TILT_END - CURRIC_TILT_START) * self._curriculum
@@ -322,7 +355,7 @@ class QuadrotorEnv(gym.Env):
         ])
 
         # --- Setpoint randomisation (training only) -----------------------
-        if self._randomize_setpoints:
+        if self._episode_randomize_setpoints:
             _hover_frac = CURRIC_HOVER_FRAC_START + (CURRIC_HOVER_FRAC_END - CURRIC_HOVER_FRAC_START) * self._curriculum
             _cmd_angle  = CURRIC_CMD_ANGLE_START  + (CURRIC_CMD_ANGLE_END  - CURRIC_CMD_ANGLE_START)  * self._curriculum
             if rng.random() < _hover_frac:
@@ -336,13 +369,25 @@ class QuadrotorEnv(gym.Env):
                 self._cmd_pitch = math.radians(float(rng.uniform(-_cmd_angle, _cmd_angle)))
                 self._cmd_alt   = float(rng.uniform(0.6, 1.6))
 
+        self._cmd_yaw_rate = 0.0
+        if "setpoint" in options:
+            self.set_setpoint(**options["setpoint"])
+        if "initial_rpy_deg" in options:
+            rpy = np.radians(np.asarray(options["initial_rpy_deg"], dtype=float))
+            if rpy.shape != (3,) or not np.all(np.isfinite(rpy)):
+                raise ValueError("initial_rpy_deg must be a finite three-vector")
+            quat = np.zeros(4)
+            # Extrinsic XYZ agrees with _quat_to_euler's roll/pitch/yaw convention.
+            mujoco.mju_euler2Quat(quat, rpy, "XYZ")
+
         # Always start at the commanded altitude.
         # Ground starts can be added later via curriculum once hover is stable.
         init_z = self._cmd_alt
 
         # Free-joint qpos: [x, y, z, qw, qx, qy, qz]
-        self._data.qpos[0:3] = [0.0, 0.0, init_z]
+        self._data.qpos[0:3] = options.get("initial_position", [0.0, 0.0, init_z])
         self._data.qpos[3:7] = quat
+        self._data.qvel[:] = options.get("initial_velocity", np.zeros(6))
 
         mujoco.mj_forward(self._model, self._data)
 
@@ -352,9 +397,13 @@ class QuadrotorEnv(gym.Env):
         # (if False, setpoints keep whatever the viewer last set via set_setpoint())
 
         obs = self._get_obs()
-        return obs, {}
+        return obs, {"mass_kg": float(self._model.body_subtreemass[self._drone_body_id]),
+                     "cog_offset_m": cog_offset.copy()}
 
     def step(self, action):
+        action = np.asarray(action)
+        if action.shape != (4,) or not np.all(np.isfinite(action)):
+            raise ValueError("action must contain four finite values")
         action = np.clip(action, -1.0, 1.0).astype(np.float64)
         self._step_count += 1
 
@@ -392,7 +441,7 @@ class QuadrotorEnv(gym.Env):
             mujoco.mj_step(self._model, self._data)
 
         # --- Mid-episode setpoint variation (training only) ---------------
-        if self._randomize_setpoints and self._step_count % 200 == 0:
+        if self._episode_randomize_setpoints and self._step_count % 200 == 0:
             rng = self.np_random
             _cmd_angle = CURRIC_CMD_ANGLE_START + (CURRIC_CMD_ANGLE_END - CURRIC_CMD_ANGLE_START) * self._curriculum
             r = rng.random()
@@ -425,7 +474,8 @@ class QuadrotorEnv(gym.Env):
             reward -= CRASH_PENALTY
 
         self._prev_action = action.astype(np.float32)  # store raw action for rate penalty
-        return obs, float(reward), terminated, truncated, {}
+        reason = "ground_contact" if crashed else "tilt_limit" if flipped else "altitude_limit" if too_far else None
+        return obs, float(reward), bool(terminated), bool(truncated), {"termination_reason": reason}
 
     def render(self):
         if self.render_mode == "human":
@@ -450,20 +500,20 @@ class QuadrotorEnv(gym.Env):
     def _get_obs(self) -> np.ndarray:
         # Gyro (body-frame, rad/s)
         gyro_raw = self._sensor(self._gyro_sensor_id, 3)
-        gyro_raw += self.np_random.normal(0, GYRO_NOISE_STD, 3)
+        gyro_raw += self.np_random.normal(0, GYRO_NOISE_STD, 3) * self._sensor_noise_enabled
         gyro_norm = np.clip(gyro_raw / MAX_GYRO, -1.0, 1.0).astype(np.float32)
 
         # Accel (body-frame, m/s² → g → normalise by 2g)
         accel_raw = self._sensor(self._accel_sensor_id, 3)
         accel_g   = accel_raw / GRAVITY
-        accel_g  += self.np_random.normal(0, ACCEL_NOISE_STD, 3)
+        accel_g  += self.np_random.normal(0, ACCEL_NOISE_STD, 3) * self._sensor_noise_enabled
         accel_norm = np.clip(accel_g / 2.0, -1.0, 1.0).astype(np.float32)
 
         # Attitude error (roll & pitch, relative to setpoint)
         # Add AHRS lag noise to simulate Madgwick filter latency on hardware
         quat = self._sensor(self._quat_sensor_id, 4)
         roll, pitch, _ = _quat_to_euler(quat)
-        ahrs_noise = self.np_random.normal(0, AHRS_LAG_STD, 2)
+        ahrs_noise = self.np_random.normal(0, AHRS_LAG_STD, 2) * self._sensor_noise_enabled
         roll_err  = np.float32(np.clip(math.degrees(roll  - self._cmd_roll)  / ANGLE_ERR_SCALE + ahrs_noise[0], -1.0, 1.0))
         pitch_err = np.float32(np.clip(math.degrees(pitch - self._cmd_pitch) / ANGLE_ERR_SCALE + ahrs_noise[1], -1.0, 1.0))
 
