@@ -173,7 +173,10 @@ class AltitudeLoopContract(unittest.TestCase):
         # 0.3 m above target: adj = -0.045 → thrust drop through the measured
         # (nonlinear) thrust curve, held for 0.2 s
         drop = de.thrust_fraction(HOVER_THROTTLE - 0.045) - de.thrust_fraction(HOVER_THROTTLE)
-        expected = 4 * MAX_THRUST * drop / de.BASE_MASS * 0.2
+        # Nominal actuator: the drop arrives after the dead time and (on
+        # average) one lag time constant later, so it acts for 0.2 s minus both.
+        acting = 0.2 - de.ACT_DELAY_TICKS_NOMINAL * 0.01 - de.ACT_TAU_NOMINAL
+        expected = 4 * MAX_THRUST * drop / de.BASE_MASS * acting
         self.assertAlmostEqual(vz_after(True), expected, delta=0.1 * abs(expected))
         # HOVER_THROTTLE is rounded to 6 dp (it becomes a C float), so hover is
         # exact only to ~1e-6 thrust: allow 0.1 mm/s after 0.2 s.
@@ -361,6 +364,54 @@ class FirmwareParity(unittest.TestCase):
                 np.testing.assert_allclose(m, np.clip(f * (FW["HOVER_THROTTLE"] + 0.4 * s), f * .06, 1), atol=1e-6)
             else:
                 np.testing.assert_allclose(m, FW["HOVER_THROTTLE"] + 0.045 + 0.4 * s, atol=1e-6)
+
+
+class ActuatorDelayContract(unittest.TestCase):
+    def test_actuator_model_dead_time_and_lag(self):
+        a = de.ActuatorModel(3, 0.0, np.zeros(4))
+        outs = [a.step(np.ones(4))[0] for _ in range(5)]
+        np.testing.assert_allclose(outs, [0, 0, 0, 1, 1])
+        b = de.ActuatorModel(0, 0.01, np.zeros(4))
+        first = b.step(np.ones(4))[0]
+        # exact tick average of 1 - exp(-t/tau) over 10 ms with tau = 10 ms
+        self.assertAlmostEqual(first, 1 - (1 - np.exp(-1.0)), places=9)
+        self.assertAlmostEqual(b.state[0], 1 - np.exp(-1.0), places=9)
+
+    def test_randomisation_and_overrides(self):
+        env = QuadrotorEnv()
+        env.set_curriculum(1.0)                  # delay is phased in with progress
+        delays, taus, inert = set(), [], []
+        for seed in range(200):
+            _, info = env.reset(seed=seed)
+            delays.add(info["actuator_delay_ticks"]); taus.append(info["motor_tau_s"])
+            inert.append(info["inertia_scale"])
+        self.assertEqual(delays, {2, 3, 4, 5})
+        self.assertTrue(0.005 <= min(taus) and max(taus) <= 0.03)
+        self.assertTrue(0.8 <= min(inert) and max(inert) <= 1.5)
+        _, info = env.reset(seed=0, options={**NOISELESS})
+        self.assertEqual((info["actuator_delay_ticks"], info["motor_tau_s"], info["inertia_scale"]),
+                         (de.ACT_DELAY_TICKS_NOMINAL, de.ACT_TAU_NOMINAL, 1.0))
+        _, info = env.reset(seed=0, options={**NOISELESS, "actuator_delay_ticks": 0,
+                                             "motor_tau_s": 0.0, "inertia_scale": 1.3})
+        self.assertEqual(info["actuator_delay_ticks"], 0)
+        np.testing.assert_allclose(env._model.body_inertia[env._drone_body_id],
+                                   env._nominal_inertia * 1.3)
+
+    def test_delay_phased_in_with_curriculum(self):
+        env = QuadrotorEnv()
+        env.set_curriculum(0.0)
+        infos = [env.reset(seed=s)[1] for s in range(50)]
+        self.assertTrue(all(i["actuator_delay_ticks"] == 0 and i["motor_tau_s"] == 0 for i in infos))
+        full = QuadrotorEnv(firmware_contract={"actuator_curriculum": False})
+        full.set_curriculum(0.0)
+        self.assertEqual({full.reset(seed=s)[1]["actuator_delay_ticks"] for s in range(200)}, {2, 3, 4, 5})
+
+    def test_hover_holds_with_delay(self):
+        env = QuadrotorEnv(firmware_contract={"alt_kp": 0.0, "alt_kd": 0.0})
+        env.reset(seed=0, options={**NOISELESS, "initial_alt_agl": 0.5, "initial_rpy_deg": [0, 0, 0]})
+        for _ in range(100):
+            env.step(np.zeros(4))
+        self.assertLess(abs(env._data.qvel[2]), 1e-3)   # air start: motors already at hover
 
 
 class LegacyReproduction(unittest.TestCase):

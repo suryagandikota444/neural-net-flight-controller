@@ -1,0 +1,26 @@
+FLIGHT RECORDER SUMMARY
+========================================
+recorded: last 30.0 s of 103.5 s armed
+loop time: median 200 µs, max 550 µs
+mode: HOVER   radio link lost: 0 ticks
+end: disarmed with the ARM switch / failsafe
+first tilt >  5°: t=  1.66 s (roll   -5.1, pitch   -1.6)
+first tilt > 10°: t= 11.87 s (roll  -10.5, pitch   +3.8)
+
+last ~4 s before the end:
+   roll:  0.75 Hz  size   1.54 →   1.03 °  (decaying)
+  pitch:  3.00 Hz  size   2.08 →   0.91 °  (decaying)
+     gx:  3.75 Hz  size   0.33 →   0.21 rad/s  (decaying)
+     gy:  3.00 Hz  size   0.62 →   0.21 rad/s  (decaying)
+     gz:  0.75 Hz  size   0.25 →   0.13 rad/s  (decaying)
+  NN output at its ±1 limit: 0.0 % of samples
+  motors: 1203–1529 µs, mean 1378 (hover ≈ 1372)
+  altitude: +0.22 … +0.43 m
+  accel z std: 0.058 g (training noise 0.22 g)
+
+Human Review: Flight was semi stable but had a lot of wobble.
+Had several times where it the wobble would intensify slowly
+and get more severe and then die down. Also had a couple times
+where the motors would suddenly increase or decrease thrust
+
+of course it does drift quite a bit from side to side as well.

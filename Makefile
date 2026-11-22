@@ -8,7 +8,10 @@
 #   make flash-test TESTS=3,8   — only tests 3 and 8
 #   make flash-test TESTS=all   — every test INCLUDING motor tests 10, 14, 16
 #   make flash-test TESTS=16 T16_MAX=1600 — thrust ramp ceiling (default 1500 us)
+#   make flash-test TESTS=18 — level calibration, stored in flash (then: make flash)
 #   make golden   — regenerate host_test/golden_vectors.h from weights.h
+#   make pull-log — read the flight recorder (last 30 s) off the drone over USB
+#                   (hold BOOT + plug in, like flashing), then erase it from the drone
 #   make clean    — remove build artifacts
 #   make size     — show memory usage
 #
@@ -43,11 +46,11 @@ HOST_CC ?= cc
 # === SOURCE FILES ===
 # Normal flight firmware — full system
 SRCS = startup.c clock.c spi.c imu.c uart.c main.c memset.c motor.c ahrs.c nn.c i2c.c baro.c flight_safety.c \
-       crsf.c rc.c rc_input.c
+       crsf.c rc.c rc_input.c blackbox.c flash.c level_cal.c
 
 # Test harness. Powered tests 10 and 14 only run when selected via TESTS=.
 SRCS_TEST = startup.c clock.c spi.c imu.c uart.c test_harness.c memset.c ahrs.c nn.c i2c.c baro.c motor.c \
-            crsf.c rc.c rc_input.c
+            crsf.c rc.c rc_input.c flash.c level_cal.c
 
 # === COMPILER FLAGS ===
 CFLAGS  = -mcpu=cortex-m4       # Target the Cortex-M4 core
@@ -162,6 +165,11 @@ check-golden:
 golden:
 	$(PYTHON) fc-nn/generate_golden.py
 
+# Flight recorder: read sector 11 via DFU, decode to experiments/blackbox/<time>/,
+# then erase it from the drone. Drone must be in DFU mode (BOOT + USB).
+pull-log:
+	$(PYTHON) fc-nn/pull_log.py
+
 # Flash test harness via DFU
 flash-test: $(TEST_TARGET).bin
 	dfu-util -a 0 -s 0x08000000:leave -D $<
@@ -194,10 +202,12 @@ host-regression:
 	./host_test/test_safety
 	$(HOST_CC) -O1 -Wall -Wextra -std=c99 host_test/test_rc_host.c -o host_test/test_rc -lm
 	./host_test/test_rc
+	$(HOST_CC) -O1 -Wall -Wextra -std=c99 host_test/test_level_cal_host.c -o host_test/test_level_cal -lm
+	./host_test/test_level_cal
 
 # Clean build artifacts
 clean:
 	rm -f $(TARGET).elf $(TARGET).bin $(TARGET).build-config $(TEST_TARGET).elf $(TEST_TARGET).bin $(TEST_TARGET).build-config host_test/test_nn host_test/test_ahrs host_test/test_safety host_test/test_rc
 
-.PHONY: all clean flash flash-openocd flash-test size test host-test host-regression check-golden golden FORCE
+.PHONY: all clean flash flash-openocd flash-test size test host-test host-regression check-golden golden pull-log FORCE
 FORCE:

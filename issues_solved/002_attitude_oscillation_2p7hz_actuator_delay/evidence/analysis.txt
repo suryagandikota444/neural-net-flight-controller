@@ -1,0 +1,30 @@
+1. SPECTRUM PEAKS (Welch, 5.12 s windows) — relative height in ()
+   gx    rms  0.540   2.73 Hz (1.00)
+   gy    rms  0.602   2.73 Hz (1.00)
+   gz    rms  0.140   2.73 Hz (0.11)
+   roll  rms  1.978   2.73 Hz (1.00), 1.56 Hz (0.17)
+   pitch rms  2.259   2.73 Hz (1.00)
+   ax    rms  0.082   2.73 Hz (1.00)
+   ay    rms  0.070   2.73 Hz (1.00), 1.56 Hz (0.16)
+   az    rms  0.101   0.98 Hz (1.00), 6.45 Hz (0.16)
+   gx: 88 % of its power is in 2-5 Hz
+   gy: 93 % of its power is in 2-5 Hz
+
+2. 2-5 Hz OSCILLATION SIZE PER 2 s WINDOW (rad/s envelope)
+   gx: 0.43 0.39 0.34 0.14 0.87 1.29 1.28 0.07 0.24 0.30 0.61 0.49 0.83 0.31 0.22
+   gy: 0.76 0.59 0.32 0.21 0.63 0.72 1.15 0.21 0.19 0.31 0.98 0.99 1.39 0.80 0.25
+
+3. MOTOR BIASES (mean µs)
+   FL 1393  FR 1422  RR 1368  RL 1424
+   left-right +14.0   front-rear +11.7   CW-CCW (FR+RL vs FL+RR) +42.5
+   mean roll -1.21°, pitch -0.02°, yaw rate -0.188 rad/s
+
+4. ACTUATOR DELAY FIT  (angular accel = K · delayed/lagged motor command)
+   roll: instant response (sim assumption)  R² 0.45
+   roll: dead time 40 ms + lag τ   0 ms  R² 0.78  gain 0.198 rad/s² per µs
+   roll: dead time 30 ms + lag τ  10 ms  R² 0.77  gain 0.199 rad/s² per µs
+   roll: dead time 40 ms + lag τ  10 ms  R² 0.76  gain 0.198 rad/s² per µs
+   pitch: instant response (sim assumption)  R² 0.48
+   pitch: dead time 40 ms + lag τ   0 ms  R² 0.82  gain 0.183 rad/s² per µs
+   pitch: dead time 30 ms + lag τ  10 ms  R² 0.81  gain 0.184 rad/s² per µs
+   pitch: dead time 40 ms + lag τ  10 ms  R² 0.80  gain 0.183 rad/s² per µs

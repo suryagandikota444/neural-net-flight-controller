@@ -329,8 +329,16 @@ def main():
     )
 
     # --- Separate eval environment (single, no subprocess) ----------------
+    # The eval env is never sent curriculum updates, so it must not phase the
+    # actuator delay in (that would pick best_model by no-delay performance):
+    # it always uses the full measured delay range.
+    eval_kwargs = dict(env_kwargs)
+    if eval_kwargs.get("firmware_contract") is not False:
+        fc = eval_kwargs.get("firmware_contract")
+        eval_kwargs["firmware_contract"] = {**(fc if isinstance(fc, dict) else {}),
+                                            "actuator_curriculum": False}
     eval_env = make_vec_env(QuadrotorEnv, n_envs=1, seed=args.seed + 10_000,
-                            env_kwargs=env_kwargs)
+                            env_kwargs=eval_kwargs)
 
     # --- Callbacks --------------------------------------------------------
     checkpoint_cb = CheckpointCallback(

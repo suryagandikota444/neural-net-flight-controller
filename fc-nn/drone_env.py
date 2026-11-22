@@ -120,6 +120,52 @@ def hover_command(mass: float = BASE_MASS, max_thrust: float = MAX_THRUST,
 HOVER_THROTTLE = round(hover_command(), 6)   # 0.372638 → 1373 µs
 ACTION_SCALE   = 0.4        # ±0.4 around hover → motor range [0, 0.77]
 
+# --- Actuator delay: MEASURED 2026-11-22 (firmware_contract mode) ----------
+# Flight-recorder fit of angular acceleration vs motor command
+# (issues_solved/002_attitude_oscillation_2p7hz_actuator_delay): the real
+# motors respond ~40 ms after the command (R² 0.78–0.82 vs 0.45–0.48 for an
+# instant response). The ESC signal is 400 Hz, so this is ESC + rotor
+# spin-up. The old simulator had NO delay; with it, the trained policy
+# oscillated at 2.7 Hz on the real drone.
+# Model: dead time of whole control ticks, then a first-order lag on thrust.
+ACT_DELAY_TICKS_NOMINAL = 3        # 30 ms
+ACT_TAU_NOMINAL         = 0.010    # 10 ms  → ≈ 40 ms effective
+INERTIA_SCALE_NOMINAL   = 1.0
+
+
+class ActuatorModel:
+    """Dead time (whole policy ticks) + first-order lag on the thrust fraction.
+
+    The lag is integrated exactly over each tick and the tick-AVERAGE thrust
+    is applied (piecewise-constant ctrl over the physics substeps), so the
+    cost is one numpy op per policy step.  delay 0 and tau 0 = instant."""
+
+    def __init__(self, delay_ticks: int, tau_s: float, init_frac,
+                 tick_s: float = FRAMESKIP * DT):
+        self.delay = int(delay_ticks)
+        self.tau = float(tau_s)
+        self.tick = tick_s
+        self.state = np.array(init_frac, dtype=np.float64)
+        self.queue = [self.state.copy() for _ in range(self.delay)]
+
+    def step(self, frac_cmd) -> np.ndarray:
+        """Advance one tick with the new command; returns the tick-average thrust fraction."""
+        frac_cmd = np.asarray(frac_cmd, dtype=np.float64)
+        if self.delay:
+            self.queue.append(frac_cmd.copy())
+            target = self.queue.pop(0)
+        else:
+            target = frac_cmd
+        if self.tau <= 0.0:
+            self.state = target.copy()
+            return self.state.copy()
+        e = math.exp(-self.tick / self.tau)
+        f0 = self.state
+        avg = target + (f0 - target) * (self.tau / self.tick) * (1.0 - e)
+        self.state = target + (f0 - target) * e
+        return avg
+
+
 # Legacy (firmware_contract=False) model — kept bit-identical for the
 # regression fixtures: linear thrust, 8.5 N per motor.
 LEGACY_MAX_THRUST     = 8.5
@@ -233,6 +279,24 @@ FIRMWARE_CONTRACT_DEFAULTS = dict(
     # Measured thrust curve (see THRUST_K above). exp=1, u0=0 → linear.
     thrust_exp=THRUST_EXP,
     thrust_u0=THRUST_U0,
+    # Measured actuator delay (see ActuatorModel): per episode, dead time
+    # uniform over whole ticks in [lo, hi] and lag tau uniform in [lo, hi] s.
+    # Nominal (domain_randomization=False): 3 ticks + 10 ms ≈ 40 ms.
+    # Options "actuator_delay_ticks" / "motor_tau_s" at reset override.
+    actuator_delay_ticks=(2, 5),
+    motor_tau_s=(0.005, 0.03),
+    # Phase the delay in with the training curriculum: both ranges are scaled
+    # by curriculum progress (0 → instant motors, 1 → full measured range).
+    # Why: with the full delay from step 0 the untrained policy crashes too
+    # often for the curriculum to ever advance (runs delay_s1/s2_20261122
+    # stalled at reward ~60, progress 0). Eval envs set this False so they
+    # always see the full delay.
+    actuator_curriculum=True,
+    # Rotational inertia multiplier (on top of the mass scaling). The flight
+    # fit suggested the real drone turns ~2x less per µs than the sim, but it
+    # was hand-held — randomise until measured (bifilar pendulum).
+    # Option "inertia_scale" at reset overrides.
+    inertia_scale_range=(0.8, 1.5),
     # OPTIONAL 5 — ground starts with the firmware's 50-tick throttle ramp.
     ground_start_frac=0.25,
     ramp_ticks=FW_RAMP_TICKS,
@@ -278,7 +342,8 @@ def resolve_firmware_contract(firmware_contract) -> Optional[dict]:
         cfg.update({k: v for k, v in firmware_contract.items() if k != "enabled"})
     elif firmware_contract is not True:
         raise TypeError("firmware_contract must be bool or dict")
-    for k in ("baro_noise_std", "thrust_scale_range", "air_start_alt_agl"):
+    for k in ("baro_noise_std", "thrust_scale_range", "air_start_alt_agl",
+              "motor_tau_s", "inertia_scale_range"):
         v = cfg[k]
         cfg[k] = (float(v), float(v)) if np.isscalar(v) else tuple(float(x) for x in v)
     return cfg
@@ -396,6 +461,10 @@ class QuadrotorEnv(gym.Env):
         self._max_ep_steps  = MAX_EP_STEPS
         self._max_thrust    = None
         self.last_motor_cmd = np.zeros(4)   # firmware motor command of the last step
+        self._act_delay = ACT_DELAY_TICKS_NOMINAL
+        self._act_tau = ACT_TAU_NOMINAL
+        self._inertia_scale = INERTIA_SCALE_NOMINAL
+        self._actuator = None
         self._km_kf        = None
         self._wind_force   = np.zeros(3)
         self._prev_action   = np.zeros(4, dtype=np.float32)
@@ -556,6 +625,13 @@ class QuadrotorEnv(gym.Env):
             mm = c["motor_mismatch"]
             self._max_thrust = (MAX_THRUST * self._thrust_scale
                                 * rng.uniform(1.0 - mm, 1.0 + mm, size=4))
+            p = self._curriculum if c["actuator_curriculum"] else 1.0
+            lo, hi = c["actuator_delay_ticks"]
+            lo_p, hi_p = int(round(lo * p)), int(round(hi * p))
+            self._act_delay = int(rng.integers(lo_p, max(lo_p, hi_p) + 1))
+            tlo, thi = c["motor_tau_s"]
+            self._act_tau = float(rng.uniform(tlo * p, thi * p))
+            self._inertia_scale = float(rng.uniform(*c["inertia_scale_range"]))
         self._km_kf      = KM_KF_RATIO * rng.uniform(0.9, 1.1, size=4)
         mass             = BASE_MASS * float(rng.uniform(0.95, 1.05))
         cog_offset       = rng.uniform(-0.002, 0.002, size=3)
@@ -573,6 +649,16 @@ class QuadrotorEnv(gym.Env):
             cog_offset = np.zeros(3)
             self._wind_force = np.zeros(3)
             self._thrust_scale = 1.0
+            if c is not None:
+                self._act_delay = ACT_DELAY_TICKS_NOMINAL
+                self._act_tau = ACT_TAU_NOMINAL
+                self._inertia_scale = INERTIA_SCALE_NOMINAL
+        if c is not None:
+            self._act_delay = int(options.get("actuator_delay_ticks", self._act_delay))
+            self._act_tau = float(options.get("motor_tau_s", self._act_tau))
+            self._inertia_scale = float(options.get("inertia_scale", self._inertia_scale))
+            if self._act_delay < 0 or self._act_tau < 0 or self._inertia_scale <= 0:
+                raise ValueError("actuator delay/tau must be >= 0 and inertia_scale > 0")
         if c is not None and "thrust_scale" in options:
             # Deterministic collective thrust-map error (e.g. 0.75 = 25 % weak)
             s = float(options["thrust_scale"])
@@ -596,7 +682,8 @@ class QuadrotorEnv(gym.Env):
         self._model.body_ipos[self._drone_body_id] = cog_offset
         # Nominal XML inertia describes the entire aircraft. Density variation
         # scales mass and inertia together, never cumulatively across resets.
-        self._model.body_inertia[self._drone_body_id] = self._nominal_inertia * (mass / self._nominal_mass)
+        self._model.body_inertia[self._drone_body_id] = (self._nominal_inertia * (mass / self._nominal_mass)
+                                                         * (self._inertia_scale if c is not None else 1.0))
         # Compiled same-frame optimization otherwise ignores nonzero body_ipos.
         self._model.body_sameframe[self._drone_body_id] = 0
         mujoco.mj_setConst(self._model, self._data)
@@ -699,13 +786,18 @@ class QuadrotorEnv(gym.Env):
 
         if c is not None:
             self._reset_alt_sensor(rng)
+            # Motors start at rest for a ground start, at hover thrust in the air.
+            init = 0.0 if self._ground_start else float(self.thrust_fraction(HOVER_THROTTLE))
+            self._actuator = ActuatorModel(self._act_delay, self._act_tau, np.full(4, init))
 
         obs = self._get_obs()
         info = {"mass_kg": float(self._model.body_subtreemass[self._drone_body_id]),
                 "cog_offset_m": cog_offset.copy()}
         if c is not None:
             info.update(ground_start=self._ground_start, thrust_scale=self._thrust_scale,
-                        baro_noise_std=self._baro_noise, target_z=self.target_z)
+                        baro_noise_std=self._baro_noise, target_z=self.target_z,
+                        actuator_delay_ticks=self._act_delay, motor_tau_s=self._act_tau,
+                        inertia_scale=self._inertia_scale)
         return obs, info
 
     def step(self, action):
@@ -756,6 +848,9 @@ class QuadrotorEnv(gym.Env):
         # ctrl is the fraction of max thrust that command produces.
         self.last_motor_cmd = motor_cmd.copy()
         frac = self.thrust_fraction(motor_cmd)
+        if c is not None:
+            # Real motors: ~40 ms dead time + spin-up lag (ActuatorModel).
+            frac = self._actuator.step(frac)
         thrusts = frac * self._max_thrust
         for i, aid in enumerate(self._act_ids):
             self._model.actuator_gear[aid, 2] = self._max_thrust[i]

@@ -37,6 +37,7 @@
  *      TEST 15: RC link + arming logic, motors OFF  (opt-in, 60 s, radio ON)
  *      TEST 16: Thrust ramp on a scale ** PROPS ON, ARM switch = dead-man ** (opt-in)
  *      TEST 17: RC channel finder — which switch is which channel, motors OFF (opt-in, 90 s)
+ *      TEST 18: Level calibration → flash (opt-in; flat surface, rotate 180° when asked)
  *
  * ── CONVENTIONS ────────────────────────────────────────────────
  *
@@ -66,6 +67,7 @@
 #include "crsf.h"      /* test 15 */
 #include "rc.h"
 #include "rc_input.h"
+#include "level_cal.h" /* test 18 */
 
 /* ============================================================
  * Test selection — set at build time by the Makefile:
@@ -87,7 +89,7 @@ static int test_selected(int n)
 {
     const char *s = HARNESS_TESTS;
     if (str_eq(s, "all"))     return 1;
-    if (str_eq(s, "passive")) return n != 10 && n != 14 && n != 15 && n != 16 && n != 17;
+    if (str_eq(s, "passive")) return n != 10 && n != 14 && n != 15 && n != 16 && n != 17 && n != 18;
     /* comma-separated list of numbers, e.g. "3,7,8" */
     while (*s) {
         int v = 0, digits = 0;
@@ -3593,6 +3595,178 @@ static void test17_rc_channel_finder(imu_type_t imu)
     uart_write_string(" us, so pick a 2-position switch that reaches ~2000 us.\r\n");
 }
 
+/* ============================================================
+ * TEST 18: Level calibration, stored in flash (issue 003)
+ *
+ *   Two measurements on the same spot, the second rotated 180° about
+ *   vertical. The surface slope flips sign between them, the sensor's own
+ *   offset (chip bias + board mounting) does not, so
+ *       offset = (a0 + a180) / 2,   surface slope = (a0 − a180) / 2.
+ *   The surface does not need to be perfectly level. "Level" afterwards =
+ *   the plane the landing gear stands on. Saved to flash sector 10;
+ *   main.c uses it on every boot (level_cal.h).
+ *
+ *   Props OFF, battery optional (USB power is fine). Firm flat surface.
+ * ============================================================ */
+#define T18_SAMPLES        300            /* 3 s per measurement          */
+#define T18_ACC_STD_MAX    0.010f         /* g: "still" (props off, no hands) */
+#define T18_GYR_STD_MAX    0.020f         /* rad/s                         */
+#define T18_ROT_MIN_DEG    170.0f
+#define T18_ROT_MAX_DEG    190.0f
+#define T18_STILL_TICKS    150            /* 1.5 s still to accept rotation */
+#define T18_ROT_TIMEOUT    6000           /* 60 s                          */
+
+/* Mean body-frame accel/gyro over T18_SAMPLES; returns 1 if the board was still. */
+static int t18_measure(imu_type_t imu, float a_mean[3], float g_mean[3])
+{
+    float sa[3] = {0}, sa2[3] = {0}, sg[3] = {0}, sg2[3] = {0};
+    for (int i = 0; i < T18_SAMPLES; i++) {
+        float g[3], a[3];
+        wait_tick();
+        read_body(imu, NULL, NULL, g, a);
+        for (int k = 0; k < 3; k++) {
+            sa[k] += a[k]; sa2[k] += a[k] * a[k];
+            sg[k] += g[k]; sg2[k] += g[k] * g[k];
+        }
+    }
+    int still = 1;
+    const float n = (float)T18_SAMPLES;
+    for (int k = 0; k < 3; k++) {
+        a_mean[k] = sa[k] / n;
+        g_mean[k] = sg[k] / n;
+        float va = sa2[k] / n - a_mean[k] * a_mean[k];
+        float vg = sg2[k] / n - g_mean[k] * g_mean[k];
+        if (va > T18_ACC_STD_MAX * T18_ACC_STD_MAX) still = 0;
+        if (vg > T18_GYR_STD_MAX * T18_GYR_STD_MAX) still = 0;
+    }
+    float norm2 = a_mean[0] * a_mean[0] + a_mean[1] * a_mean[1] + a_mean[2] * a_mean[2];
+    if (norm2 < 0.81f || norm2 > 1.21f) still = 0;        /* |a| outside 0.9–1.1 g */
+    return still;
+}
+
+static int t18_measure_retry(imu_type_t imu, const char *what, float a[3], float g[3])
+{
+    for (int attempt = 1; attempt <= 3; attempt++) {
+        uart_write_string("  Measuring ");
+        uart_write_string(what);
+        uart_write_string(" (3 s, don't touch)...\r\n");
+        if (t18_measure(imu, a, g)) {
+            uart_write_string("    ax "); print_float3(a[0]);
+            uart_write_string("  ay "); print_float3(a[1]);
+            uart_write_string("  az "); print_float3(a[2]);
+            uart_write_string(" g\r\n");
+            return 1;
+        }
+        uart_write_string("    moved / vibrating - keep it still. Retrying...\r\n");
+        delay_ms(1000);
+    }
+    return 0;
+}
+
+static void t18_print_angles(const char *label, float ax_g, float ay_g)
+{
+    uart_write_string(label);
+    uart_write_string(" roll ");
+    print_float3(level_cal_roll_deg(ay_g));
+    uart_write_string(" deg, pitch ");
+    print_float3(level_cal_pitch_deg(ax_g));
+    uart_write_string(" deg\r\n");
+}
+
+static void test18_level_calibration(imu_type_t imu)
+{
+    print_banner("TEST 18: Level calibration (stored in flash)");
+
+    level_cal_t old;
+    int had_old = level_cal_load(&old);
+    if (had_old) t18_print_angles("  Currently stored offset:", old.offset[0], old.offset[1]);
+    else         uart_write_string("  No calibration stored yet.\r\n");
+
+    uart_write_string(
+        "\r\n  PROPS OFF. Stand the drone on its landing gear on a firm, flat\r\n"
+        "  surface (a table). It does NOT need to be perfectly level.\r\n"
+        "  Hands off. Step 1 of 2 starts in 5 s...\r\n");
+    delay_ms(5000);
+
+    float a0[3], a180[3], g0[3], g180[3];
+    if (!t18_measure_retry(imu, "position 1", a0, g0)) {
+        print_fail("TEST 18: board never still - nothing saved");
+        return;
+    }
+
+    uart_write_string(
+        "\r\n  Step 2 of 2: ROTATE the drone 180 deg IN PLACE (spin it around on\r\n"
+        "  the same spot, keep it standing on the surface), then let go.\r\n"
+        "  The angle is printed live; it continues once it reads 170-190 deg\r\n"
+        "  and the drone is still for 1.5 s.\r\n");
+
+    float yaw = 0.0f;              /* rad, gyro-integrated, bias from position 1 */
+    int still_ticks = 0, ok = 0;
+    for (int i = 0; i < T18_ROT_TIMEOUT; i++) {
+        float g[3], a[3];
+        wait_tick();
+        read_body(imu, g0, NULL, g, a);
+        yaw += g[2] * 0.01f;
+        float m = g[0] * g[0] + g[1] * g[1] + g[2] * g[2];
+        still_ticks = (m < 0.03f * 0.03f) ? still_ticks + 1 : 0;
+        float deg = level_cal_absf(yaw) * 57.2958f;
+        if (i % 50 == 0) {
+            uart_write_string("    rotated ");
+            print_float3(deg);
+            uart_write_string(" deg\r\n");
+        }
+        if (still_ticks >= T18_STILL_TICKS && deg >= T18_ROT_MIN_DEG && deg <= T18_ROT_MAX_DEG) {
+            ok = 1;
+            break;
+        }
+    }
+    if (!ok) {
+        print_fail("TEST 18: no 180 deg rotation within 60 s - nothing saved");
+        return;
+    }
+    uart_write_string("    rotation accepted: ");
+    print_float3(level_cal_absf(yaw) * 57.2958f);
+    uart_write_string(" deg\r\n");
+
+    if (!t18_measure_retry(imu, "position 2", a180, g180)) {
+        print_fail("TEST 18: board never still - nothing saved");
+        return;
+    }
+
+    level_cal_t c;
+    level_cal_from_two(a0, a180, &c);
+
+    uart_write_string("\r\n  RESULT\r\n");
+    t18_print_angles("    Board/frame level offset (now corrected):", c.offset[0], c.offset[1]);
+    uart_write_string("    offset ax "); print_float3(c.offset[0]);
+    uart_write_string("  ay "); print_float3(c.offset[1]);
+    uart_write_string("  az "); print_float3(c.offset[2]);
+    uart_write_string(" g\r\n");
+    t18_print_angles("    Your surface slope (ignored):", c.surface[0], c.surface[1]);
+    uart_write_string("    (the old boot calibration would have flown leaning by\r\n"
+                      "     offset + slope; now only the gear plane counts)\r\n");
+    if (level_cal_absf(a0[2] - a180[2]) > 0.01f)
+        uart_write_string("    note: z differs between positions by > 0.01 g -\r\n"
+                          "          surface uneven or drone moved; consider re-running.\r\n");
+    if (had_old)
+        t18_print_angles("    Change vs stored:", c.offset[0] - old.offset[0],
+                         c.offset[1] - old.offset[1]);
+
+    if (!level_cal_plausible(&c)) {
+        print_fail("TEST 18: offset > 0.10 g (~6 deg) - not saved. Check the board mounting.");
+        return;
+    }
+    uart_write_string("  Saving to flash (sector 10)...\r\n");
+    if (level_cal_save(&c)) {
+        print_pass("TEST 18: level calibration saved and read back");
+        uart_write_string("  Now flash the flight firmware: make flash\r\n"
+                          "  Its boot message should say: LEVEL: stored calibration\r\n");
+    } else {
+        print_fail("TEST 18: flash write/verify FAILED");
+    }
+}
+
+
 int main(void)
 {
     /* ── 1. Clock ── */
@@ -3711,6 +3885,7 @@ int main(void)
     if (test_selected(15)) test15_rc_link(imu);                  /* RC link, radio ON, motors OFF */
     if (test_selected(16)) test16_thrust_ramp(imu);              /* MOTORS SPIN, props on, ARM = dead-man */
     if (test_selected(17)) test17_rc_channel_finder(imu);        /* RC channel finder, motors OFF */
+    if (test_selected(18)) test18_level_calibration(imu);        /* writes flash sector 10, props off */
 
     /* ── Done ── */
     print_banner("ALL SELECTED TESTS COMPLETE");

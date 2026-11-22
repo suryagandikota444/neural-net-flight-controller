@@ -42,6 +42,7 @@ import mujoco
 
 from drone_env import (
     QuadrotorEnv, BASE_MASS, MAX_THRUST, HOVER_THROTTLE, ACTION_SCALE, thrust_fraction,
+    ActuatorModel, ACT_DELAY_TICKS_NOMINAL, ACT_TAU_NOMINAL,
     KM_KF_RATIO, MOTOR_DIRS, GRAVITY, FRAMESKIP, DT,
     GYRO_NOISE_STD, ACCEL_NOISE_STD, GROUND_REST_Z, LIFTOFF_AGL,
     _quat_to_euler, _quat_rotate_vec,
@@ -61,7 +62,9 @@ LOOP_DT = FW["LOOP_DT"]
 class Plant:
     """start_alt is metres above the ground reference (GROUND_REST_Z)."""
     def __init__(self, start_alt: float, thrust_scale: float = 1.0,
-                 seed: int = 0, ground_start: bool = False):
+                 seed: int = 0, ground_start: bool = False,
+                 delay_ticks: int = ACT_DELAY_TICKS_NOMINAL,
+                 motor_tau_s: float = ACT_TAU_NOMINAL):
         # Legacy env: everything below is set by hand, the contract layer is
         # firmware territory (FirmwareController / BaroModel) here.
         self.env = QuadrotorEnv(render_mode=None, firmware_contract=False)
@@ -89,19 +92,24 @@ class Plant:
         for aid in e._act_ids:
             e._model.actuator_gear[aid, 2] = MAX_THRUST * thrust_scale
         mujoco.mj_forward(e._model, e._data)
+        # Real motors: measured ~40 ms dead time + spin-up lag (issue 002).
+        init = 0.0 if ground_start else float(thrust_fraction(HOVER_THROTTLE))
+        self.actuator = ActuatorModel(delay_ticks, motor_tau_s, np.full(4, init))
 
     def step(self, motor_cmd, dt_ticks: int = 1):
         e = self.env
         motor_cmd = np.asarray(motor_cmd, dtype=np.float64)
-        frac = thrust_fraction(motor_cmd)        # measured curve (real drone)
-        thrusts = frac * e._max_thrust
-        e._data.ctrl[e._act_ids] = frac
-        yaw_torque = float(np.sum(MOTOR_DIRS * e._km_kf * thrusts))
-        quat = e._data.qpos[3:7].copy()
-        tw = _quat_rotate_vec(quat, np.array([0.0, 0.0, yaw_torque]))
-        e._data.xfrc_applied[e._drone_body_id, 3:6] = tw
-        for _ in range(FRAMESKIP * dt_ticks):
-            mujoco.mj_step(e._model, e._data)
+        cmd_frac = thrust_fraction(motor_cmd)    # measured curve (real drone)
+        for _ in range(dt_ticks):                # a stalled loop holds the command
+            frac = self.actuator.step(cmd_frac)
+            thrusts = frac * e._max_thrust
+            e._data.ctrl[e._act_ids] = frac
+            yaw_torque = float(np.sum(MOTOR_DIRS * e._km_kf * thrusts))
+            quat = e._data.qpos[3:7].copy()
+            tw = _quat_rotate_vec(quat, np.array([0.0, 0.0, yaw_torque]))
+            e._data.xfrc_applied[e._drone_body_id, 3:6] = tw
+            for _ in range(FRAMESKIP):
+                mujoco.mj_step(e._model, e._data)
 
     # ---- ground truth ----
     def truth(self):

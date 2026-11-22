@@ -2,7 +2,10 @@ ENTRY(Reset_Handler)
 
 MEMORY
 {
-    FLASH (rx)  : ORIGIN = 0x08000000, LENGTH = 1024K
+    /* Top 256 KB is reserved — code must never be placed there:
+     *   sector 10 (0x080C0000) stored level calibration (level_cal.c)
+     *   sector 11 (0x080E0000) flight recorder log (blackbox.c) */
+    FLASH (rx)  : ORIGIN = 0x08000000, LENGTH = 768K
     RAM (rwx)   : ORIGIN = 0x20000000, LENGTH = 128K
     CCM (rwx)   : ORIGIN = 0x10000000, LENGTH = 64K
 }
@@ -38,7 +41,7 @@ SECTIONS
     _estack = ORIGIN(RAM) + LENGTH(RAM);  /* Top of RAM = 0x2001FFFF + 1 */
 
     /* Define a section for CCM */
-    .ccmram :
+    .ccmram (NOLOAD) :   /* not zeroed/copied by startup; keeps .bin small */
     {
         . = ALIGN(4);
         *(.ccmram)

@@ -68,6 +68,8 @@
 #include "ahrs.h"
 #include "flight_safety.h"
 #include "nn.h"        /* Also provides NN_HOVER_THROTTLE, NN_ACTION_SCALE */
+#include "blackbox.h"  /* 100 Hz flight recorder: last 30 s, saved on motor stop, make pull-log */
+#include "level_cal.h" /* stored accel level calibration (harness TEST 18, flash sector 10)     */
 #include "i2c.h"
 #include "baro.h"
 #include "fc_config.h"  /* shared: axis alignment, obs scales, altitude gains, action filter */
@@ -457,6 +459,39 @@ static void print_rc_status(const crsf_t *c, const rc_state_t *r, int link_ok,
 
 
 /* ============================================================
+ * FLIGHT RECORDER — one 40-byte record per armed tick (blackbox.h)
+ * ============================================================ */
+static int16_t sat16(float x)
+{
+	if (x >  32767.0f) return  32767;
+	if (x < -32768.0f) return -32768;
+	return (int16_t)(x < 0.0f ? x - 0.5f : x + 0.5f);
+}
+
+static void bb_log_tick(uint32_t tick, uint32_t t0_cycles,
+                        float gx, float gy, float gz, float ax, float ay, float az,
+                        float roll, float pitch, const float nn[4], const float cmd[4],
+                        float alt, float vvel, uint32_t flags)
+{
+	bb_record_t r;
+	r.tick    = (uint16_t)tick;
+	r.gyro[0] = sat16(gx * 1000.0f);  r.gyro[1] = sat16(gy * 1000.0f);  r.gyro[2] = sat16(gz * 1000.0f);
+	r.acc[0]  = sat16(ax * 1000.0f);  r.acc[1]  = sat16(ay * 1000.0f);  r.acc[2]  = sat16(az * 1000.0f);
+	r.roll    = sat16(roll * 100.0f);
+	r.pitch   = sat16(pitch * 100.0f);
+	for (int k = 0; k < 4; k++) {
+		r.nn[k]  = sat16(nn[k] * 10000.0f);
+		r.pwm[k] = (uint16_t)(1000.0f + 1000.0f * cmd[k] + 0.5f);
+	}
+	r.alt_mm   = sat16(alt * 1000.0f);
+	r.vvel_mms = sat16(vvel * 1000.0f);
+	uint32_t loop_50us = (dwt_cycle_now() - t0_cycles) / (168U * 50U);   /* 168 MHz */
+	if (loop_50us > 255U) loop_50us = 255U;
+	r.flags = (uint16_t)(flags | (loop_50us << BB_F_LOOP_SHIFT));
+	blackbox_record(&r);
+}
+
+/* ============================================================
  * MAIN
  * ============================================================ */
 int main(void)
@@ -642,6 +677,24 @@ int main(void)
     float cal_sum_gx = 0, cal_sum_gy = 0, cal_sum_gz = 0;
     float cal_sum_ax = 0, cal_sum_ay = 0, cal_sum_az = 0;
     int   cal_count = 0;
+
+	/* Accelerometer "level": use the stored calibration (harness TEST 18)
+	 * from the first tick. Without one, fall back to the old behaviour:
+	 * the surface the drone boots on is taken as level (issue 003 — any
+	 * slope there becomes a lean, and the drone drifts). */
+	level_cal_t level_cal;
+	int level_stored = level_cal_load(&level_cal);
+	if (level_stored) {
+		for (int k = 0; k < 3; k++) accel_bias[k] = level_cal.offset[k];
+		uart_write_string("LEVEL: stored calibration  offset roll ");
+		print_fixed1(level_cal_roll_deg(level_cal.offset[1]));
+		uart_write_string(" deg, pitch ");
+		print_fixed1(level_cal_pitch_deg(level_cal.offset[0]));
+		uart_write_string(" deg\r\n");
+	} else {
+		uart_write_string("LEVEL: ** no stored calibration ** - boot surface is taken as level.\r\n"
+		                  "       Run once: make flash-test TESTS=18, then make flash.\r\n");
+	}
 	
 	uint32_t   timing_counter = 0;
 
@@ -670,9 +723,10 @@ int main(void)
         float ay = (float)ALIGN_AY(sample.ay) * accel_raw_to_g;
         float az = (float)ALIGN_AZ(sample.az) * accel_raw_to_g;
 
-        /* Apply bias correction (computed during settle phase).
-         * Before arming, biases are all 0 so this is a no-op.
-         * After arming, this removes persistent accel/gyro offsets.
+        /* Apply bias correction.
+         * Gyro bias: measured during the 2 s settle phase (0 until then).
+         * Accel bias: the stored level calibration (TEST 18) from tick 0,
+         * or, without one, measured during the settle phase.
          *
          * Gyro: subtract average at rest (should be ~0 rad/s)
          * Accel: subtract offset from expected gravity vector [0, 0, +1g]
@@ -743,9 +797,19 @@ int main(void)
                     gyro_bias[0] = cal_sum_gx * inv_n;
                     gyro_bias[1] = cal_sum_gy * inv_n;
                     gyro_bias[2] = cal_sum_gz * inv_n;
-                    accel_bias[0] = cal_sum_ax * inv_n;         /* expect 0, subtract offset */
-                    accel_bias[1] = cal_sum_ay * inv_n;         /* expect 0, subtract offset */
-                    accel_bias[2] = cal_sum_az * inv_n - 1.0f;  /* expect +1g, subtract offset from 1g */
+                    if (level_stored) {
+                        /* accel already corrected since tick 0: what is left
+                         * is the tilt of the surface it booted on (info) */
+                        uart_write_string("LEVEL: boot surface tilt roll ");
+                        print_fixed1(level_cal_roll_deg(cal_sum_ay * inv_n));
+                        uart_write_string(" deg, pitch ");
+                        print_fixed1(level_cal_pitch_deg(cal_sum_ax * inv_n));
+                        uart_write_string(" deg (not used as level)\r\n");
+                    } else {
+                        accel_bias[0] = cal_sum_ax * inv_n;         /* expect 0, subtract offset */
+                        accel_bias[1] = cal_sum_ay * inv_n;         /* expect 0, subtract offset */
+                        accel_bias[2] = cal_sum_az * inv_n - 1.0f;  /* expect +1g, subtract offset from 1g */
+                    }
                 }
 
                 calibrated = 1;
@@ -775,6 +839,17 @@ int main(void)
 			rc_update(&rc, &in, LOOP_DT);
 		}
 
+		/* Flight recorder: a new arm starts a fresh 30 s recording */
+		static int bb_flight_active = 0;   /* motors have run since this arm */
+		if (rc.just_armed) {
+			blackbox_begin_flight();
+			bb_flight_active = 1;
+		}
+		uint32_t bb_flags = (link_ok ? BB_F_LINK_OK : 0U)
+		                  | ((uint32_t)rc.mode << BB_F_MODE_SHIFT)
+		                  | (baro_ok ? BB_F_BARO_OK : 0U)
+		                  | (level_stored ? BB_F_LEVEL_CAL : 0U);
+
 		/* Ground reference follows the baro while disarmed, frozen once armed */
 		if (baro_ok && !rc.armed) {
 			float a = baro_get_altitude();
@@ -790,6 +865,10 @@ int main(void)
 			/* DISARMED: motors at 1000 µs, controller state reset so the
 			 * next arm starts exactly like a training ground start. */
 			motor_all_stop();
+			if (bb_flight_active) {          /* motors just stopped: save */
+				bb_flight_active = 0;
+				blackbox_save();             /* blocks ~1-3 s, motors off */
+			}
 			ramp_counter = 0;
 			for (int k = 0; k < 4; k++) nn_smoothed[k] = 0.0f;
 			continue;
@@ -798,6 +877,18 @@ int main(void)
 		/* A fault must bypass this tick's computation AND all future outputs. */
 		if (!ahrs_is_valid()) flight_safety_latch();
 		if (!flight_safety_check(roll_deg, pitch_deg, TILT_LIMIT_DEG)) {
+			/* Motors are cut (latched). Record the tick, and save the
+			 * flight the first time this happens. */
+			static const float zero4[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+			float a_now = baro_ok ? baro_get_altitude() - alt_zero : 0.0f;
+			float v_now = baro_ok ? baro_get_vvel() : 0.0f;
+			bb_log_tick(tick_count, t0, gx, gy, gz, ax, ay, az, roll_deg, pitch_deg,
+			            zero4, zero4, a_now, v_now, bb_flags | BB_F_SAFETY_CUT);
+			if (bb_flight_active) {
+				bb_flight_active = 0;
+				motor_all_stop();
+				blackbox_save();
+			}
 			continue;
 		}
 
@@ -886,6 +977,8 @@ int main(void)
 
 		/* Clip NN output to [-1,1] — matches training env np.clip(action,-1,1) */
 		for (int k = 0; k < 4; k++) nn_out[k] = clampf(nn_out[k], -1.0f, 1.0f);
+		float nn_raw[4];                         /* for the flight recorder */
+		for (int k = 0; k < 4; k++) nn_raw[k] = nn_out[k];
 
 		uint32_t t6 = dwt_cycle_now();  /* after NN inference */
 
@@ -918,6 +1011,7 @@ int main(void)
 		* ramp_frac goes from 0.0 → 1.0 over RAMP_TICKS ticks.
 		* motor_cmd = ramp_frac × nn_cmd
 		*/
+		int ramping = ramp_counter < RAMP_TICKS;
 		if (ramp_counter < RAMP_TICKS) {
 			ramp_counter++;
 			float ramp_frac = (float)ramp_counter / (float)RAMP_TICKS;
@@ -938,6 +1032,11 @@ int main(void)
 
 		/* ── I: Write to motors (NN→Betaflight mapping) ─── */
 		flight_safety_write_motors(NN_TO_MOTOR, motor_cmd);
+
+		/* ── I2: Flight recorder (~1 µs: one 40-byte copy) ─── */
+		bb_log_tick(tick_count, t0, gx, gy, gz, ax, ay, az, roll_deg, pitch_deg,
+		            nn_raw, motor_cmd, alt, vvel,
+		            bb_flags | (ramping ? BB_F_RAMPING : 0U));
 
 		/* ── Full telemetry log (5 Hz) ───────────────────────
 		 * Format: TEL,gx,gy,gz,ax,ay,az,roll,pitch,
