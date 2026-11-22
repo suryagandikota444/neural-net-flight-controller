@@ -15,11 +15,18 @@
  *   motor_cmd[i] = clamp(NN_HOVER_THROTTLE + out[i] * NN_ACTION_SCALE, 0, 1)
  *
  * Where:
- *   NN_HOVER_THROTTLE ≈ 0.3226  (thrust to hover at 1.118 kg)
- *   NN_ACTION_SCALE   = 0.4     (range of adjustment around hover)
+ *   NN_HOVER_THROTTLE  base throttle the policy was trained around
+ *                      (0.372638 since the measured thrust curve, 2026-11-21)
+ *   NN_ACTION_SCALE    range of adjustment around hover (0.4)
  *
  * An output of 0 means "hover." Positive = more thrust, negative = less.
- * This is defined in weights.h.
+ *
+ * Both values live ONLY in weights.h, written by export_weights.py next to
+ * the weights they were trained with. nn.c copies them into the variables
+ * below so main.c and the harness always use the numbers that match the
+ * network. (Until 2026-11-22 this header hard-coded 0.3226f, so exporting
+ * a policy with a new hover throttle silently left the firmware on the
+ * old one.)
  */
 
 #ifndef NN_H
@@ -37,8 +44,10 @@
  */
 void nn_forward(const float obs[12], float out[4]);
 
-/* Residual action mapping constants (from training) */
-#define NN_HOVER_THROTTLE  0.3226f
-#define NN_ACTION_SCALE    0.4f
+/* Residual action mapping constants — defined in nn.c from weights.h */
+extern const float nn_hover_throttle;
+extern const float nn_action_scale;
+#define NN_HOVER_THROTTLE  nn_hover_throttle
+#define NN_ACTION_SCALE    nn_action_scale
 
 #endif /* NN_H */

@@ -3182,3 +3182,958 @@ ALL SELECTED TESTS COMPLETE
 ========================================
 Review output above for PASS/FAIL.
 LED solid = done.
+
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 6,7,8
+Motor tests 10 and 14 are NOT selected — no motor output.
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 6: NN Inference Validation
+========================================
+Runs nn_forward() on the chip for every golden vector and
+compares with Python's output from the same weights.h.
+
+  OK   hover: FL=+0.040 FR=+0.012 RR=+0.038 RL=+0.007 
+  OK   roll_err +10deg: FL=-0.145 FR=+0.125 RR=+0.113 RL=-0.128 
+  OK   roll_err -10deg: FL=+0.183 FR=-0.146 RR=-0.138 RL=+0.147 
+  OK   pitch_err +10deg: FL=+0.179 FR=+0.103 RR=-0.087 RL=-0.270 
+  OK   pitch_err -10deg: FL=-0.098 FR=-0.011 RR=+0.194 RL=+0.243 
+  OK   gyro_x +1rad/s: FL=-0.064 FR=+0.060 RR=+0.155 RL=-0.061 
+  OK   gyro_z +2rad/s: FL=+0.315 FR=-0.432 RR=+0.634 RL=-0.250 
+  OK   alt low (clamped): FL=+0.156 FR=+0.131 RR=+0.179 RL=+0.138 
+  OK   alt high (clamped): FL=-0.083 FR=-0.111 RR=-0.111 RL=-0.106 
+  OK   descending 1m/s: FL=+0.551 FR=+0.665 RR=+0.621 RL=+0.669 
+  OK   random_0: FL=+3.017 FR=-1.066 RR=+7.686 RL=-1.346 
+  OK   random_1: FL=+0.795 FR=+2.157 RR=+0.194 RL=-0.540 
+  OK   random_2: FL=-2.090 FR=+2.210 RR=+2.300 RL=+0.563 
+  OK   random_3: FL=-1.872 FR=+2.363 RR=-2.526 RL=+2.447 
+  OK   random_4: FL=-5.138 FR=+5.030 RR=-0.960 RL=+3.356 
+  OK   all_zero: FL=+0.087 FR=+0.066 RR=+0.176 RL=+0.108 
+  OK   saturated: FL=-0.384 FR=-4.186 RR=+9.964 RL=-1.425 
+
+  Level-hover vector → motor PWM (hover_thr=+0.323, scale=+0.400):
+    FL=1338 FR=1328 RR=1338 RL=1326 us
+
+  Result: 68/68 outputs match.  Worst |err| = +0.003e-3
+  [PASS] On-chip NN output matches Python for every golden vector
+
+========================================
+TEST 7: Hardware-in-the-Loop Closed Loop
+========================================
+Runs the FULL control loop with real sensors,
+but motors OFF. Shows what PWM would be sent.
+
+Board must be FLAT and STILL for 10 seconds.
+
+  Setting baro ground reference...
+  AHRS settling + IMU bias calibration (2 sec)...
+  Bias calibration results:
+    gyro_bias:  gx=-0.002  gy=+0.005  gz=-0.000 rad/s
+    accel_bias: ax=+0.000  ay=-0.005  az=+0.003 g
+    Predicted AHRS error without cal: R=-0.267 deg  P=-0.004 deg
+  AHRS re-initialized. Re-settling with corrected data (1 sec)...
+  Post-cal AHRS: R=-0.019 P=-0.028 (should be ~0,0)
+  Armed. Running NN control loop for 8 seconds...
+
+  [+0.000s] FL:1007 FR:1007 RR:1007 RL:1007 | R=-0.010 P=+0.030 [RAMP]
+  [+0.200s] FL:1159 FR:1154 RR:1163 RL:1155 | R=+0.015 P=+0.061 [RAMP]
+  [+0.400s] FL:1316 FR:1308 RR:1324 RL:1311 | R=+0.015 P=-0.072 [RAMP]
+  [+0.600s] FL:1444 FR:1438 RR:1456 RL:1443 | R=+0.022 P=+0.028
+  [+0.800s] FL:1428 FR:1418 RR:1437 RL:1420 | R=-0.001 P=+0.037
+  [+1.000s] FL:1426 FR:1415 RR:1434 RL:1417 | R=+0.013 P=+0.000
+  [+1.200s] FL:1463 FR:1462 RR:1479 RL:1469 | R=-0.006 P=-0.010
+  [+1.400s] FL:1400 FR:1390 RR:1406 RL:1386 | R=+0.037 P=-0.013
+  [+1.600s] FL:1442 FR:1434 RR:1453 RL:1439 | R=-0.021 P=-0.032
+  [+1.800s] FL:1419 FR:1408 RR:1427 RL:1409 | R=-0.013 P=-0.051
+  [+2.000s] FL:1447 FR:1440 RR:1458 RL:1445 | R=+0.011 P=+0.019
+  [+2.200s] FL:1466 FR:1466 RR:1483 RL:1474 | R=+0.005 P=-0.032
+  [+2.400s] FL:1438 FR:1429 RR:1448 RL:1433 | R=-0.022 P=+0.013
+  [+2.600s] FL:1437 FR:1429 RR:1447 RL:1432 | R=-0.011 P=+0.036
+  [+2.800s] FL:1433 FR:1423 RR:1442 RL:1426 | R=-0.001 P=+0.008
+  [+3.000s] FL:1434 FR:1424 RR:1442 RL:1426 | R=-0.075 P=+0.006
+  [+3.200s] FL:1447 FR:1440 RR:1459 RL:1446 | R=-0.022 P=+0.055
+  [+3.400s] FL:1443 FR:1435 RR:1454 RL:1440 | R=-0.026 P=-0.010
+  [+3.600s] FL:1436 FR:1426 RR:1445 RL:1429 | R=+0.014 P=+0.004
+  [+3.800s] FL:1421 FR:1411 RR:1429 RL:1412 | R=+0.022 P=+0.029
+  [+4.000s] FL:1424 FR:1413 RR:1432 RL:1415 | R=+0.022 P=-0.030
+  [+4.200s] FL:1423 FR:1413 RR:1432 RL:1414 | R=+0.020 P=-0.018
+  [+4.400s] FL:1459 FR:1456 RR:1474 RL:1463 | R=-0.012 P=-0.040
+  [+4.600s] FL:1434 FR:1425 RR:1443 RL:1427 | R=+0.015 P=+0.032
+  [+4.800s] FL:1431 FR:1421 RR:1440 RL:1424 | R=+0.019 P=+0.036
+  [+5.000s] FL:1445 FR:1437 RR:1455 RL:1441 | R=-0.023 P=-0.033
+  [+5.200s] FL:1417 FR:1407 RR:1425 RL:1406 | R=+0.021 P=+0.049
+  [+5.400s] FL:1433 FR:1424 RR:1442 RL:1426 | R=-0.044 P=+0.000
+  [+5.600s] FL:1450 FR:1444 RR:1462 RL:1450 | R=-0.014 P=-0.005
+  [+5.800s] FL:1448 FR:1441 RR:1459 RL:1446 | R=-0.016 P=+0.011
+  [+6.000s] FL:1429 FR:1419 RR:1438 RL:1421 | R=-0.016 P=+0.005
+  [+6.200s] FL:1435 FR:1426 RR:1444 RL:1428 | R=+0.015 P=+0.033
+  [+6.400s] FL:1420 FR:1409 RR:1428 RL:1410 | R=-0.002 P=-0.008
+  [+6.600s] FL:1421 FR:1410 RR:1428 RL:1410 | R=-0.038 P=+0.029
+  [+6.800s] FL:1454 FR:1450 RR:1467 RL:1455 | R=+0.010 P=+0.062
+  [+7.000s] FL:1435 FR:1425 RR:1444 RL:1428 | R=-0.047 P=-0.000
+  [+7.200s] FL:1423 FR:1413 RR:1431 RL:1413 | R=+0.012 P=+0.016
+  [+7.400s] FL:1438 FR:1429 RR:1448 RL:1432 | R=+0.004 P=-0.038
+  [+7.600s] FL:1442 FR:1433 RR:1452 RL:1437 | R=+0.015 P=+0.050
+  [+7.800s] FL:1451 FR:1445 RR:1463 RL:1451 | R=-0.013 P=-0.015
+
+---- STEADY-STATE ANALYSIS (last 2 sec) ----
+
+  FL(CCW)  avg=1435 us  stddev=+7.834 us  range=[1410-1454]
+  FR(CW)   avg=1426 us  stddev=+8.881 us  range=[1399-1450]
+  RR(CCW)  avg=1444 us  stddev=+8.902 us  range=[1417-1467]
+  RL(CW)   avg=1428 us  stddev=+10.124 us  range=[1397-1455]
+
+  Overall avg = 1433 us  (expect ~1323 us)
+  Motor spread = 19 us  (max - min across 4 motors)
+
+  [PASS] Motor spread < 80 us — well balanced at hover
+  [INFO] Average PWM is not graded: real hover PWM is unmeasured.
+         On a table it includes ~+45 us of altitude P term
+         (board is 0.3 m below TARGET_ALT).
+  [PASS] All motors stable (stddev < 20 us) — no oscillation
+
+  Balance (|x| < 30 us is balanced):
+    Roll : left - right = -3.440 us  (balanced)
+    Pitch: front - rear = -6.101 us  (balanced)
+    Yaw  : CW - CCW     = -12.450 us  (balanced)
+
+========================================
+TEST 8: Live Tilt → Motor Response
+========================================
+Tilt the board; checks the NN speeds up the LOW side.
+Graded on the CHANGE from a level baseline.
+NO MOTORS WILL SPIN.
+
+  Calibrating (2 sec, keep board FLAT and STILL)...
+  Calibrated. R=+0.000 P=+0.054
+  Measuring LEVEL baseline (1 sec, keep FLAT)...
+  Baseline PWM:  FL 1338  FR 1328  RR 1338  RL 1326 us
+
+========================================
+TILT A: RIGHT SIDE DOWN (~20 deg)
+  Correct response: RIGHT motors (FR, RR) speed up
+  Preparing in 3...2...1...TILT AND HOLD
+
+  R=+0.010 P=+0.056 FL:1339 FR:1328 RR:1338 RL:1325
+  R=-0.058 P=-0.102 FL:1338 FR:1327 RR:1338 RL:1327
+  R=-0.020 P=-0.094 FL:1338 FR:1327 RR:1339 RL:1327
+  R=-0.006 P=-0.163 FL:1332 FR:1330 RR:1326 RL:1339
+  R=-0.881 P=+1.323 FL:1396 FR:1326 RR:1336 RL:1281
+  R=-0.183 P=+8.663 FL:1430 FR:1367 RR:1288 RL:1204
+  R=+5.797 P=+23.741 FL:1494 FR:1433 RR:1313 RL:1054
+  R=+3.121 P=+25.307 FL:1520 FR:1395 RR:1310 RL:1073
+  R=-0.256 P=+23.153 FL:1522 FR:1381 RR:1322 RL:1075
+  R=-0.031 P=+22.029 FL:1504 FR:1392 RR:1301 RL:1094
+  Correct pair - opposite pair = +0.000 us
+  [WARN] Not enough tilted samples (need >10 deg): roll never exceeded +10 deg
+
+  Return to FLAT (2 sec)...
+
+========================================
+TILT B: NOSE DOWN (~20 deg)  — lift the REAR
+  Correct response: FRONT motors (FL, FR) speed up
+  Preparing in 3...2...1...TILT AND HOLD
+
+  R=-0.106 P=-0.282 FL:1336 FR:1328 RR:1336 RL:1332
+  R=-5.401 P=-1.093 FL:1391 FR:1275 RR:1249 RL:1404
+  R=-15.699 P=-0.440 FL:1447 FR:1221 RR:1226 RL:1420
+  R=-22.504 P=-0.133 FL:1466 FR:1218 RR:1225 RL:1424
+  R=-22.997 P=-0.154 FL:1469 FR:1208 RR:1230 RL:1421
+  R=-22.985 P=-0.288 FL:1466 FR:1211 RR:1230 RL:1422
+  R=-22.536 P=-0.118 FL:1465 FR:1213 RR:1230 RL:1421
+  R=-22.737 P=-0.079 FL:1467 FR:1212 RR:1230 RL:1421
+  R=-22.538 P=-0.095 FL:1466 FR:1211 RR:1231 RL:1421
+  R=-22.325 P=-0.178 FL:1465 FR:1212 RR:1231 RL:1421
+  Correct pair - opposite pair = +0.000 us
+  [WARN] Not enough tilted samples (need >10 deg): pitch never exceeded +10 deg (nose down is POSITIVE pitch)
+
+  Return to FLAT (2 sec)...
+
+========================================
+TILT C: NOSE UP (~20 deg)  — lift the FRONT
+  Correct response: REAR motors (RR, RL) speed up
+  Preparing in 3...2...1...TILT AND HOLD
+
+  R=+1.690 P=+0.264 FL:1332 FR:1320 RR:1376 RL:1286
+  R=+19.094 P=+0.271 FL:1200 FR:1463 RR:1428 RL:1211
+  R=+24.587 P=+0.157 FL:1243 FR:1448 RR:1371 RL:1242
+  R=+18.939 P=+0.159 FL:1198 FR:1433 RR:1413 RL:1193
+  R=+36.651 P=+0.054 FL:1212 FR:1491 RR:1474 RL:1182
+  R=+34.389 P=-0.032 FL:1212 FR:1478 RR:1451 RL:1184
+  R=+36.536 P=-0.158 FL:1214 FR:1482 RR:1458 RL:1188
+  R=+35.710 P=-0.105 FL:1214 FR:1481 RR:1455 RL:1187
+  R=+35.771 P=-0.170 FL:1213 FR:1481 RR:1456 RL:1187
+  R=+35.514 P=+0.054 FL:1215 FR:1480 RR:1454 RL:1185
+  Correct pair - opposite pair = +0.000 us
+  [WARN] Not enough tilted samples (need >10 deg): pitch never went below -10 deg (nose up is NEGATIVE pitch)
+
+========================================
+TEST 8 COMPLETE
+========================================
+A FAIL on one axis only (roll OR pitch) means that axis's
+sign is inverted (ALIGN_xx in fc_config.h). If test 3 passes
+but this fails, suspect NN_TO_MOTOR[] / motor wiring.
+
+========================================
+ALL SELECTED TESTS COMPLETE
+========================================
+Review output above for PASS/FAIL.
+LED solid = done.
+
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 6,7,8
+Motor tests 10 and 14 are NOT selected — no motor output.
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 6: NN Inference Validation
+========================================
+Runs nn_forward() on the chip for every golden vector and
+compares with Python's output from the same weights.h.
+
+  OK   hover: FL=+0.040 FR=+0.012 RR=+0.038 RL=+0.007 
+  OK   roll_err +10deg: FL=-0.145 FR=+0.125 RR=+0.113 RL=-0.128 
+  OK   roll_err -10deg: FL=+0.183 FR=-0.146 RR=-0.138 RL=+0.147 
+  OK   pitch_err +10deg: FL=+0.179 FR=+0.103 RR=-0.087 RL=-0.270 
+  OK   pitch_err -10deg: FL=-0.098 FR=-0.011 RR=+0.194 RL=+0.243 
+  OK   gyro_x +1rad/s: FL=-0.064 FR=+0.060 RR=+0.155 RL=-0.061 
+  OK   gyro_z +2rad/s: FL=+0.315 FR=-0.432 RR=+0.634 RL=-0.250 
+  OK   alt low (clamped): FL=+0.156 FR=+0.131 RR=+0.179 RL=+0.138 
+  OK   alt high (clamped): FL=-0.083 FR=-0.111 RR=-0.111 RL=-0.106 
+  OK   descending 1m/s: FL=+0.551 FR=+0.665 RR=+0.621 RL=+0.669 
+  OK   random_0: FL=+3.017 FR=-1.066 RR=+7.686 RL=-1.346 
+  OK   random_1: FL=+0.795 FR=+2.157 RR=+0.194 RL=-0.540 
+  OK   random_2: FL=-2.090 FR=+2.210 RR=+2.300 RL=+0.563 
+  OK   random_3: FL=-1.872 FR=+2.363 RR=-2.526 RL=+2.447 
+  OK   random_4: FL=-5.138 FR=+5.030 RR=-0.960 RL=+3.356 
+  OK   all_zero: FL=+0.087 FR=+0.066 RR=+0.176 RL=+0.108 
+  OK   saturated: FL=-0.384 FR=-4.186 RR=+9.964 RL=-1.425 
+
+  Level-hover vector → motor PWM (hover_thr=+0.323, scale=+0.400):
+    FL=1338 FR=1328 RR=1338 RL=1326 us
+
+  Result: 68/68 outputs match.  Worst |err| = +0.003e-3
+  [PASS] On-chip NN output matches Python for every golden vector
+
+========================================
+TEST 7: Hardware-in-the-Loop Closed Loop
+========================================
+Runs the FULL control loop with real sensors,
+but motors OFF. Shows what PWM would be sent.
+
+Board must be FLAT and STILL for 10 seconds.
+
+  Setting baro ground reference...
+  AHRS settling + IMU bias calibration (2 sec)...
+  Bias calibration results:
+    gyro_bias:  gx=-0.002  gy=+0.005  gz=-0.000 rad/s
+    accel_bias: ax=+0.005  ay=-0.009  az=+0.002 g
+    Predicted AHRS error without cal: R=-0.513 deg  P=-0.270 deg
+  AHRS re-initialized. Re-settling with corrected data (1 sec)...
+  Post-cal AHRS: R=-0.032 P=+0.032 (should be ~0,0)
+  Armed. Running NN control loop for 8 seconds...
+
+  [+0.000s] FL:1007 FR:1007 RR:1007 RL:1007 | R=+0.009 P=-0.011 [RAMP]
+  [+0.200s] FL:1162 FR:1158 RR:1166 RL:1160 | R=-0.011 P=-0.030 [RAMP]
+  [+0.400s] FL:1302 FR:1294 RR:1308 RL:1293 | R=+0.009 P=-0.032 [RAMP]
+  [+0.600s] FL:1448 FR:1443 RR:1460 RL:1449 | R=+0.020 P=+0.051
+  [+0.800s] FL:1418 FR:1407 RR:1426 RL:1408 | R=-0.002 P=+0.061
+  [+1.000s] FL:1402 FR:1392 RR:1409 RL:1390 | R=+0.006 P=-0.019
+  [+1.200s] FL:1432 FR:1423 RR:1442 RL:1427 | R=-0.020 P=-0.069
+  [+1.400s] FL:1429 FR:1420 RR:1439 RL:1423 | R=+0.028 P=+0.008
+  [+1.600s] FL:1440 FR:1432 RR:1451 RL:1438 | R=-0.057 P=-0.021
+  [+1.800s] FL:1400 FR:1390 RR:1406 RL:1387 | R=+0.024 P=+0.010
+  [+2.000s] FL:1428 FR:1418 RR:1437 RL:1421 | R=+0.016 P=+0.028
+  [+2.200s] FL:1428 FR:1418 RR:1436 RL:1421 | R=-0.061 P=+0.060
+  [+2.400s] FL:1438 FR:1430 RR:1448 RL:1434 | R=+0.048 P=+0.023
+  [+2.600s] FL:1423 FR:1412 RR:1432 RL:1414 | R=+0.014 P=-0.084
+  [+2.800s] FL:1424 FR:1414 RR:1433 RL:1417 | R=+0.011 P=+0.018
+  [+3.000s] FL:1438 FR:1430 RR:1449 RL:1435 | R=+0.008 P=+0.014
+  [+3.200s] FL:1425 FR:1415 RR:1434 RL:1417 | R=+0.015 P=-0.019
+  [+3.400s] FL:1430 FR:1421 RR:1439 RL:1424 | R=-0.014 P=+0.044
+  [+3.600s] FL:1426 FR:1417 RR:1436 RL:1419 | R=+0.006 P=+0.058
+  [+3.800s] FL:1413 FR:1403 RR:1421 RL:1403 | R=-0.016 P=-0.012
+  [+4.000s] FL:1430 FR:1421 RR:1439 RL:1424 | R=-0.034 P=+0.006
+  [+4.200s] FL:1429 FR:1420 RR:1439 RL:1423 | R=+0.013 P=-0.010
+  [+4.400s] FL:1415 FR:1405 RR:1424 RL:1406 | R=+0.034 P=+0.052
+  [+4.600s] FL:1433 FR:1424 RR:1443 RL:1428 | R=+0.049 P=-0.026
+  [+4.800s] FL:1431 FR:1421 RR:1440 RL:1424 | R=-0.009 P=+0.018
+  [+5.000s] FL:1432 FR:1422 RR:1441 RL:1425 | R=+0.009 P=+0.018
+  [+5.200s] FL:1443 FR:1437 RR:1455 RL:1443 | R=+0.010 P=-0.010
+  [+5.400s] FL:1418 FR:1408 RR:1427 RL:1410 | R=+0.011 P=-0.013
+  [+5.600s] FL:1438 FR:1432 RR:1450 RL:1436 | R=+0.053 P=+0.009
+  [+5.800s] FL:1415 FR:1405 RR:1423 RL:1405 | R=-0.029 P=+0.013
+  [+6.000s] FL:1429 FR:1420 RR:1439 RL:1423 | R=+0.009 P=+0.047
+  [+6.200s] FL:1440 FR:1432 RR:1451 RL:1437 | R=+0.010 P=+0.003
+  [+6.400s] FL:1426 FR:1416 RR:1435 RL:1418 | R=+0.070 P=+0.020
+  [+6.600s] FL:1431 FR:1422 RR:1441 RL:1425 | R=-0.001 P=-0.003
+  [+6.800s] FL:1430 FR:1420 RR:1439 RL:1423 | R=+0.038 P=+0.046
+  [+7.000s] FL:1430 FR:1420 RR:1439 RL:1423 | R=+0.009 P=-0.015
+  [+7.200s] FL:1430 FR:1421 RR:1440 RL:1424 | R=+0.011 P=+0.011
+  [+7.400s] FL:1429 FR:1419 RR:1438 RL:1422 | R=+0.016 P=+0.015
+  [+7.600s] FL:1418 FR:1407 RR:1426 RL:1408 | R=+0.017 P=+0.090
+  [+7.800s] FL:1417 FR:1407 RR:1425 RL:1407 | R=+0.029 P=-0.048
+
+---- STEADY-STATE ANALYSIS (last 2 sec) ----
+
+  FL(CCW)  avg=1429 us  stddev=+9.881 us  range=[1401-1460]
+  FR(CW)   avg=1420 us  stddev=+10.937 us  range=[1391-1459]
+  RR(CCW)  avg=1438 us  stddev=+10.909 us  range=[1407-1476]
+  RL(CW)   avg=1423 us  stddev=+12.515 us  range=[1388-1467]
+
+  Overall avg = 1427 us  (expect ~1323 us)
+  Motor spread = 18 us  (max - min across 4 motors)
+
+  [PASS] Motor spread < 80 us — well balanced at hover
+  [INFO] Average PWM is not graded: real hover PWM is unmeasured.
+         On a table it includes ~+45 us of altitude P term
+         (board is 0.3 m below TARGET_ALT).
+  [PASS] All motors stable (stddev < 20 us) — no oscillation
+
+  Balance (|x| < 30 us is balanced):
+    Roll : left - right = -3.514 us  (balanced)
+    Pitch: front - rear = -6.089 us  (balanced)
+    Yaw  : CW - CCW     = -12.236 us  (balanced)
+
+========================================
+TEST 8: Live Tilt → Motor Response
+========================================
+Tilt the board; checks the NN speeds up the LOW side.
+Graded on the CHANGE from a level baseline.
+NO MOTORS WILL SPIN.
+
+  Calibrating (2 sec, keep board FLAT and STILL)...
+  Calibrated. R=+0.014 P=+0.048
+  Measuring LEVEL baseline (1 sec, keep FLAT)...
+  Baseline PWM:  FL 1339  FR 1328  RR 1338  RL 1326 us
+
+========================================
+TILT A: RIGHT SIDE DOWN (~20 deg)
+  Correct response: RIGHT motors (FR, RR) speed up
+  Preparing in 3...2...1...TILT AND HOLD
+
+  R=+0.909 P=+21.792 FL:1491 FR:1396 RR:1298 RL:1099
+  R=+0.575 P=+20.564 FL:1489 FR:1394 RR:1295 RL:1107
+  R=+0.561 P=+20.934 FL:1491 FR:1393 RR:1297 RL:1104
+  R=+0.573 P=+20.858 FL:1491 FR:1395 RR:1296 RL:1104
+  R=+0.449 P=+21.336 FL:1494 FR:1395 RR:1297 RL:1101
+  R=+0.682 P=+21.415 FL:1494 FR:1395 RR:1298 RL:1099
+  R=+0.400 P=+21.289 FL:1497 FR:1395 RR:1297 RL:1100
+  R=+0.561 P=+22.251 FL:1501 FR:1396 RR:1300 RL:1094
+  R=+0.616 P=+21.954 FL:1498 FR:1396 RR:1299 RL:1095
+  R=+0.633 P=+21.736 FL:1497 FR:1396 RR:1297 RL:1097
+  Correct pair - opposite pair = +0.000 us
+  [WARN] Not enough tilted samples (need >10 deg): roll never exceeded +10 deg
+
+  Return to FLAT (2 sec)...
+
+========================================
+TILT B: NOSE DOWN (~20 deg)  — lift the REAR
+  Correct response: FRONT motors (FL, FR) speed up
+  Preparing in 3...2...1...TILT AND HOLD
+
+  R=-27.992 P=+0.144 FL:1492 FR:1201 RR:1210 RL:1426
+  R=-29.563 P=+0.344 FL:1501 FR:1187 RR:1218 RL:1422
+  R=-38.039 P=+0.659 FL:1546 FR:1152 RR:1204 RL:1414
+  R=-40.115 P=+0.306 FL:1543 FR:1156 RR:1204 RL:1416
+  R=-40.225 P=+0.614 FL:1546 FR:1158 RR:1204 RL:1414
+  R=-40.864 P=+0.498 FL:1548 FR:1156 RR:1203 RL:1414
+  R=-40.714 P=+0.433 FL:1547 FR:1156 RR:1203 RL:1414
+  R=-40.614 P=+0.709 FL:1548 FR:1157 RR:1203 RL:1413
+  R=-40.689 P=+0.717 FL:1548 FR:1159 RR:1203 RL:1413
+  R=-40.517 P=+0.611 FL:1547 FR:1157 RR:1203 RL:1414
+  Correct pair - opposite pair = +0.000 us
+  [WARN] Not enough tilted samples (need >10 deg): pitch never exceeded +10 deg (nose down is POSITIVE pitch)
+
+  Return to FLAT (2 sec)...
+
+========================================
+TILT C: NOSE UP (~20 deg)  — lift the FRONT
+  Correct response: REAR motors (RR, RL) speed up
+  Preparing in 3...2...1...TILT AND HOLD
+
+  R=+43.928 P=+0.625 FL:1182 FR:1517 RR:1506 RL:1157
+  R=+59.735 P=+0.757 FL:1217 FR:1528 RR:1493 RL:1167
+  R=+61.491 P=+0.791 FL:1217 FR:1517 RR:1484 RL:1173
+  R=+63.196 P=+0.904 FL:1224 FR:1513 RR:1479 RL:1175
+  R=+62.505 P=+0.725 FL:1221 FR:1515 RR:1483 RL:1174
+  R=+63.892 P=+0.729 FL:1225 FR:1516 RR:1479 RL:1177
+  R=+61.705 P=+0.901 FL:1221 FR:1513 RR:1483 RL:1172
+  R=+60.842 P=+0.779 FL:1218 FR:1515 RR:1481 RL:1175
+  R=+62.424 P=+0.735 FL:1224 FR:1513 RR:1481 RL:1175
+  R=+62.617 P=+0.932 FL:1222 FR:1520 RR:1483 RL:1172
+  Correct pair - opposite pair = +0.000 us
+  [WARN] Not enough tilted samples (need >10 deg): pitch never went below -10 deg (nose up is NEGATIVE pitch)
+
+========================================
+TEST 8 COMPLETE
+========================================
+A FAIL on one axis only (roll OR pitch) means that axis's
+sign is inverted (ALIGN_xx in fc_config.h). If test 3 passes
+but this fails, suspect NN_TO_MOTOR[] / motor wiring.
+
+========================================
+ALL SELECTED TESTS COMPLETE
+========================================
+Review output above for PASS/FAIL.
+LED solid = done.
+
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 3,6,7,8
+Motor tests 10 and 14 are NOT selected — no motor output.
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 3: Dynamic Axis Alignment
+========================================
+Checks that tilts produce the SAME signs the NN was
+trained with (drone_env.py, X fwd / Y left / Z up).
+
+You will tilt the board 3 ways, ~30 deg each.
+Follow the prompts.
+
+Step 0: Place board FLAT. AHRS settling (2 sec)...
+  AHRS settled. Roll=-0.247 Pitch=-1.755
+  (Should be near 0,0 if board is flat)
+
+----------------------------------------
+TILT 1: NOSE DOWN (~30 degrees)
+  Lift the REAR of the board so the nose dips.
+  Expected: ax < 0, AHRS pitch > 0
+----------------------------------------
+
+  >> Tilt NOSE DOWN and hold steady <<
+  (Move during the countdown, then hold for ~4 seconds)
+
+  Preparing in 3...2...1...SAMPLING
+
+  ax=-0.220 ay=+0.051 az=+0.875 gz=+0.348 | R=+0.044 P=+15.964 Y=+2.458
+  ax=-0.399 ay=-0.009 az=+0.917 gz=+0.044 | R=+0.205 P=+22.260 Y=+4.342
+  ax=-0.365 ay=+0.014 az=+0.918 gz=-0.014 | R=+0.587 P=+21.856 Y=+4.760
+  ax=-0.370 ay=+0.014 az=+0.933 gz=-0.053 | R=+0.530 P=+21.175 Y=+4.361
+  ax=-0.357 ay=-0.000 az=+0.930 gz=+0.005 | R=+0.150 P=+20.885 Y=+3.930
+  ax=-0.367 ay=+0.003 az=+0.924 gz=-0.011 | R=+0.256 P=+21.519 Y=+3.981
+  ax=-0.367 ay=+0.005 az=+0.931 gz=-0.001 | R=+0.241 P=+21.479 Y=+3.945
+  ax=-0.369 ay=+0.005 az=+0.934 gz=+0.000 | R=+0.307 P=+21.476 Y=+3.956
+  ax=-0.378 ay=+0.006 az=+0.918 gz=-0.004 | R=+0.335 P=+22.118 Y=+3.960
+  ax=-0.376 ay=+0.004 az=+0.926 gz=+0.002 | R=+0.227 P=+22.040 Y=+3.906
+  ax=-0.380 ay=+0.009 az=+0.925 gz=+0.012 | R=+0.419 P=+22.395 Y=+4.035
+  ax=-0.392 ay=+0.005 az=+0.919 gz=+0.000 | R=+0.361 P=+23.005 Y=+4.031
+  ax=-0.395 ay=+0.002 az=+0.916 gz=-0.002 | R=+0.149 P=+23.277 Y=+3.915
+  ax=-0.399 ay=+0.005 az=+0.919 gz=+0.001 | R=+0.321 P=+23.384 Y=+3.997
+  ax=-0.394 ay=+0.003 az=+0.918 gz=-0.001 | R=+0.235 P=+23.126 Y=+3.957
+  ax=-0.402 ay=+0.004 az=+0.913 gz=+0.003 | R=+0.242 P=+23.610 Y=+3.968
+  ax=-0.396 ay=+0.005 az=+0.918 gz=-0.001 | R=+0.157 P=+23.256 Y=+3.944
+  ax=-0.402 ay=+0.002 az=+0.916 gz=+0.003 | R=+0.235 P=+23.715 Y=+3.992
+  ax=-0.397 ay=+0.005 az=+0.916 gz=+0.002 | R=+0.249 P=+23.340 Y=+4.023
+  ax=-0.402 ay=+0.013 az=+0.914 gz=-0.005 | R=+0.643 P=+23.708 Y=+4.163
+
+  ---- NOSE-DOWN AVERAGES ----
+    ax=-0.381  ay=+0.005  az=+0.918
+    gx=-0.004  gy=+0.040  gz=+0.006
+    AHRS roll=+0.313  pitch=+22.415  yaw=+4.036
+
+  Return to FLAT (3 seconds, AHRS tracking)...
+----------------------------------------
+TILT 2: RIGHT SIDE DOWN (~30 degrees)
+  Lift the LEFT side so the RIGHT side dips.
+  Expected: ay > 0, AHRS roll > 0
+----------------------------------------
+
+  >> Tilt RIGHT SIDE DOWN and hold steady <<
+  (Move during the countdown, then hold for ~4 seconds)
+
+  Preparing in 3...2...1...SAMPLING
+
+  ax=+0.030 ay=+0.568 az=+0.821 gz=-0.022 | R=+34.885 P=-1.853 Y=+6.788
+  ax=+0.030 ay=+0.572 az=+0.814 gz=-0.016 | R=+35.083 P=-1.798 Y=+6.593
+  ax=+0.029 ay=+0.572 az=+0.821 gz=-0.007 | R=+34.812 P=-1.751 Y=+6.530
+  ax=+0.030 ay=+0.573 az=+0.818 gz=-0.010 | R=+35.042 P=-1.838 Y=+6.430
+  ax=+0.027 ay=+0.571 az=+0.826 gz=+0.001 | R=+34.531 P=-1.668 Y=+6.420
+  ax=+0.034 ay=+0.565 az=+0.823 gz=+0.000 | R=+34.646 P=-2.043 Y=+6.450
+  ax=+0.034 ay=+0.569 az=+0.820 gz=-0.002 | R=+34.710 P=-2.002 Y=+6.439
+  ax=+0.031 ay=+0.561 az=+0.830 gz=-0.004 | R=+34.104 P=-1.860 Y=+6.445
+  ax=+0.031 ay=+0.568 az=+0.820 gz=-0.009 | R=+34.695 P=-1.846 Y=+6.354
+  ax=+0.031 ay=+0.561 az=+0.835 gz=-0.002 | R=+34.324 P=-1.908 Y=+6.313
+  ax=+0.037 ay=+0.566 az=+0.825 gz=-0.011 | R=+34.251 P=-1.988 Y=+6.242
+  ax=+0.031 ay=+0.572 az=+0.819 gz=-0.005 | R=+35.151 P=-1.814 Y=+6.133
+  ax=+0.032 ay=+0.565 az=+0.826 gz=-0.009 | R=+34.451 P=-1.830 Y=+6.107
+  ax=+0.031 ay=+0.567 az=+0.823 gz=+0.001 | R=+34.571 P=-1.835 Y=+6.074
+  ax=+0.029 ay=+0.565 az=+0.824 gz=-0.006 | R=+34.221 P=-1.780 Y=+6.091
+  ax=+0.031 ay=+0.563 az=+0.826 gz=-0.002 | R=+34.247 P=-1.834 Y=+6.082
+  ax=+0.034 ay=+0.564 az=+0.825 gz=-0.004 | R=+34.348 P=-2.002 Y=+6.090
+  ax=+0.031 ay=+0.566 az=+0.820 gz=-0.001 | R=+34.597 P=-1.792 Y=+6.081
+  ax=+0.031 ay=+0.560 az=+0.833 gz=-0.003 | R=+33.973 P=-1.842 Y=+6.114
+  ax=+0.033 ay=+0.561 az=+0.823 gz=-0.010 | R=+34.210 P=-1.912 Y=+6.039
+
+  ---- RIGHT-DOWN AVERAGES ----
+    ax=+0.031  ay=+0.566  az=+0.824
+    gx=-0.007  gy=+0.002  gz=-0.005
+    AHRS roll=+34.488  pitch=-1.809  yaw=+6.272
+
+  Return to FLAT (3 seconds, AHRS tracking)...
+----------------------------------------
+TILT 3: ROTATE CW (viewed from above)
+  Keep board flat, rotate clockwise slowly while sampling.
+  Expected: gz < 0 (CW about +Z = negative), yaw decreasing
+----------------------------------------
+
+  >> Rotate CLOCKWISE (keep flat) <<
+  (Move during the countdown, then hold for ~4 seconds)
+
+  Preparing in 3...2...1...SAMPLING
+
+  ax=+0.031 ay=-0.005 az=+1.000 gz=+0.000 | R=-0.264 P=-1.826 Y=+6.607
+  ax=+0.035 ay=-0.004 az=+1.000 gz=+0.001 | R=-0.293 P=-2.054 Y=+6.612
+  ax=+0.034 ay=-0.001 az=+0.999 gz=-0.004 | R=-0.058 P=-2.011 Y=+6.584
+  ax=+0.010 ay=+0.000 az=+1.000 gz=-0.071 | R=+0.002 P=-1.492 Y=+6.368
+  ax=+0.048 ay=-0.017 az=+1.001 gz=-0.322 | R=-0.754 P=-1.600 Y=+3.329
+  ax=+0.028 ay=+0.000 az=+0.999 gz=-0.367 | R=-0.132 P=-1.783 Y=-0.591
+  ax=+0.044 ay=-0.004 az=+1.000 gz=-0.431 | R=+0.275 P=-1.540 Y=-5.690
+  ax=+0.025 ay=-0.004 az=+1.004 gz=-0.293 | R=+0.149 P=-1.507 Y=-9.038
+  ax=+0.035 ay=+0.042 az=+0.971 gz=-0.269 | R=+0.254 P=-1.605 Y=-12.676
+  ax=+0.035 ay=-0.007 az=+0.990 gz=-0.243 | R=+0.111 P=-1.403 Y=-15.721
+  ax=+0.014 ay=+0.013 az=+1.006 gz=-0.255 | R=+0.044 P=-1.181 Y=-18.565
+  ax=+0.029 ay=-0.003 az=+0.998 gz=-0.234 | R=-0.199 P=-1.571 Y=-21.484
+  ax=+0.024 ay=+0.004 az=+0.994 gz=-0.271 | R=-0.089 P=-1.095 Y=-23.999
+  ax=-0.023 ay=-0.052 az=+0.978 gz=-1.142 | R=-1.264 P=-0.574 Y=-31.640
+  ax=+0.020 ay=+0.454 az=+1.213 gz=-0.485 | R=+2.939 P=-0.650 Y=-44.217
+  ax=-0.011 ay=+0.042 az=+1.028 gz=-0.213 | R=+2.719 P=+0.016 Y=-46.762
+  ax=+0.007 ay=+0.001 az=+0.993 gz=-0.280 | R=+0.869 P=+0.295 Y=-49.363
+  ax=-0.014 ay=-0.027 az=+0.990 gz=-0.377 | R=-1.170 P=+0.335 Y=-53.103
+  ax=+0.030 ay=+0.011 az=+0.987 gz=-0.370 | R=-1.160 P=-0.120 Y=-57.766
+  ax=-0.000 ay=-0.017 az=+1.005 gz=-0.342 | R=-0.881 P=-0.591 Y=-62.106
+
+  ---- YAW-CW AVERAGES ----
+    ax=+0.019  ay=+0.003  az=+0.999
+    gx=-0.008  gy=+0.012  gz=-0.317
+    AHRS roll=+0.007  pitch=-1.019  yaw=-22.872
+
+========================================
+TEST 3 RESULTS
+========================================
+  [PASS] NOSE DOWN: ax < 0 and pitch > 0 — matches training
+  [PASS] RIGHT DOWN: ay > 0 and roll > 0 — matches training
+  [PASS] ROTATE CW: gz < 0 — matches training
+
+Reference (training convention):
+  Nose down:     ax<0, pitch>0
+  Right down:    ay>0, roll>0
+  CW rotation:   gz<0, yaw decreasing
+
+========================================
+TEST 6: NN Inference Validation
+========================================
+Runs nn_forward() on the chip for every golden vector and
+compares with Python's output from the same weights.h.
+
+  OK   hover: FL=+0.040 FR=+0.012 RR=+0.038 RL=+0.007 
+  OK   roll_err +10deg: FL=-0.145 FR=+0.125 RR=+0.113 RL=-0.128 
+  OK   roll_err -10deg: FL=+0.183 FR=-0.146 RR=-0.138 RL=+0.147 
+  OK   pitch_err +10deg: FL=+0.179 FR=+0.103 RR=-0.087 RL=-0.270 
+  OK   pitch_err -10deg: FL=-0.098 FR=-0.011 RR=+0.194 RL=+0.243 
+  OK   gyro_x +1rad/s: FL=-0.064 FR=+0.060 RR=+0.155 RL=-0.061 
+  OK   gyro_z +2rad/s: FL=+0.315 FR=-0.432 RR=+0.634 RL=-0.250 
+  OK   alt low (clamped): FL=+0.156 FR=+0.131 RR=+0.179 RL=+0.138 
+  OK   alt high (clamped): FL=-0.083 FR=-0.111 RR=-0.111 RL=-0.106 
+  OK   descending 1m/s: FL=+0.551 FR=+0.665 RR=+0.621 RL=+0.669 
+  OK   random_0: FL=+3.017 FR=-1.066 RR=+7.686 RL=-1.346 
+  OK   random_1: FL=+0.795 FR=+2.157 RR=+0.194 RL=-0.540 
+  OK   random_2: FL=-2.090 FR=+2.210 RR=+2.300 RL=+0.563 
+  OK   random_3: FL=-1.872 FR=+2.363 RR=-2.526 RL=+2.447 
+  OK   random_4: FL=-5.138 FR=+5.030 RR=-0.960 RL=+3.356 
+  OK   all_zero: FL=+0.087 FR=+0.066 RR=+0.176 RL=+0.108 
+  OK   saturated: FL=-0.384 FR=-4.186 RR=+9.964 RL=-1.425 
+
+  Level-hover vector → motor PWM (hover_thr=+0.373, scale=+0.400):
+    FL=1389 FR=1378 RR=1388 RL=1376 us
+
+  Result: 68/68 outputs match.  Worst |err| = +0.003e-3
+  [PASS] On-chip NN output matches Python for every golden vector
+
+========================================
+TEST 7: Hardware-in-the-Loop Closed Loop
+========================================
+Runs the FULL control loop with real sensors,
+but motors OFF. Shows what PWM would be sent.
+
+Board must be FLAT and STILL for 10 seconds.
+
+  Setting baro ground reference...
+  AHRS settling + IMU bias calibration (2 sec)...
+  Bias calibration results:
+    gyro_bias:  gx=-0.002  gy=+0.005  gz=-0.000 rad/s
+    accel_bias: ax=+0.030  ay=-0.004  az=+0.002 g
+    Predicted AHRS error without cal: R=-0.213 deg  P=-1.705 deg
+  AHRS re-initialized. Re-settling with corrected data (1 sec)...
+  Post-cal AHRS: R=+0.030 P=+0.038 (should be ~0,0)
+  Armed. Running NN control loop for 8 seconds...
+
+  [+0.000s] FL:1008 FR:1008 RR:1008 RL:1008 | R=+0.013 P=-0.018 [RAMP]
+  [+0.200s] FL:1180 FR:1176 RR:1184 RL:1176 | R=-0.017 P=-0.015 [RAMP]
+  [+0.400s] FL:1356 FR:1348 RR:1364 RL:1351 | R=+0.045 P=+0.004 [RAMP]
+  [+0.600s] FL:1487 FR:1479 RR:1498 RL:1483 | R=+0.049 P=-0.045
+  [+0.800s] FL:1486 FR:1477 RR:1496 RL:1480 | R=+0.066 P=-0.013
+  [+1.000s] FL:1474 FR:1464 RR:1483 RL:1466 | R=+0.016 P=-0.002
+  [+1.200s] FL:1476 FR:1466 RR:1485 RL:1468 | R=+0.039 P=+0.009
+  [+1.400s] FL:1460 FR:1450 RR:1468 RL:1449 | R=-0.011 P=-0.031
+  [+1.600s] FL:1487 FR:1479 RR:1497 RL:1483 | R=+0.047 P=-0.001
+  [+1.800s] FL:1491 FR:1484 RR:1502 RL:1489 | R=-0.010 P=-0.003
+  [+2.000s] FL:1482 FR:1472 RR:1491 RL:1475 | R=+0.004 P=+0.054
+  [+2.200s] FL:1459 FR:1449 RR:1467 RL:1448 | R=+0.035 P=-0.006
+  [+2.400s] FL:1470 FR:1460 RR:1479 RL:1461 | R=-0.007 P=-0.029
+  [+2.600s] FL:1496 FR:1491 RR:1508 RL:1496 | R=-0.001 P=+0.036
+  [+2.800s] FL:1483 FR:1474 RR:1493 RL:1477 | R=+0.045 P=-0.019
+  [+3.000s] FL:1486 FR:1477 RR:1495 RL:1480 | R=-0.026 P=-0.020
+  [+3.200s] FL:1491 FR:1484 RR:1503 RL:1489 | R=+0.016 P=-0.003
+  [+3.400s] FL:1481 FR:1472 RR:1491 RL:1474 | R=-0.003 P=-0.062
+  [+3.600s] FL:1480 FR:1470 RR:1489 RL:1473 | R=+0.048 P=-0.001
+  [+3.800s] FL:1502 FR:1497 RR:1515 RL:1503 | R=+0.018 P=-0.032
+  [+4.000s] FL:1495 FR:1489 RR:1507 RL:1494 | R=-0.014 P=+0.010
+  [+4.200s] FL:1486 FR:1476 RR:1495 RL:1479 | R=-0.051 P=+0.050
+  [+4.400s] FL:1485 FR:1476 RR:1495 RL:1479 | R=+0.010 P=-0.036
+  [+4.600s] FL:1496 FR:1491 RR:1508 RL:1495 | R=+0.029 P=+0.069
+  [+4.800s] FL:1475 FR:1465 RR:1484 RL:1467 | R=-0.022 P=+0.000
+  [+5.000s] FL:1487 FR:1479 RR:1498 RL:1483 | R=-0.026 P=+0.003
+  [+5.200s] FL:1474 FR:1464 RR:1483 RL:1466 | R=+0.015 P=-0.003
+  [+5.400s] FL:1486 FR:1478 RR:1497 RL:1482 | R=+0.019 P=-0.020
+  [+5.600s] FL:1458 FR:1447 RR:1465 RL:1446 | R=+0.002 P=-0.013
+  [+5.800s] FL:1476 FR:1466 RR:1485 RL:1468 | R=-0.008 P=-0.012
+  [+6.000s] FL:1499 FR:1494 RR:1512 RL:1500 | R=+0.040 P=+0.011
+  [+6.200s] FL:1479 FR:1469 RR:1488 RL:1471 | R=+0.038 P=-0.002
+  [+6.400s] FL:1470 FR:1460 RR:1478 RL:1461 | R=-0.031 P=+0.010
+  [+6.600s] FL:1457 FR:1446 RR:1463 RL:1445 | R=-0.009 P=+0.028
+  [+6.800s] FL:1484 FR:1475 RR:1494 RL:1479 | R=-0.015 P=-0.033
+  [+7.000s] FL:1459 FR:1448 RR:1466 RL:1447 | R=+0.012 P=+0.023
+  [+7.200s] FL:1497 FR:1491 RR:1509 RL:1497 | R=+0.031 P=+0.077
+  [+7.400s] FL:1484 FR:1475 RR:1494 RL:1478 | R=+0.016 P=+0.028
+  [+7.600s] FL:1484 FR:1475 RR:1494 RL:1479 | R=+0.014 P=-0.054
+  [+7.800s] FL:1484 FR:1475 RR:1494 RL:1479 | R=-0.011 P=-0.016
+
+---- STEADY-STATE ANALYSIS (last 2 sec) ----
+
+  FL(CCW)  avg=1477 us  stddev=+9.592 us  range=[1455-1499]
+  FR(CW)   avg=1468 us  stddev=+10.500 us  range=[1445-1494]
+  RR(CCW)  avg=1487 us  stddev=+10.700 us  range=[1462-1512]
+  RL(CW)   avg=1471 us  stddev=+12.227 us  range=[1443-1500]
+
+  Overall avg = 1476 us  (expect ~1373 us)
+  Motor spread = 18 us  (max - min across 4 motors)
+
+  [PASS] Motor spread < 80 us — well balanced at hover
+  [INFO] Average PWM is not graded: real hover PWM is unmeasured.
+         On a table it includes ~+45 us of altitude P term
+         (board is 0.3 m below TARGET_ALT).
+  [PASS] All motors stable (stddev < 20 us) — no oscillation
+
+  Balance (|x| < 30 us is balanced):
+    Roll : left - right = -3.523 us  (balanced)
+    Pitch: front - rear = -5.879 us  (balanced)
+    Yaw  : CW - CCW     = -12.601 us  (balanced)
+
+========================================
+TEST 8: Live Tilt → Motor Response
+========================================
+Tilt the board; checks the NN speeds up the LOW side.
+Graded on the CHANGE from a level baseline.
+NO MOTORS WILL SPIN.
+
+  Calibrating (2 sec, keep board FLAT and STILL)...
+  Calibrated. R=+0.017 P=-0.026
+  Measuring LEVEL baseline (1 sec, keep FLAT)...
+  Baseline PWM:  FL 1389  FR 1378  RR 1388  RL 1376 us
+
+========================================
+TILT A: RIGHT SIDE DOWN (~20 deg)
+  Correct response: RIGHT motors (FR, RR) speed up
+  Preparing in 3...2...1...TILT AND HOLD
+
+  R=+33.790 P=+0.040 FL:1269 FR:1526 RR:1492 RL:1240
+  R=+33.556 P=+0.101 FL:1267 FR:1529 RR:1493 RL:1240
+  R=+33.870 P=-0.085 FL:1268 FR:1522 RR:1497 RL:1235
+  R=+34.311 P=-0.040 FL:1267 FR:1528 RR:1497 RL:1239
+  R=+33.177 P=-0.073 FL:1268 FR:1525 RR:1489 RL:1241
+  R=+33.406 P=+0.140 FL:1267 FR:1528 RR:1492 RL:1238
+  R=+33.453 P=+0.026 FL:1267 FR:1526 RR:1493 RL:1238
+  R=+34.447 P=-0.012 FL:1266 FR:1528 RR:1498 RL:1238
+  R=+34.512 P=+0.041 FL:1266 FR:1529 RR:1497 RL:1238
+  R=+34.796 P=+0.097 FL:1266 FR:1529 RR:1499 RL:1236
+
+  Change vs level baseline (300 tilted samples):  FL -121.492  FR +149.253  RR +107.042  RL -137.595 us
+  Correct pair - opposite pair = +257.691 us
+  [PASS] RIGHT DOWN: right motors speed up → corrects
+
+  Return to FLAT (2 sec)...
+
+========================================
+TILT B: NOSE DOWN (~20 deg)  — lift the REAR
+  Correct response: FRONT motors (FL, FR) speed up
+  Preparing in 3...2...1...TILT AND HOLD
+
+  R=+0.723 P=+27.549 FL:1584 FR:1455 RR:1362 RL:1113
+  R=+0.609 P=+27.922 FL:1586 FR:1457 RR:1361 RL:1111
+  R=+0.895 P=+27.951 FL:1585 FR:1458 RR:1361 RL:1111
+  R=+0.694 P=+28.387 FL:1587 FR:1458 RR:1360 RL:1108
+  R=+0.750 P=+28.062 FL:1585 FR:1457 RR:1361 RL:1110
+  R=+0.671 P=+28.153 FL:1586 FR:1458 RR:1360 RL:1110
+  R=+0.720 P=+28.285 FL:1586 FR:1459 RR:1360 RL:1109
+  R=+0.753 P=+28.188 FL:1586 FR:1458 RR:1360 RL:1110
+  R=+0.753 P=+28.287 FL:1586 FR:1459 RR:1360 RL:1109
+  R=+0.592 P=+28.137 FL:1586 FR:1458 RR:1360 RL:1110
+
+  Change vs level baseline (300 tilted samples):  FL +197.322  FR +80.028  RR -27.662  RL -265.248 us
+  Correct pair - opposite pair = +285.130 us
+  [PASS] NOSE DOWN: front motors speed up → lifts nose → corrects
+
+  Return to FLAT (2 sec)...
+
+========================================
+TILT C: NOSE UP (~20 deg)  — lift the FRONT
+  Correct response: REAR motors (RR, RL) speed up
+  Preparing in 3...2...1...TILT AND HOLD
+
+  R=+0.479 P=-45.628 FL:1285 FR:1269 RR:1577 RL:1592
+  R=+0.285 P=-45.180 FL:1283 FR:1268 RR:1573 RL:1592
+  R=+0.146 P=-45.206 FL:1283 FR:1266 RR:1572 RL:1593
+  R=+0.386 P=-45.754 FL:1285 FR:1270 RR:1574 RL:1592
+  R=+0.317 P=-45.355 FL:1283 FR:1267 RR:1573 RL:1592
+  R=+0.355 P=-45.052 FL:1283 FR:1267 RR:1573 RL:1592
+  R=+0.520 P=-45.938 FL:1285 FR:1271 RR:1575 RL:1591
+  R=+0.407 P=-45.764 FL:1285 FR:1269 RR:1575 RL:1591
+  R=+0.312 P=-45.563 FL:1283 FR:1267 RR:1574 RL:1592
+  R=+0.223 P=-45.145 FL:1284 FR:1269 RR:1573 RL:1592
+
+  Change vs level baseline (300 tilted samples):  FL -104.617  FR -109.219  RR +185.736  RL +216.299 us
+  Correct pair - opposite pair = +307.935 us
+  [PASS] NOSE UP: rear motors speed up → lifts tail → corrects
+
+========================================
+TEST 8 COMPLETE
+========================================
+A FAIL on one axis only (roll OR pitch) means that axis's
+sign is inverted (ALIGN_xx in fc_config.h). If test 3 passes
+but this fails, suspect NN_TO_MOTOR[] / motor wiring.
+
+========================================
+ALL SELECTED TESTS COMPLETE
+========================================
+Review output above for PASS/FAIL.
+LED solid = done.
+Barometer: settling...
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.018,+0.117,+0.019,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.017,+0.030,+0.072,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.001,+0.034,+0.039,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.005,+0.079,+0.067,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.009,-0.033,+0.034,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.008,+0.115,-0.028,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.007,-0.204,+0.009,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.006,-0.048,+0.030,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.034,+0.138,-0.007,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.006,-0.141,+0.374,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.029,-0.431,+0.579,1500,1500,988,1500,1500,1500,0,0,0
+�Barometer: settling...
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.027,-0.204,-0.035,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.015,-0.372,-0.003,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.020,-0.166,+0.125,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.025,-0.436,-0.108,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.005,-0.299,+0.030,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.015,-0.104,+0.238,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.031,-0.210,+0.245,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.023,-0.191,+0.165,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.038,-0.230,-0.553,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.049,-0.104,-0.291,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.100,-0.239,-0.112,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.087,-0.228,-0.040,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.045,-0.179,+0.000,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.032,-0.238,+0.002,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.024,-0.201,+0.027,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.008,-0.194,-0.009,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.024,-0.206,-0.216,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.006,-0.155,-0.194,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.014,-0.256,-0.051,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.023,-0.302,-0.147,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.023,-0.155,+0.031,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.032,-0.344,-0.034,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.040,-0.137,+0.085,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.004,-0.283,+0.016,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.002,-0.241,-0.123,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.023,-0.357,-0.079,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.001,-0.241,-0.095,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.008,-0.178,+0.170,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.024,-0.328,+0.330,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.008,-0.417,+0.124,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.017,-0.067,+0.231,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.031,-0.070,+0.025,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.012,-0.394,+0.106,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.014,-0.100,+0.181,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.014,-0.060,+0.154,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.004,-0.050,+0.187,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.013,-0.110,+0.069,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.009,-0.058,-0.007,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.021,-0.095,+0.068,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.003,-0.238,+0.145,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.012,-0.142,+0.213,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.015,-0.112,+0.323,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.010,-0.236,+0.235,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.005,-0.209,-0.057,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.001,+0.076,-0.414,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.008,-0.009,-0.277,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.018,-0.125,+0.067,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.023,+0.095,-0.143,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.010,-0.133,+0.181,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.001,-0.015,+0.351,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.008,-0.061,-0.131,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.005,-0.112,+0.223,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.003,-0.018,-0.063,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.006,+0.042,+0.209,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.018,-0.001,+0.005,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.025,-0.093,+0.071,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,+0.018,-0.077,+0.061,1500,1500,988,1500,1500,1500,0,0,0
+RCS,0,0,0,HOVER,33,+0.000,+0.000,+0.300,-0.007,-0.090,+0.297,1500,1500,988,1500,1500,1500,0,0,0
+�Barometer: settling...
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,-0.011,-0.111,-0.015,1500,1500,1003,1500,1000,2000,131,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,-0.009,-0.086,+0.121,1500,1500,1003,1500,1000,2000,155,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,-0.007,+0.089,+0.051,1500,1500,1003,1500,1000,2000,178,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,+0.007,-0.077,-0.083,1500,1500,1003,1500,1000,2000,201,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,-0.018,+0.099,+0.035,1500,1500,1003,1500,1000,2000,224,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,+0.011,-0.047,+0.132,1500,1500,1003,1500,1000,2000,247,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,-0.001,-0.184,+0.212,1500,1500,1003,1500,1000,2000,271,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,+0.012,+0.270,+0.087,1500,1500,1002,1500,1000,2000,294,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,-0.015,-0.031,+0.046,1500,1500,1002,1500,1000,2000,318,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,+0.028,-0.050,+0.408,1500,1500,1003,1500,1000,2000,341,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,+0.012,-0.011,-0.007,1500,1500,1002,1500,1000,2000,365,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,-0.019,+0.252,+0.021,1500,1500,1003,1500,1000,2000,388,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,+0.002,+0.017,-0.070,1500,1500,1003,1500,1000,2000,411,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,+0.014,+0.120,+0.071,1500,1500,1002,1500,1000,2000,435,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,-0.004,+0.104,-0.015,1500,1500,1003,1500,1000,2000,459,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,+0.039,-0.051,+0.054,1500,1500,1003,1500,1000,2000,483,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,+0.027,+0.027,+0.181,1500,1500,1003,1500,1000,2000,506,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,+0.021,+0.172,+0.161,1500,1500,1003,1500,1000,2000,529,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,+0.011,+0.006,+0.229,1500,1500,1003,1500,1000,2000,552,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,+0.016,-0.051,+0.043,1500,1500,1003,1500,1000,2000,575,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,+0.028,+0.180,+0.218,1500,1500,1003,1500,1000,2000,599,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,+0.008,+0.086,-0.065,1500,1500,1002,1500,1000,2000,622,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,+0.010,+0.127,+0.177,1500,1500,1002,1500,1000,2000,646,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,+0.021,-0.400,-0.180,1500,1500,1002,1500,1000,2000,669,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,+0.029,-0.140,-0.342,1500,1500,1002,1500,1000,2000,693,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,+0.006,+0.000,+0.120,1500,1500,1002,1500,1000,2000,716,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.012,-0.111,+0.045,1500,1500,1003,1500,1000,1000,739,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.001,-0.247,-0.381,1500,1500,1003,1500,1000,1000,763,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.011,-0.432,-0.249,1500,1500,1002,1500,1000,1000,786,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,-0.033,-0.259,-0.281,1500,1500,1002,1500,1000,1000,810,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,-0.016,-0.098,-0.065,1500,1500,1003,1500,1000,1000,832,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,-0.027,-0.114,+0.018,1500,1500,1002,1500,1000,1000,856,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,-0.030,+0.024,-0.094,1500,1500,1003,1500,1000,1000,880,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,-0.038,-0.110,-0.175,1500,1500,1003,1500,1000,1000,903,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,-0.005,-0.108,-0.242,1500,1500,1003,1500,1000,1000,927,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.021,-0.262,-0.166,1500,1500,1003,1500,1000,1503,950,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.035,-0.314,-0.151,1500,1500,1003,1500,1000,1503,974,1,0
+TEL,-0.001,-0.008,+0.006,+0.011,+0.001,+0.999,+0.007,-0.465,-0.000,-0.000,+0.000,+0.006,+0.000,+0.500,+0.000,-0.010,-0.050,+0.004,+0.000,+0.000,+0.142,+0.118,+0.175,+0.137,+0.172,+0.168,+0.177,+0.171
+TEL,+0.006,-0.027,-0.001,+0.006,-0.027,+1.000,-0.100,-0.391,+0.000,-0.001,-0.000,+0.003,-0.014,+0.500,-0.002,-0.009,-0.050,+0.090,+0.000,+0.000,-0.113,-0.103,-0.090,-0.148,+0.262,+0.265,+0.269,+0.251
+RCS,1,100,1,HOVER,0,+0.000,+0.000,+0.300,+0.398,-0.164,-0.530,1500,1500,1002,1500,1000,2000,997,1,0
+TEL,-0.016,+0.011,+0.006,+0.012,-0.016,+0.991,-0.166,-0.762,-0.000,+0.000,+0.000,+0.006,-0.008,+0.496,-0.004,-0.017,-0.050,-0.026,+0.000,+0.000,+0.129,+0.142,+0.178,+0.167,+0.459,+0.464,+0.479,+0.474
+TEL,+0.003,+0.042,-0.035,-0.019,+0.002,+0.986,-0.266,-0.685,+0.000,+0.001,-0.001,-0.010,+0.001,+0.493,-0.006,-0.015,-0.050,-0.079,+0.000,+0.000,+0.265,+0.350,+0.326,+0.355,+0.522,+0.556,+0.546,+0.558
+RCS,1,100,1,HOVER,0,+0.000,+0.000,+0.300,-0.334,-0.116,-0.335,1500,1500,1003,1500,1000,2000,1021,1,0
+TEL,-0.135,+0.001,-0.128,+0.039,-0.044,+1.011,-0.411,-0.590,-0.004,+0.000,-0.004,+0.019,-0.022,+0.505,-0.009,-0.013,-0.050,-0.173,+0.000,+0.000,+0.551,+0.690,+0.616,+0.669,+0.660,+0.716,+0.686,+0.707
+TEL,+0.057,+0.110,-0.292,-0.018,-0.083,+0.798,-0.788,-0.449,+0.002,+0.003,-0.008,-0.009,-0.041,+0.399,-0.018,-0.010,+0.050,+0.097,+0.000,+0.000,-0.100,+0.031,-0.105,-0.010,+0.281,+0.334,+0.280,+0.318
+TEL,+0.051,-0.078,+0.174,+0.043,-0.184,+1.217,-0.196,-0.450,+0.001,-0.002,+0.005,+0.022,-0.092,+0.608,-0.004,-0.010,+0.050,+0.698,+0.000,+0.000,-0.621,-0.427,-0.487,-0.543,+0.024,+0.102,+0.078,+0.056
+RCS,1,100,1,HOVER,0,+0.000,+0.000,+0.300,+0.693,-0.317,-0.452,1500,1500,1003,1500,1000,2000,1044,1,0
+TEL,-0.027,-0.004,+0.022,+0.023,+0.014,+1.003,+0.050,-0.275,-0.001,-0.000,+0.001,+0.012,+0.007,+0.502,+0.001,-0.006,+0.050,+0.337,+0.000,+0.000,-0.537,-0.341,-0.484,-0.427,+0.058,+0.136,+0.079,+0.102
+TEL,-0.003,+0.011,-0.014,-0.014,-0.013,+0.974,-0.130,-0.077,-0.000,+0.000,-0.000,-0.007,-0.007,+0.487,-0.003,-0.002,+0.050,+0.193,+0.000,+0.000,-0.439,-0.282,-0.416,-0.365,+0.097,+0.160,+0.106,+0.127
+RCS,1,100,1,HOVER,0,+0.000,+0.000,+0.300,+1.373,+0.168,-0.246,1500,1500,1003,1500,1000,2000,1068,1,0
+TEL,+0.030,-0.016,-0.004,-0.031,-0.028,+0.994,+0.265,-0.254,+0.001,-0.000,-0.000,-0.016,-0.014,+0.497,+0.006,-0.006,+0.050,+0.023,+0.000,+0.000,-0.240,-0.177,-0.220,-0.212,+0.230,+0.255,+0.238,+0.241
+TEL,-0.033,+0.025,+0.009,+0.008,+0.023,+0.990,+0.260,-0.298,-0.001,+0.001,+0.000,+0.004,+0.012,+0.495,+0.006,-0.007,+0.018,-0.133,+0.000,+0.000,+0.145,+0.261,+0.205,+0.279,+0.438,+0.485,+0.463,+0.492
+TEL,-0.067,+0.036,+0.011,+0.048,+0.017,+0.989,+0.059,+0.073,-0.002,+0.001,+0.000,+0.024,+0.008,+0.495,+0.001,+0.002,-0.048,-0.185,+0.000,+0.000,+0.364,+0.488,+0.441,+0.429,+0.551,+0.601,+0.582,+0.577
+RCS,1,100,1,HOVER,0,+0.000,+0.000,+0.300,-0.061,+0.093,+0.038,1500,1500,1002,1500,1000,2000,1091,1,0
+TEL,-0.017,-0.043,-0.015,+0.004,+0.006,+0.997,-0.153,+0.001,-0.000,-0.001,-0.000,+0.002,+0.003,+0.499,-0.003,+0.000,-0.050,-0.328,+0.000,+0.000,+0.557,+0.677,+0.643,+0.601,+0.677,+0.725,+0.711,+0.694
+TEL,+0.090,+0.021,-0.004,-0.013,-0.012,+1.004,-0.124,-0.079,+0.003,+0.001,-0.000,-0.007,-0.006,+0.502,-0.003,-0.002,-0.050,-0.396,+0.000,+0.000,+0.724,+0.731,+0.723,+0.728,+0.762,+0.765,+0.762,+0.764
+RCS,1,100,1,HOVER,0,+0.000,+0.000,+0.300,+0.568,+0.006,-0.195,1500,1500,1003,1500,1000,2000,1113,1,0
+TEL,+0.033,-0.017,-0.015,-0.015,-0.015,+0.998,-0.055,-0.230,+0.001,-0.000,-0.000,-0.008,-0.008,+0.499,-0.001,-0.005,-0.050,-0.261,+0.000,+0.000,+0.536,+0.641,+0.613,+0.587,+0.650,+0.692,+0.680,+0.670
+TEL,+0.003,+0.005,-0.022,-0.012,-0.005,+0.991,-0.070,-0.246,+0.000,+0.000,-0.001,-0.006,-0.003,+0.496,-0.002,-0.005,-0.050,-0.221,+0.000,+0.000,+0.481,+0.586,+0.560,+0.547,+0.607,+0.649,+0.638,+0.633
+TEL,-0.074,+0.012,-0.025,+0.017,-0.033,+0.991,-0.138,-0.301,-0.002,+0.000,-0.001,+0.009,-0.017,+0.495,-0.003,-0.007,-0.050,-0.274,+0.000,+0.000,+0.625,+0.735,+0.710,+0.692,+0.687,+0.731,+0.721,+0.714
+RCS,1,100,1,HOVER,0,+0.000,+0.000,+0.300,+0.142,-0.233,-0.206,1500,1500,1002,1500,1000,2000,1137,1,0
+TEL,-0.071,+0.019,-0.023,+0.039,-0.005,+1.006,-0.249,-0.302,-0.002,+0.001,-0.001,+0.019,-0.002,+0.503,-0.006,-0.007,-0.044,-0.222,+0.000,+0.000,+0.510,+0.613,+0.585,+0.589,+0.612,+0.653,+0.642,+0.644
+TEL,-0.031,+0.070,-0.025,+0.041,+0.001,+1.009,-0.657,-0.339,-0.001,+0.002,-0.001,+0.021,+0.000,+0.504,-0.015,-0.008,-0.050,-0.286,+0.000,+0.000,+0.736,+0.856,+0.822,+0.795,+0.732,+0.781,+0.767,+0.756
+RCS,1,100,1,HOVER,0,+0.000,+0.000,+0.300,+0.198,-0.633,-0.398,1500,1500,1002,1500,1000,2000,1160,1,0
+TEL,-0.001,+0.004,+0.003,+0.008,-0.036,+1.021,-0.793,-0.428,-0.000,+0.000,+0.000,+0.004,-0.018,+0.510,-0.018,-0.010,-0.050,-0.385,+0.000,+0.000,+0.861,+0.894,+0.881,+0.881,+0.817,+0.830,+0.825,+0.825
+TEL,-0.209,-0.016,+0.008,-0.008,+0.071,+1.046,-0.473,-0.313,-0.006,-0.000,+0.000,-0.004,+0.036,+0.523,-0.011,-0.007,-0.050,-0.259,+0.000,+0.000,+0.729,+0.828,+0.830,+0.785,+0.725,+0.764,+0.765,+0.747
+TEL,+0.011,+0.029,-0.002,+0.008,+0.011,+0.939,-0.376,-0.295,+0.000,+0.001,-0.000,+0.004,+0.005,+0.469,-0.008,-0.007,+0.036,-0.112,+0.000,+0.000,+0.354,+0.400,+0.392,+0.458,+0.514,+0.533,+0.530,+0.556
+RCS,1,100,1,HOVER,0,+0.000,+0.000,+0.300,+0.778,-0.268,-0.140,1500,1500,1002,1500,1000,2000,1184,1,0
+TEL,-0.009,+0.052,-0.040,+0.035,-0.025,+0.880,-0.499,-0.182,-0.000,+0.001,-0.001,+0.018,-0.012,+0.440,-0.011,-0.004,+0.050,+0.103,+0.000,+0.000,-0.095,-0.004,-0.083,-0.061,+0.260,+0.297,+0.265,+0.274
+TEL,+0.119,+0.072,+0.024,+0.018,-0.040,+0.836,-0.437,-0.158,+0.003,+0.002,+0.001,+0.009,-0.020,+0.418,-0.010,-0.004,+0.050,+0.378,+0.000,+0.000,-0.326,-0.137,-0.251,-0.216,+0.142,+0.218,+0.172,+0.186
+RCS,1,100,1,HOVER,0,+0.000,+0.000,+0.300,+0.358,-0.267,+0.099,1500,1500,1003,1500,1000,2000,1207,1,0
+TEL,+0.068,+0.158,-0.031,+0.023,-0.022,+0.953,-0.359,+0.007,+0.002,+0.005,-0.001,+0.011,-0.011,+0.476,-0.008,+0.000,+0.050,+0.530,+0.000,+0.000,-0.451,-0.235,-0.350,-0.320,+0.092,+0.179,+0.133,+0.145
+TEL,-0.071,+0.030,+0.011,+0.012,+0.032,+1.136,-0.070,+0.086,-0.002,+0.001,+0.000,+0.006,+0.016,+0.568,-0.002,+0.002,+0.050,+0.454,+0.000,+0.000,-0.559,-0.353,-0.503,-0.451,+0.049,+0.132,+0.071,+0.092
+TEL,+0.046,-0.001,+0.009,-0.005,+0.031,+1.078,+0.039,-0.150,+0.001,-0.000,+0.000,-0.003,+0.015,+0.539,+0.001,-0.003,+0.050,+0.491,+0.000,+0.000,-0.600,-0.371,-0.507,-0.466,+0.033,+0.124,+0.070,+0.086
+RCS,1,100,1,HOVER,0,+0.000,+0.000,+0.300,+0.102,+0.093,-0.132,1500,1500,1003,1500,1000,2000,1231,1,0
+TEL,-0.024,-0.001,+0.028,+0.014,+0.008,+0.978,-0.010,+0.028,-0.001,-0.000,+0.001,+0.007,+0.004,+0.489,-0.000,+0.001,+0.050,-0.003,+0.000,+0.000,-0.168,-0.152,-0.172,-0.166,+0.244,+0.251,+0.243,+0.245
+TEL,-0.018,-0.030,-0.007,+0.030,+0.030,+1.053,-0.077,-0.284,-0.001,-0.001,-0.000,+0.015,+0.015,+0.527,-0.002,-0.006,+0.050,-0.137,+0.000,+0.000,+0.117,+0.214,+0.165,+0.257,+0.408,+0.447,+0.427,+0.464
+RCS,1,100,1,HOVER,0,+0.000,+0.000,+0.300,+1.301,-0.176,-0.099,1500,1500,1003,1500,1000,2000,1254,1,0
+TEL,-0.013,-0.039,+0.005,-0.003,+0.007,+1.005,-0.058,-0.098,-0.000,-0.001,+0.000,-0.001,+0.003,+0.503,-0.001,-0.002,-0.028,-0.240,+0.000,+0.000,+0.398,+0.537,+0.472,+0.487,+0.564,+0.620,+0.594,+0.600
+TEL,+0.067,+0.002,-0.004,-0.002,-0.012,+0.971,+0.203,-0.065,+0.002,+0.000,-0.000,-0.001,-0.006,+0.486,+0.005,-0.001,-0.049,-0.242,+0.000,+0.000,+0.505,+0.617,+0.590,+0.556,+0.614,+0.659,+0.648,+0.634
+TEL,+0.004,-0.043,-0.013,-0.007,-0.018,+1.010,+0.048,-0.320,+0.000,-0.001,-0.000,-0.004,-0.009,+0.505,+0.001,-0.007,-0.050,-0.380,+0.000,+0.000,+0.780,+0.809,+0.798,+0.818,+0.776,+0.787,+0.783,+0.791
+RCS,1,100,1,HOVER,0,+0.000,+0.000,+0.300,+0.330,-0.080,-0.488,1500,1500,1003,1500,1000,2000,1277,1,0
+TEL,-0.074,+0.011,-0.013,+0.025,-0.013,+1.004,-0.219,-0.363,-0.002,+0.000,-0.000,+0.012,-0.006,+0.502,-0.005,-0.008,-0.050,-0.556,+0.000,+0.000,+0.825,+0.857,+0.840,+0.857,+0.802,+0.815,+0.809,+0.815
+TEL,+0.044,+0.020,-0.040,-0.025,-0.010,+0.983,+0.045,-0.371,+0.001,+0.001,-0.001,-0.013,-0.005,+0.492,+0.001,-0.008,-0.050,-0.434,+0.000,+0.000,+0.814,+0.851,+0.832,+0.850,+0.797,+0.812,+0.805,+0.812
+RCS,1,100,1,HOVER,0,+0.000,+0.000,+0.300,+0.090,-0.091,-0.388,1500,1500,1002,1500,1000,2000,1302,1,0
+TEL,-0.046,+0.012,-0.086,+0.003,+0.034,+1.012,-0.091,-0.575,-0.001,+0.000,-0.002,+0.001,+0.017,+0.506,-0.002,-0.013,-0.050,-0.452,+0.000,+0.000,+0.906,+0.923,+0.915,+0.916,+0.835,+0.842,+0.838,+0.839
+TEL,-0.004,+0.003,+0.024,+0.046,+0.027,+1.010,+0.049,-0.514,-0.000,+0.000,+0.001,+0.023,+0.013,+0.505,+0.001,-0.011,-0.050,-0.236,+0.000,+0.000,+0.712,+0.800,+0.799,+0.768,+0.699,+0.735,+0.734,+0.722
+TEL,-0.060,-0.017,-0.006,+0.051,-0.004,+0.941,-0.024,-0.827,-0.002,-0.000,-0.000,+0.025,-0.002,+0.470,-0.001,-0.018,+0.050,-0.018,+0.000,+0.000,+0.180,+0.167,+0.187,+0.210,+0.397,+0.392,+0.400,+0.409
+RCS,1,100,1,HOVER,0,+0.000,+0.000,+0.300,+1.564,-0.023,-0.689,1500,1500,1003,1500,1000,2000,1325,1,0
+TEL,-0.013,+0.025,-0.020,+0.021,+0.013,+0.938,+0.018,-0.543,-0.000,+0.001,-0.001,+0.010,+0.007,+0.469,+0.000,-0.012,+0.050,+0.045,+0.000,+0.000,-0.022,+0.029,+0.002,-0.001,+0.291,+0.312,+0.301,+0.300
+TEL,-0.037,+0.052,-0.027,+0.019,+0.022,+0.843,-0.536,-0.698,-0.001,+0.001,-0.001,+0.010,+0.011,+0.422,-0.012,-0.016,+0.050,+0.524,+0.000,+0.000,-0.368,-0.152,-0.246,-0.212,+0.125,+0.212,+0.174,+0.188
+RCS,1,100,1,HOVER,0,+0.000,+0.000,+0.300,+0.707,-0.555,-0.845,1500,1500,1003,1500,1000,2000,1349,1,0
+TEL,-0.002,+0.014,+0.029,-0.036,+0.022,+1.009,-0.474,-0.667,-0.000,+0.000,+0.001,-0.018,+0.011,+0.504,-0.011,-0.015,+0.050,+0.469,+0.000,+0.000,-0.493,-0.315,-0.420,-0.366,+0.075,+0.147,+0.105,+0.126
+TEL,+0.028,-0.064,+0.011,-0.007,-0.019,+1.121,-0.143,-0.584,+0.001,-0.002,+0.000,-0.004,-0.009,+0.561,-0.003,-0.013,+0.050,+0.347,+0.000,+0.000,-0.377,-0.201,-0.320,-0.259,+0.122,+0.192,+0.145,+0.169
+TEL,-0.003,-0.003,-0.010,-0.011,-0.006,+0.919,-0.364,-0.652,-0.000,-0.000,-0.000,-0.005,-0.003,+0.459,-0.008,-0.014,+0.050,+0.122,+0.000,+0.000,-0.437,-0.301,-0.407,-0.359,+0.098,+0.152,+0.110,+0.129
+RCS,1,100,1,HOVER,0,+0.000,+0.000,+0.300,+0.205,-0.261,-0.724,1500,1500,1002,1500,1000,2000,1372,1,0
+TEL,+0.015,-0.021,-0.012,+0.001,+0.026,+1.053,-0.214,-0.640,+0.000,-0.001,-0.000,+0.001,+0.013,+0.526,-0.005,-0.014,+0.050,+0.226,+0.000,+0.000,-0.579,-0.389,-0.519,-0.455,+0.041,+0.117,+0.065,+0.091
+TEL,+0.069,-0.010,-0.060,-0.010,-0.052,+0.937,-0.017,-0.622,+0.002,-0.000,-0.002,-0.005,-0.026,+0.468,-0.000,-0.014,+0.050,+0.041,+0.000,+0.000,-0.280,-0.189,-0.251,-0.224,+0.171,+0.207,+0.183,+0.193
+RCS,1,100,1,HOVER,0,+0.000,+0.000,+0.300,+1.665,+0.029,-0.634,1500,1500,1003,1500,1000,2000,1396,1,0
+TEL,+0.008,-0.003,-0.012,+0.013,-0.005,+0.968,+0.019,-0.594,+0.000,-0.000,-0.000,+0.006,-0.002,+0.484,+0.000,-0.013,+0.050,+0.034,+0.000,+0.000,-0.281,-0.214,-0.255,-0.246,+0.171,+0.198,+0.181,+0.185
+TEL,-0.052,-0.017,-0.022,+0.025,+0.005,+1.049,-0.098,-0.545,-0.001,-0.000,-0.001,+0.012,+0.003,+0.525,-0.002,-0.012,-0.048,-0.348,+0.000,+0.000,+0.514,+0.638,+0.609,+0.574,+0.628,+0.677,+0.666,+0.652
+TEL,-0.033,+0.023,-0.007,-0.005,+0.001,+0.974,+0.065,-0.610,-0.001,+0.001,-0.000,-0.003,+0.000,+0.487,+0.001,-0.014,+0.015,-0.271,+0.000,+0.000,+0.390,+0.529,+0.456,+0.506,+0.551,+0.607,+0.577,+0.598
+RCS,1,100,1,HOVER,0,+0.000,+0.000,+0.300,-0.057,+0.002,-0.568,1500,1500,1003,1500,1000,2000,1418,1,0
+TEL,-0.084,+0.004,+0.014,+0.027,+0.014,+1.008,-0.052,-0.673,-0.002,+0.000,+0.000,+0.014,+0.007,+0.504,-0.001,-0.015,-0.050,-0.505,+0.000,+0.000,+0.650,+0.688,+0.663,+0.669,+0.733,+0.748,+0.738,+0.740
+TEL,-0.024,+0.064,+0.046,+0.007,-0.002,+1.000,-0.157,-0.504,-0.001,+0.002,+0.001,+0.003,-0.001,+0.500,-0.003,-0.011,-0.050,-0.337,+0.000,+0.000,+0.771,+0.864,+0.847,+0.819,+0.730,+0.768,+0.761,+0.750
+RCS,1,100,1,HOVER,0,+0.000,+0.000,+0.300,+0.656,+0.003,-0.534,1500,1500,1002,1500,1000,2000,1441,1,0
+TEL,-0.042,+0.016,+0.005,+0.001,-0.019,+0.982,-0.184,-0.540,-0.001,+0.000,+0.000,+0.000,-0.009,+0.491,-0.004,-0.012,-0.050,-0.503,+0.000,+0.000,+0.784,+0.800,+0.795,+0.813,+0.786,+0.793,+0.791,+0.798
+TEL,+0.002,+0.005,-0.039,-0.004,-0.021,+0.984,-0.183,-0.456,+0.000,+0.000,-0.001,-0.002,-0.011,+0.492,-0.004,-0.010,-0.050,-0.451,+0.000,+0.000,+0.747,+0.754,+0.752,+0.759,+0.765,+0.768,+0.767,+0.770
+TEL,+0.083,+0.015,+0.029,-0.012,-0.051,+0.957,-0.138,-0.465,+0.002,+0.000,+0.001,-0.006,-0.025,+0.478,-0.003,-0.010,-0.050,-0.365,+0.000,+0.000,+0.785,+0.834,+0.820,+0.827,+0.758,+0.777,+0.772,+0.774
+RCS,1,100,1,HOVER,0,+0.000,+0.000,+0.300,-0.281,-0.192,-0.514,1500,1500,1003,1500,1000,2000,1465,1,0
+TEL,-0.077,+0.047,-0.007,+0.044,-0.027,+0.936,-0.414,-0.595,-0.002,+0.001,-0.000,+0.022,-0.013,+0.468,-0.009,-0.013,-0.050,-0.435,+0.000,+0.000,+0.886,+0.915,+0.908,+0.901,+0.825,+0.837,+0.834,+0.831
+TEL,-0.096,-0.159,-0.048,+0.023,+0.001,+1.087,-0.467,-0.579,-0.003,-0.005,-0.001,+0.012,+0.000,+0.544,-0.010,-0.013,-0.050,-0.371,+0.000,+0.000,+0.927,+0.949,+0.948,+0.951,+0.827,+0.835,+0.835,+0.836
+RCS,1,100,1,HOVER,0,+0.000,+0.000,+0.300,-0.041,-0.246,-0.580,1500,1500,1003,1500,1000,2000,1488,1,0
+TEL,-0.080,+0.038,-0.046,+0.018,+0.015,+0.979,-0.218,-0.566,-0.002,+0.001,-0.001,+0.009,+0.008,+0.490,-0.005,-0.013,+0.050,-0.053,+0.000,+0.000,+0.272,+0.245,+0.290,+0.307,+0.440,+0.429,+0.447,+0.454
+TEL,+0.087,-0.004,+0.035,+0.028,-0.009,+0.895,-0.187,-0.515,+0.002,-0.000,+0.001,+0.014,-0.004,+0.448,-0.004,-0.011,+0.050,+0.234,+0.000,+0.000,-0.188,-0.058,-0.152,-0.101,+0.197,+0.250,+0.212,+0.232
+TEL,+0.189,+0.200,+0.004,+0.053,-0.014,+0.807,-0.097,-0.370,+0.005,+0.006,+0.000,+0.026,-0.007,+0.404,-0.002,-0.008,+0.050,+0.364,+0.000,+0.000,-0.307,-0.110,-0.230,-0.189,+0.150,+0.229,+0.181,+0.197
+RCS,1,100,1,HOVER,0,+0.000,+0.000,+0.300,+1.250,-0.043,-0.254,1500,1500,1003,1500,1000,2000,1512,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,-0.039,-0.003,-0.446,1500,1500,1003,1500,1000,1000,1535,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.001,-0.071,-0.497,1500,1500,1003,1500,1000,1000,1559,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,-0.015,-0.435,-0.095,1500,1500,1003,1500,1000,1000,1582,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.003,-0.181,+0.010,1500,1500,1003,1500,1000,1000,1606,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.002,-0.076,+0.352,1500,1500,1003,1500,1000,1000,1629,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.013,-0.248,+0.582,1500,1500,1002,1500,1000,1000,1652,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.008,-0.337,+0.183,1500,1500,1003,1500,1000,1000,1676,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,-0.006,-0.209,+0.125,1500,1500,1003,1500,1000,1000,1699,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.007,-0.351,+0.404,1500,1500,1002,1500,1000,1000,1723,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.004,-0.258,+0.363,1500,1500,1003,1500,1000,1000,1746,1,0

@@ -29,12 +29,9 @@ HERE = Path(__file__).parent
 DEFAULT_HEADER = HERE.parent / "weights.h"
 GOLDEN_OUT = HERE.parent / "host_test" / "golden_vectors.h"
 
-MODEL_CANDIDATES = [
-    HERE / "runs/quad_hover/best_model.zip",
-    HERE / "runs/quad_hover/final_model.zip",
-    HERE / "runs/quad_hover_working_w_pulse/best_model.zip",
-    HERE / "runs/quad_hover_working_w_pulse/final_model.zip",
-]
+# Every model under runs/ — weights.h is matched against all of them.
+MODEL_CANDIDATES = sorted((HERE / "runs").glob("*/best_model.zip")) + \
+                   sorted((HERE / "runs").glob("*/final_model.zip"))
 
 PASS = "  \033[32m✓ PASS\033[0m"
 FAIL = "  \033[31m✗ FAIL\033[0m"

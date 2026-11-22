@@ -308,7 +308,7 @@ static void test1_spi_readback(imu_type_t imu)
         total++;
 
         v = spi1_read_register(ICM_REG_GYRO_ACCEL_CONFIG0);
-        print_regcheck("GYRO_ACCEL_CF", ICM_REG_GYRO_ACCEL_CONFIG0, v, 0x06);
+        print_regcheck("GYRO_ACCEL_CF", ICM_REG_GYRO_ACCEL_CONFIG0, v, 0x76);  /* gyro 50 Hz, accel 25 Hz (imu.c) */
         if (v == 0x06) pass_count++;
         total++;
 
@@ -1871,11 +1871,14 @@ static int tilt_response_phase(imu_type_t imu, const float gb[3], const float ab
 
     float sum[4] = {0};
     int count = 0;
+    float peak_roll = 0.0f, peak_pitch = 0.0f;   /* largest |angle| seen, signed */
 
     for (int i = 0; i < 300; i++) {
         float nn[4], roll, pitch;
         nn_tick(imu, gb, ab, nn, &roll, &pitch);
         float angle = (axis == 0) ? roll : pitch;
+        if (FABSF(roll)  > FABSF(peak_roll))  peak_roll  = roll;
+        if (FABSF(pitch) > FABSF(peak_pitch)) peak_pitch = pitch;
 
         if ((float)sign * angle > 10.0f) {
             for (int k = 0; k < 4; k++) sum[k] += nn_to_pwm(nn[k]) - nn_to_pwm(base_nn[k]);
@@ -1896,6 +1899,28 @@ static int tilt_response_phase(imu_type_t imu, const float gb[3], const float ab
     }
 
     for (int k = 0; k < 4; k++) d[k] = count ? sum[k] / (float)count : 0.0f;
+
+    /* Not enough tilt on the expected axis: say what the board DID feel,
+     * so "held it turned 90 degrees" / "FC mounted rotated" is obvious. */
+    if (count <= 10) {
+        float pr = peak_roll, pp = peak_pitch;
+        float big = FABSF(pr) > FABSF(pp) ? FABSF(pr) : FABSF(pp);
+        uart_write_string("\r\n  The board felt: ");
+        if (big < 10.0f) {
+            uart_write_string("less than 10 deg of tilt on either axis.\r\n");
+        } else {
+            if (FABSF(pr) >= FABSF(pp))
+                uart_write_string(pr > 0 ? "RIGHT SIDE DOWN" : "LEFT SIDE DOWN");
+            else
+                uart_write_string(pp > 0 ? "NOSE DOWN" : "NOSE UP");
+            uart_write_string("  (peak roll ");  print_float3(pr);
+            uart_write_string(", pitch ");      print_float3(pp);
+            uart_write_string(" deg)\r\n");
+            uart_write_string("  That is not the tilt asked for. If you DID tilt as asked, the flight\r\n"
+                              "  controller is mounted rotated on the frame: its arrow must point to\r\n"
+                              "  the nose (firmware assumes the CW180 mount Betaflight reported).\r\n");
+        }
+    }
 
     if (count > 10) {
         uart_write_string("\r\n  Change vs level baseline (");

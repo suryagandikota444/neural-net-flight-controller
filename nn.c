@@ -67,8 +67,15 @@
  * (sequential row-major scan through weight matrices).
  */
 
-#include "nn.h"
+/* weights.h first: its NN_HOVER_THROTTLE / NN_ACTION_SCALE are numeric
+ * literals. Copy them into the variables nn.h exports, then let nn.h
+ * redefine the names to those variables for the rest of the program. */
 #include "weights.h"
+const float nn_hover_throttle = NN_HOVER_THROTTLE;
+const float nn_action_scale   = NN_ACTION_SCALE;
+#undef NN_HOVER_THROTTLE
+#undef NN_ACTION_SCALE
+#include "nn.h"
 
 
 /* ============================================================

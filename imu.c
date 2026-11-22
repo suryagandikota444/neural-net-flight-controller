@@ -130,8 +130,8 @@ imu_type_t imu_detect(uint8_t *whoami)
  * PWR_MGMT0 [1:0] ACCEL_MODE: 11=low-noise                                */
 #define ICM_PWR_GYRO_ACCEL_LN       0x0F   /* 0b00001111 */
 
-/* GYRO_ACCEL_CONFIG0 (0x52) — UI filter bandwidth
- * bits [7:4]: accel UI LPF BW  (0 = ODR/2 = no extra filtering — leave default)
+/* GYRO_ACCEL_CONFIG0 (0x52) — UI filter bandwidth (same code table for both)
+ * bits [7:4]: accel UI LPF BW
  * bits [3:0]: gyro  UI LPF BW
  *   0 = ODR/2  (Nyquist, no filtering — default after reset)
  *   1 = ODR/4
@@ -143,10 +143,18 @@ imu_type_t imu_detect(uint8_t *whoami)
  *   7 = ODR/40
  *  15 = low-latency bypass (no filtering)
  *
- * At 1 kHz ODR, value 6 puts the cutoff at exactly 50 Hz — the Nyquist
- * limit of the 100 Hz control loop.  Any energy above 50 Hz is attenuated
- * before it reaches the output registers, preventing aliasing. */
-#define ICM_GYRO_UI_BW_50HZ         0x06   /* gyro bits [3:0] = 6 = ODR/20 = 50 Hz; accel bits [7:4] = 0 (default) */
+ * Gyro: value 6 → 50 Hz, the Nyquist limit of the 100 Hz control loop.
+ *
+ * Accel: value 7 → ODR/40 = 25 Hz (added 2026-11-21). Before this the
+ * accel had NO extra filtering (500 Hz bandwidth) while the firmware reads
+ * it at only 100 Hz, so prop vibration (~100–200 Hz, near multiples of the
+ * read rate) aliased into slow false swings. On the thrust-ramp bench
+ * (TEST 16) az_std reached 0.6 g at 1250 µs, and a 0.12 g swing falsely
+ * tripped the liftoff check. The accel only feeds the slow AHRS correction
+ * (beta 0.05) and NN obs[3..5], so 25 Hz costs ~9 ms of lag and cuts a
+ * 100 Hz vibration ~16x (2nd-order UI filter, the reset default).
+ * It does not remove aliasing completely — only oversampling would. */
+#define ICM_UI_BW_GYRO_50HZ_ACCEL_25HZ  0x76   /* accel [7:4] = 7 (ODR/40 = 25 Hz), gyro [3:0] = 6 (ODR/20 = 50 Hz) */
 
 static void icm42688p_init(void)
 {
@@ -163,11 +171,11 @@ static void icm42688p_init(void)
     /* Gyro: ±2000 dps, 1 kHz */
     spi1_write_register(ICM_REG_GYRO_CONFIG0, ICM_GYRO_FS_2000DPS_ODR_1K);
 
-    /* Gyro UI LPF: 50 Hz cutoff (ODR/20) via GYRO_ACCEL_CONFIG0 (0x52).
-     * Attenuates motor/prop vibration above 50 Hz before it reaches
-     * the output registers, preventing aliasing into the 0-50 Hz
-     * control band when the firmware reads at 100 Hz. */
-    spi1_write_register(ICM_REG_GYRO_ACCEL_CONFIG0, ICM_GYRO_UI_BW_50HZ);
+    /* UI low-pass filters via GYRO_ACCEL_CONFIG0 (0x52): gyro 50 Hz,
+     * accel 25 Hz. Attenuates motor/prop vibration before it reaches the
+     * output registers, so less of it aliases into the control band when
+     * the firmware reads at 100 Hz. */
+    spi1_write_register(ICM_REG_GYRO_ACCEL_CONFIG0, ICM_UI_BW_GYRO_50HZ_ACCEL_25HZ);
 
     /* Accel: ±16 g, 1 kHz */
     spi1_write_register(ICM_REG_ACCEL_CONFIG0, ICM_ACCEL_FS_16G_ODR_1K);
