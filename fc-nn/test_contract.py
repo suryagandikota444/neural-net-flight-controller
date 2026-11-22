@@ -414,6 +414,96 @@ class ActuatorDelayContract(unittest.TestCase):
         self.assertLess(abs(env._data.qvel[2]), 1e-3)   # air start: motors already at hover
 
 
+class YawDragSetpointContract(unittest.TestCase):
+    """Issue 003 additions: steady yaw torque, prop torque range, rotor drag,
+    slew-limited attitude setpoints."""
+
+    def test_randomisation_ranges_and_deterministic_nominal(self):
+        env = QuadrotorEnv()
+        env.set_curriculum(1.0)
+        infos = [env.reset(seed=s)[1] for s in range(200)]
+        yd = [i["yaw_disturbance_nm"] for i in infos]
+        self.assertTrue(max(yd) > 0.03 and min(yd) < -0.03 and max(map(abs, yd)) <= 0.04)
+        self.assertTrue(0.6 <= min(i["km_scale"] for i in infos) and max(i["km_scale"] for i in infos) <= 1.2)
+        self.assertTrue(0.1 <= min(i["rotor_drag"] for i in infos) and max(i["rotor_drag"] for i in infos) <= 0.5)
+        _, info = env.reset(seed=0, options=NOISELESS)
+        self.assertEqual((info["yaw_disturbance_nm"], info["km_scale"], info["rotor_drag"]),
+                         (0.0, 1.0, de.ROTOR_DRAG_NOMINAL))
+        env.set_curriculum(0.0)                  # phased in like the actuator delay
+        self.assertTrue(all(env.reset(seed=s)[1]["yaw_disturbance_nm"] == 0.0 for s in range(20)))
+
+    def test_km_scale_scales_prop_torque(self):
+        env = QuadrotorEnv()
+        env.reset(seed=0, options={**NOISELESS, "km_scale": 0.6})
+        np.testing.assert_allclose(env._km_kf, de.KM_KF_RATIO * 0.6)
+
+    def _yaw_rate_after(self, tau, steps=30):
+        env = QuadrotorEnv(firmware_contract={"alt_kp": 0.0, "alt_kd": 0.0})
+        env.reset(seed=0, options={**NOISELESS, "initial_alt_agl": 0.5,
+                                   "initial_rpy_deg": [0, 0, 0], "yaw_disturbance_nm": tau})
+        for _ in range(steps):
+            env.step(np.zeros(4))
+        return float(env._data.qvel[5])
+
+    def test_yaw_disturbance_spins_the_drone(self):
+        base = self._yaw_rate_after(0.0)
+        cw = self._yaw_rate_after(-0.03)
+        self.assertLess(cw - base, -0.1)          # negative torque → clockwise (gz < 0)
+        self.assertGreater(self._yaw_rate_after(0.03) - base, 0.1)
+
+    def test_rotor_drag_slows_sliding_and_accelerometer_feels_it(self):
+        def run(drag):
+            env = QuadrotorEnv(firmware_contract={"alt_kp": 0.0, "alt_kd": 0.0})
+            obs, _ = env.reset(seed=0, options={**NOISELESS, "initial_alt_agl": 0.5,
+                                                "initial_rpy_deg": [0, 0, 0], "rotor_drag": drag,
+                                                "initial_velocity": [1.0, 0, 0, 0, 0, 0]})
+            for _ in range(20):
+                obs, *_ = env.step(np.zeros(4))
+            return float(env._data.qvel[0]), float(obs[3])
+        v0, ax0 = run(0.0)
+        v5, ax5 = run(0.5)
+        self.assertAlmostEqual(v0, 1.0, places=2)             # no drag: keeps sliding
+        self.assertLess(v5, v0 - 0.05)                         # drag slows it
+        self.assertAlmostEqual(ax0, 0.0, places=3)             # IMU blind to steady slide
+        self.assertLess(ax5, -0.01)                            # drag shows up as −x accel (obs units)
+        f = de.rotor_drag_force(np.array([1.0, 0, 0, 0]), np.array([1.0, 2.0, 3.0]), 0.5)
+        np.testing.assert_allclose(f, [-0.5, -1.0, 0.0])       # rotor plane only
+
+    def test_setpoints_bounded_and_slew_limited(self):
+        env = QuadrotorEnv(firmware_contract={"attitude_setpoints": True})
+        env.set_curriculum(1.0)
+        max_step = math.radians(30.0) * 0.01 + 1e-9
+        seen = []
+        for seed in range(4):
+            env.reset(seed=seed)
+            prev = (env._cmd_roll, env._cmd_pitch)
+            for _ in range(1000):
+                _, _, term, trunc, _ = env.step(np.zeros(4))
+                now = (env._cmd_roll, env._cmd_pitch)
+                self.assertLessEqual(abs(now[0] - prev[0]), max_step)
+                self.assertLessEqual(abs(now[1] - prev[1]), max_step)
+                seen += [abs(now[0]), abs(now[1])]
+                prev = now
+                if term or trunc:
+                    break
+        self.assertLessEqual(max(seen), math.radians(10.0) + 1e-9)
+        self.assertGreater(max(seen), math.radians(3.0))
+        # obs[6] is the error to the setpoint, as main.c computes it
+        env.reset(seed=0, options={**NOISELESS, "initial_rpy_deg": [0, 0, 0],
+                                   "setpoint": {"roll_deg": 8.0}})
+        obs, *_ = env.step(np.zeros(4))
+        self.assertAlmostEqual(float(obs[6]), -8.0 / de.ANGLE_ERR_SCALE, delta=0.01)
+
+    def test_setpoints_off_by_default(self):
+        env = QuadrotorEnv()
+        env.set_curriculum(1.0)
+        for seed in range(5):
+            env.reset(seed=seed)
+            for _ in range(300):
+                env.step(np.zeros(4))
+                self.assertEqual((env._cmd_roll, env._cmd_pitch), (0.0, 0.0))
+
+
 class LegacyReproduction(unittest.TestCase):
     def test_legacy_mode_bit_identical_to_pre_contract_env(self):
         golden = np.load(HERE / "fixtures" / "legacy_obs_golden.npz")

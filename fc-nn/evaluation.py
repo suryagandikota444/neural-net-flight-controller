@@ -40,6 +40,7 @@ class Scenario:
     max_mean_lean_deg: float = None     # |time-mean roll| and |mean pitch| limit
     max_mean_yaw_rate_deg_s: float = None  # |time-mean yaw rate| limit (steady spin)
     advisory: bool = False              # reported, not part of the pass verdict
+    yaw_disturbance_nm: float = None    # steady airframe yaw torque (contract env)
 
     def reset_options(self):
         options = dict(domain_randomization=self.randomized,
@@ -55,6 +56,8 @@ class Scenario:
             options["initial_alt_agl"] = self.initial_alt_agl
         if self.thrust_scale is not None:
             options["thrust_scale"] = self.thrust_scale
+        if self.yaw_disturbance_nm is not None:
+            options["yaw_disturbance_nm"] = self.yaw_disturbance_nm
         return options
 
 
@@ -94,6 +97,8 @@ CONTRACT_SCENARIOS = (
              **{**_C, "altitude_rmse_limit_m": 0.15, "altitude_band_m": 0.15}),
     Scenario("thrust_strong25", 20, thrust_scale=1.25, advisory=True,
              **{**_C, "altitude_rmse_limit_m": 0.15, "altitude_band_m": 0.15}),
+    # Issue 003: the real drone spun ~15°/s CW against ≈ 0.02–0.04 N·m.
+    Scenario("yaw_torque_cw", 20, yaw_disturbance_nm=-0.03, advisory=True, **_C),
 )
 
 

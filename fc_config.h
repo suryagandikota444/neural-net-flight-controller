@@ -96,6 +96,10 @@
  * with both on CH6, ARM ON would also select LAND, which blocks arming).
  * Note: ELRS sends CH5 in every packet but CH6+ in rotation, so a CH6
  * kill can arrive a few packets later than a CH5 one.
+ *
+ * 2026-11-22: radio is an APEX G-129 gamepad (buttons, no switches).
+ * No button was found on CH5, so MODE moved to CH8 (Anti-Turtle button,
+ * AUX4 per the G-129 manual). Check its two states with TEST 17.
  * ============================================================ */
 #define RC_BAUD                 420000U
 #define RC_CH_ROLL              0
@@ -103,14 +107,16 @@
 #define RC_CH_THROTTLE          2
 #define RC_CH_YAW               3
 #define RC_CH_ARM               5        /* CH6 */
-#define RC_CH_MODE              4        /* CH5 — confirm which switch with TEST 17 */
+#define RC_CH_MODE              7        /* CH8 — APEX G-129 "Anti-Turtle" button (AUX4) */
 #if RC_CH_ARM == RC_CH_MODE
 #error "RC_CH_ARM and RC_CH_MODE must be different channels"
 #endif
 
 #define RC_LINK_TIMEOUT_TICKS   25       /* 250 ms without a frame → failsafe   */
 #define RC_ARM_ON_THRESHOLD     0.5f     /* arm switch > this (≈1700 µs) = ON   */
-#define RC_THROTTLE_LOW         (-0.85f) /* throttle below this to arm (≈1065 µs)*/
+#define RC_THROTTLE_LOW         (-0.70f) /* throttle below this to arm (≈1141 µs). Was -0.85 (≈1065);
+                                          * APEX G-129 throttle bottoms at 1107 µs and its
+                                          * stick calibration would not start (2026-11-22). */
 #define RC_ARM_MAX_TILT_DEG     15.0f    /* refuse to arm unless roughly level  */
 #define RC_MODE_LOW_MAX         (-0.33f) /* mode switch: < this HOVER          */
 #define RC_MODE_HIGH_MIN        0.33f    /*              > this LAND, else STICK*/

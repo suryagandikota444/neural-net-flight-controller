@@ -1,0 +1,21 @@
+FLIGHT RECORDER SUMMARY
+========================================
+recorded: last 30.0 s of 49.2 s armed
+loop time: median 200 µs, max 550 µs
+mode: HOVER   radio link lost: 0 ticks
+level reference: stored calibration (TEST 18)
+end: disarmed with the ARM switch / failsafe
+first tilt >  5°: t=  0.51 s (roll   -5.1, pitch   -2.4)
+first tilt > 10°: t=  9.15 s (roll   +2.4, pitch  +10.4)
+first tilt > 20°: t= 14.43 s (roll  -19.3, pitch  +20.8)
+
+last ~4 s before the end:
+   roll:  3.00 Hz  size   2.08 →   3.26 °  (GROWING)
+  pitch:  2.25 Hz  size   2.40 →   3.26 °  (steady)
+     gx:  3.00 Hz  size   0.38 →   0.58 rad/s  (steady)
+     gy:  2.25 Hz  size   0.48 →   0.57 rad/s  (steady)
+     gz:  1.00 Hz  size   0.12 →   0.23 rad/s  (GROWING)
+  NN output at its ±1 limit: 0.0 % of samples
+  motors: 1136–1638 µs, mean 1357 (hover ≈ 1372)
+  altitude: +0.26 … +0.73 m
+  accel z std: 0.278 g (training noise 0.22 g)

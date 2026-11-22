@@ -4284,3 +4284,1204 @@ RCS,1,100,0,HOVER,8,+0.000,+0.000,+0.300,-0.002,+97.402,-5.550,1500,1500,998,150
 RCS,1,100,0,HOVER,8,+0.000,+0.000,+0.300,-0.007,+83.308,-4.571,1500,1500,997,1500,1000,1000,1932,1,0
 RCS,1,100,0,HOVER,8,+0.000,+0.000,+0.300,-0.011,+69.250,-3.627,1500,1500,998,1500,1000,1000,1956,1,0
 RCS,1,100,0,HOVER,8,+0.000,+0.000,+0.300,-0.013,+54.622,-2.772,1500,1500,998,1500,1000,1000,1979,1,0
+ÿÿ
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 17
+Motor tests 10 and 14 are NOT selected â€” no motor output.
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 17: RC Channel Finder (motors OFF)
+========================================
+Flip ONE switch / press ONE button at a time and watch for '>>> CHn'.
+Currently configured: ARM = CH6, MODE = CH5  (fc_config.h, RC_CH_ARM = channel - 1)
+
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+ÿ
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 17
+Motor tests 10 and 14 are NOT selected â€” no motor output.
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 17: RC Channel Finder (motors OFF)
+========================================
+Flip ONE switch / press ONE button at a time and watch for '>>> CHn'.
+Currently configured: ARM = CH6, MODE = CH5  (fc_config.h, RC_CH_ARM = channel - 1)
+
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 28, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 28, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 196, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 224, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 252, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 280, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 280, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 308, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 364, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 476, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 532, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 546, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 560, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 588, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 588, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 728, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 784, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 812, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 840, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 840, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 868, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 868, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 868, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 868, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 868, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 868, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 868, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 868, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 868, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 868, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 868, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 868, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 868, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 868, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 868, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+  no RC frames yet... bytes received 868, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+
+---- TEST 17 SUMMARY: range seen on each channel ----
+  [FAIL] never received RC frames â€” see the hints printed above
+
+========================================
+ALL SELECTED TESTS COMPLETE
+========================================
+Review output above for PASS/FAIL.
+LED solid = done.
+  LQ 100 | sticks CH1-4: 1509 1484 1107 1510 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1508 1484 1106 1510 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1508 1482 1107 1510 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1508 1484 1106 1510 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1484 1106 1512 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1485 1106 1511 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+>>> CH6 changed 1000 -> 1503 us   <- this is the channel used as ARM now
+  LQ 100 | sticks CH1-4: 1509 1485 1107 1511 | CH5-12: 1000 1503 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1485 1107 1512 | CH5-12: 1000 1503 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1485 1107 1512 | CH5-12: 1000 1503 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1485 1107 1512 | CH5-12: 1000 1503 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1485 1107 1512 | CH5-12: 1000 1503 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1485 1107 1512 | CH5-12: 1000 1503 1000 1000 1000 1000 1000 1000
+>>> CH6 changed 1503 -> 2000 us   <- this is the channel used as ARM now
+  LQ 100 | sticks CH1-4: 1509 1485 1107 1511 | CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1485 1107 1511 | CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1508 1485 1107 1511 | CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000
+>>> CH6 changed 2000 -> 1000 us   <- this is the channel used as ARM now
+  LQ 100 | sticks CH1-4: 1508 1485 1107 1511 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1485 1106 1511 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1485 1106 1510 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+>>> CH3 (stick) changed 1106 -> 1815 us
+  LQ 100 | sticks CH1-4: 1509 1485 1887 1514 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1485 1887 1511 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1485 1887 1511 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+>>> CH3 (stick) changed 1815 -> 1357 us
+  LQ 100 | sticks CH1-4: 1508 1485 1108 1508 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1485 1103 1500 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1485 1107 1508 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1508 1485 1109 1512 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1485 1106 1507 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+>>> CH1 (stick) changed 1509 -> 1835 us
+  LQ 100 | sticks CH1-4: 1906 1450 1105 1508 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+>>> CH1 (stick) changed 1835 -> 1520 us
+  LQ 100 | sticks CH1-4: 1520 1482 1106 1508 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+>>> CH1 (stick) changed 1520 -> 1195 us
+  LQ 100 | sticks CH1-4: 1117 1482 1106 1508 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1117 1482 1106 1508 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+>>> CH1 (stick) changed 1195 -> 1500 us
+  LQ 100 | sticks CH1-4: 1508 1482 1106 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+>>> CH1 (stick) changed 1500 -> 1129 us
+  LQ 100 | sticks CH1-4: 1116 1482 1107 1508 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1117 1482 1106 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1116 1487 1106 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+>>> CH1 (stick) changed 1129 -> 1452 us
+  LQ 100 | sticks CH1-4: 1508 1484 1106 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1484 1106 1508 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+>>> CH1 (stick) changed 1452 -> 1116 us
+  LQ 100 | sticks CH1-4: 1116 1547 1106 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1116 1643 1106 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+>>> CH2 (stick) changed 1484 -> 1183 us
+>>> CH1 (stick) changed 1116 -> 1500 us
+  LQ 100 | sticks CH1-4: 1500 1477 1106 1508 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1507 1482 1106 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1176 1106 1508 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1507 1477 1106 1508 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+>>> CH2 (stick) changed 1183 -> 1485 us
+>>> CH2 (stick) changed 1485 -> 1832 us
+  LQ 100 | sticks CH1-4: 1508 1901 1106 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+>>> CH2 (stick) changed 1832 -> 1531 us
+  LQ 100 | sticks CH1-4: 1509 1500 1105 1507 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+>>> CH1 (stick) changed 1500 -> 1116 us
+>>> CH1 (stick) changed 1116 -> 1457 us
+  LQ 100 | sticks CH1-4: 1507 1487 1106 1508 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+>>> CH1 (stick) changed 1457 -> 1842 us
+>>> CH1 (stick) changed 1842 -> 1525 us
+  LQ 100 | sticks CH1-4: 1525 1490 1106 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1487 1106 1508 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+>>> CH10 changed 1000 -> 2000 us
+  LQ 100 | sticks CH1-4: 1514 1500 1106 1509 | CH5-12: 1000 1000 1000 1000 1000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1500 1106 1508 | CH5-12: 1000 1000 1000 1000 1000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1500 1106 1508 | CH5-12: 1000 1000 1000 1000 1000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1500 1107 1508 | CH5-12: 1000 1000 1000 1000 1000 2000 1000 1000
+>>> CH6 changed 1000 -> 1503 us   <- this is the channel used as ARM now
+  LQ 100 | sticks CH1-4: 1514 1500 1106 1509 | CH5-12: 1000 1503 1000 1000 1000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1500 1106 1508 | CH5-12: 1000 1503 1000 1000 1000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1500 1107 1508 | CH5-12: 1000 1503 1000 1000 1000 2000 1000 1000
+>>> CH9 changed 1000 -> 2000 us
+  LQ 100 | sticks CH1-4: 1514 1494 1107 1509 | CH5-12: 1000 1503 1000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1500 1106 1509 | CH5-12: 1000 1503 1000 1000 2000 2000 1000 1000
+>>> CH8 changed 1000 -> 1503 us
+  LQ 100 | sticks CH1-4: 1514 1494 1106 1508 | CH5-12: 1000 1503 1000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1500 1106 1509 | CH5-12: 1000 1503 1000 1503 2000 2000 1000 1000
+>>> CH6 changed 1503 -> 2000 us   <- this is the channel used as ARM now
+  LQ 100 | sticks CH1-4: 1514 1500 1107 1508 | CH5-12: 1000 2000 1000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1500 1107 1508 | CH5-12: 1000 2000 1000 1503 2000 2000 1000 1000
+>>> CH8 changed 1503 -> 2000 us
+  LQ 100 | sticks CH1-4: 1514 1500 1107 1509 | CH5-12: 1000 2000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1514 | CH5-12: 1000 2000 1000 2000 2000 2000 1000 1000
+>>> CH3 (stick) changed 1357 -> 1663 us
+  LQ 100 | sticks CH1-4: 1514 1490 1664 1509 | CH5-12: 1000 2000 1000 2000 2000 2000 1000 1000
+>>> CH3 (stick) changed 1663 -> 1241 us
+  LQ 100 | sticks CH1-4: 1514 1490 1108 1509 | CH5-12: 1000 2000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1508 | CH5-12: 1000 2000 1000 2000 2000 2000 1000 1000
+>>> CH7 changed 1000 -> 2000 us
+  LQ 100 | sticks CH1-4: 1514 1492 1107 1509 | CH5-12: 1000 2000 2000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1492 1107 1509 | CH5-12: 1000 2000 2000 2000 2000 2000 1000 1000
+>>> CH7 changed 2000 -> 1000 us
+  LQ 100 | sticks CH1-4: 1514 1492 1106 1509 | CH5-12: 1000 2000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1509 | CH5-12: 1000 2000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1106 1509 | CH5-12: 1000 2000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1509 | CH5-12: 1000 2000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1106 1509 | CH5-12: 1000 2000 1000 2000 2000 2000 1000 1000
+>>> CH6 changed 2000 -> 1000 us   <- this is the channel used as ARM now
+  LQ 100 | sticks CH1-4: 1514 1490 1106 1509 | CH5-12: 1000 1000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1106 1509 | CH5-12: 1000 1000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1106 1509 | CH5-12: 1000 1000 1000 2000 2000 2000 1000 1000
+>>> CH6 changed 1000 -> 1503 us   <- this is the channel used as ARM now
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1509 | CH5-12: 1000 1503 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1106 1509 | CH5-12: 1000 1503 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1509 | CH5-12: 1000 1503 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1106 1509 | CH5-12: 1000 1503 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1509 | CH5-12: 1000 1503 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1509 | CH5-12: 1000 1503 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1508 | CH5-12: 1000 1503 1000 2000 2000 2000 1000 1000
+>>> CH6 changed 1503 -> 2000 us   <- this is the channel used as ARM now
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1509 | CH5-12: 1000 2000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1509 | CH5-12: 1000 2000 1000 2000 2000 2000 1000 1000
+
+---- TEST 17 SUMMARY: range seen on each channel ----
+  CH1 : 1116 - 1907 us
+  CH2 : 1092 - 1902 us
+  CH3 : 1097 - 1887 us
+  CH4 : 1500 - 1517 us   (not moved)
+  CH5 : 1000 - 1000 us   (not moved)   <- MODE now
+  CH6 : 1000 - 2000 us   <- ARM now
+  CH7 : 1000 - 2000 us
+  CH8 : 1000 - 2000 us
+  CH9 : 1000 - 2000 us
+  CH10: 1000 - 2000 us
+  CH11: 1000 - 1000 us   (not moved)
+  CH12: 1000 - 1000 us   (not moved)
+  CH13: 880 - 880 us   (not moved)
+  CH14: 880 - 880 us   (not moved)
+  CH15: 2001 - 2011 us   (not moved)
+  CH16: 2011 - 2011 us   (not moved)
+
+  To make channel N the ARM switch: fc_config.h -> RC_CH_ARM = N-1
+  (or, better for ELRS, assign your arm switch to CH5/AUX1 in the radio mixer).
+  ARM = ON above 1756 us, so pick a 2-position switch that reaches ~2000 us.
+
+========================================
+ALL SELECTED TESTS COMPLETE
+========================================
+Review output above for PASS/FAIL.
+LED solid = done.
+ÿ
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 17
+Motor tests 10 and 14 are NOT selected â€” no motor output.
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 17: RC Channel Finder (motors OFF)
+========================================
+Flip ONE switch / press ONE button at a time and watch for '>>> CHn'.
+Currently configured: ARM = CH6, MODE = CH5  (fc_config.h, RC_CH_ARM = channel - 1)
+
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 14, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+>>> RADIO LINK UP â€” starting positions recorded
+>>> CH8 changed 880 -> 2000 us
+>>> CH9 changed 880 -> 2000 us
+>>> CH10 changed 880 -> 2000 us
+  LQ 100 | sticks CH1-4: 1514 1490 1106 1508 | CH5-12: 1000 1000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1509 | CH5-12: 1000 1000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1106 1509 | CH5-12: 1000 1000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1509 | CH5-12: 1000 1000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1509 | CH5-12: 1000 1000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1509 | CH5-12: 1000 1000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1106 1509 | CH5-12: 1000 1000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1508 | CH5-12: 1000 1000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1106 1509 | CH5-12: 1000 1000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1509 | CH5-12: 1000 1000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1106 1509 | CH5-12: 1000 1000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1508 | CH5-12: 1000 1000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1509 | CH5-12: 1000 1000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1106 1509 | CH5-12: 1000 1000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1509 | CH5-12: 1000 1000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1509 | CH5-12: 1000 1000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1509 | CH5-12: 1000 1000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1509 | CH5-12: 1000 1000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1106 1509 | CH5-12: 1000 1000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1509 | CH5-12: 1000 1000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1106 1509 | CH5-12: 1000 1000 1000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1509 | CH5-12: 1000 1000 1000 2000 2000 2000 1000 1000
+>>> CH9 changed 2000 -> 1000 us
+  LQ 100 | sticks CH1-4: 1514 1490 1106 1509 | CH5-12: 1000 1000 1000 2000 1000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1490 1106 1509 | CH5-12: 1000 1000 1000 2000 1000 2000 1000 1000
+>>> CH8 changed 2000 -> 1000 us
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1509 | CH5-12: 1000 1000 1000 1000 1000 2000 1000 1000
+>>> CH6 changed 880 -> 1503 us   <- this is the channel used as ARM now
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1509 | CH5-12: 1000 1503 1000 1000 1000 2000 1000 1000
+>>> CH10 changed 2000 -> 1000 us
+  LQ 100 | sticks CH1-4: 1514 1490 1107 1509 | CH5-12: 1000 1503 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1487 1107 1509 | CH5-12: 1000 1503 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1514 1487 1107 1507 | CH5-12: 1000 1503 1000 1000 1000 1000 1000 1000
+>>> CH7 changed 1000 -> 2000 us
+  LQ 100 | sticks CH1-4: 1510 1490 1106 1507 | CH5-12: 1000 1503 2000 1000 1000 1000 1000 1000
+>>> CH3 (stick) changed 1106 -> 1615 us
+  LQ 100 | sticks CH1-4: 1510 1490 1615 1500 | CH5-12: 1000 1503 2000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1492 1890 1508 | CH5-12: 1000 1503 2000 1000 1000 1000 1000 1000
+>>> CH3 (stick) changed 1615 -> 1107 us
+  LQ 100 | sticks CH1-4: 1432 1490 1107 1507 | CH5-12: 1000 1503 2000 1000 1000 1000 1000 1000
+>>> CH1 (stick) changed 1514 -> 1150 us
+>>> CH1 (stick) changed 1150 -> 1472 us
+  LQ 100 | sticks CH1-4: 1590 1485 1107 1508 | CH5-12: 1000 1503 2000 1000 1000 1000 1000 1000
+>>> CH1 (stick) changed 1472 -> 1860 us
+>>> CH1 (stick) changed 1860 -> 1518 us
+  LQ 100 | sticks CH1-4: 1517 1482 1106 1507 | CH5-12: 1000 1503 2000 1000 1000 1000 1000 1000
+>>> CH2 (stick) changed 1490 -> 1181 us
+>>> CH1 (stick) changed 1518 -> 1176 us
+>>> CH2 (stick) changed 1181 -> 1492 us
+>>> CH2 (stick) changed 1492 -> 1801 us
+>>> CH1 (stick) changed 1176 -> 1514 us
+>>> CH1 (stick) changed 1514 -> 1848 us
+>>> CH2 (stick) changed 1801 -> 1487 us
+  LQ 100 | sticks CH1-4: 1906 1226 1107 1507 | CH5-12: 1000 1503 2000 1000 1000 1000 1000 1000
+>>> CH2 (stick) changed 1487 -> 1153 us
+>>> CH1 (stick) changed 1848 -> 1522 us
+>>> CH1 (stick) changed 1522 -> 1158 us
+>>> CH2 (stick) changed 1153 -> 1500 us
+>>> CH2 (stick) changed 1500 -> 1813 us
+>>> CH1 (stick) changed 1158 -> 1512 us
+>>> CH1 (stick) changed 1512 -> 1826 us
+>>> CH2 (stick) changed 1813 -> 1467 us
+>>> CH2 (stick) changed 1467 -> 1143 us
+>>> CH1 (stick) changed 1826 -> 1517 us
+>>> CH1 (stick) changed 1517 -> 1115 us
+>>> CH2 (stick) changed 1143 -> 1452 us
+  LQ 100 | sticks CH1-4: 1291 1713 1107 1507 | CH5-12: 1000 1503 2000 1000 1000 1000 1000 1000
+>>> CH1 (stick) changed 1115 -> 1512 us
+>>> CH4 (stick) changed 1509 -> 1858 us
+>>> CH3 (stick) changed 1107 -> 1555 us
+>>> CH3 (stick) changed 1555 -> 1890 us
+>>> CH4 (stick) changed 1858 -> 1500 us
+>>> CH4 (stick) changed 1500 -> 1178 us
+  LQ 100 | sticks CH1-4: 1511 1485 1844 1178 | CH5-12: 1000 1503 2000 1000 1000 1000 1000 1000
+>>> CH3 (stick) changed 1890 -> 1392 us
+>>> CH4 (stick) changed 1178 -> 1490 us
+>>> CH4 (stick) changed 1490 -> 1817 us
+>>> CH3 (stick) changed 1392 -> 1888 us
+>>> CH4 (stick) changed 1817 -> 1500 us
+>>> CH4 (stick) changed 1500 -> 1114 us
+>>> CH3 (stick) changed 1888 -> 1513 us
+>>> CH3 (stick) changed 1513 -> 1200 us
+>>> CH4 (stick) changed 1114 -> 1500 us
+>>> CH4 (stick) changed 1500 -> 1900 us
+>>> CH3 (stick) changed 1200 -> 1886 us
+>>> CH4 (stick) changed 1900 -> 1414 us
+  LQ 100 | sticks CH1-4: 1511 1485 1886 1215 | CH5-12: 1000 1503 2000 1000 1000 1000 1000 1000
+>>> CH4 (stick) changed 1414 -> 1100 us
+>>> CH3 (stick) changed 1886 -> 1324 us
+>>> CH4 (stick) changed 1100 -> 1419 us
+  LQ 100 | sticks CH1-4: 1511 1485 1108 1507 | CH5-12: 1000 1503 2000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1484 1108 1507 | CH5-12: 1000 1503 2000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1485 1107 1507 | CH5-12: 1000 1503 2000 1000 1000 1000 1000 1000
+>>> CH9 changed 1000 -> 2000 us
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1507 | CH5-12: 1000 1503 2000 1000 2000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1500 | CH5-12: 1000 1503 2000 1000 2000 1000 1000 1000
+>>> CH10 changed 1000 -> 2000 us
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1507 | CH5-12: 1000 1503 2000 1000 2000 2000 1000 1000
+>>> CH6 changed 1503 -> 2000 us   <- this is the channel used as ARM now
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1500 | CH5-12: 1000 2000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1485 1107 1507 | CH5-12: 1000 2000 2000 1000 2000 2000 1000 1000
+>>> CH6 changed 2000 -> 1000 us   <- this is the channel used as ARM now
+  LQ 100 | sticks CH1-4: 1511 1485 1108 1507 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1485 1107 1507 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1485 1108 1507 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1507 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1507 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1507 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1485 1107 1507 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1485 1108 1507 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1485 1108 1507 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1485 1108 1509 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+>>> CH4 (stick) changed 1419 -> 1735 us
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1755 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+>>> CH4 (stick) changed 1735 -> 1422 us
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1170 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1512 1485 1107 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1485 1108 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1485 1107 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1512 1485 1107 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1485 1108 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1485 1107 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1485 1107 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1512 1485 1107 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1511 1485 1107 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1485 1107 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1485 1108 1500 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+
+---- TEST 17 SUMMARY: range seen on each channel ----
+  CH1 : 1115 - 1908 us
+  CH2 : 1095 - 1903 us
+  CH3 : 1105 - 1892 us
+  CH4 : 1098 - 1900 us
+  CH5 : 1000 - 1000 us   (not moved)   <- MODE now
+  CH6 : 880 - 2000 us   <- ARM now
+  CH7 : 1000 - 2000 us
+  CH8 : 880 - 2000 us
+  CH9 : 880 - 2000 us
+  CH10: 880 - 2000 us
+  CH11: 880 - 1000 us
+  CH12: 880 - 1000 us
+  CH13: 880 - 880 us   (not moved)
+  CH14: 880 - 880 us   (not moved)
+  CH15: 2011 - 2011 us   (not moved)
+  CH16: 1822 - 2011 us
+
+  To make channel N the ARM switch: fc_config.h -> RC_CH_ARM = N-1
+  (or, better for ELRS, assign your arm switch to CH5/AUX1 in the radio mixer).
+  ARM = ON above 1756 us, so pick a 2-position switch that reaches ~2000 us.
+
+========================================
+ALL SELECTED TESTS COMPLETE
+========================================
+Review output above for PASS/FAIL.
+LED solid = done.
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1484 1107 1509 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1482 1107 1509 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+>>> CH8 changed 880 -> 1503 us
+  LQ 100 | sticks CH1-4: 1510 1482 1107 1509 | CH5-12: 1000 1000 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1482 1108 1509 | CH5-12: 1000 1000 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1482 1107 1509 | CH5-12: 1000 1000 2000 1503 2000 2000 1000 1000
+>>> CH8 changed 1503 -> 2000 us
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 2000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 2000 2000 2000 2000 1000 1000
+>>> CH8 changed 2000 -> 1000 us
+  LQ 100 | sticks CH1-4: 1510 1484 1108 1509 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1482 1108 1509 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+>>> CH8 changed 1000 -> 1503 us
+  LQ 100 | sticks CH1-4: 1510 1482 1107 1509 | CH5-12: 1000 1000 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 2000 1503 2000 2000 1000 1000
+>>> CH8 changed 1503 -> 2000 us
+  LQ 100 | sticks CH1-4: 1510 1482 1107 1509 | CH5-12: 1000 1000 2000 2000 2000 2000 1000 1000
+>>> CH8 changed 2000 -> 1000 us
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 2000 1000 2000 2000 1000 1000
+>>> CH8 changed 1000 -> 1503 us
+  LQ 100 | sticks CH1-4: 1510 1482 1107 1509 | CH5-12: 1000 1000 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 2000 1503 2000 2000 1000 1000
+>>> CH8 changed 1503 -> 2000 us
+  LQ 100 | sticks CH1-4: 1510 1482 1107 1509 | CH5-12: 1000 1000 2000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 2000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 2000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 2000 2000 2000 2000 1000 1000
+>>> CH6 changed 880 -> 1503 us   <- this is the channel used as ARM now
+  LQ 100 | sticks CH1-4: 1510 1485 1107 1509 | CH5-12: 1000 1503 2000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1485 1107 1509 | CH5-12: 1000 1503 2000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1485 1107 1509 | CH5-12: 1000 1503 2000 2000 2000 2000 1000 1000
+>>> CH6 changed 1503 -> 2000 us   <- this is the channel used as ARM now
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 2000 2000 2000 2000 2000 1000 1000
+>>> CH6 changed 2000 -> 1000 us   <- this is the channel used as ARM now
+  LQ 100 | sticks CH1-4: 1510 1485 1107 1509 | CH5-12: 1000 1000 2000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 2000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1485 1107 1509 | CH5-12: 1000 1000 2000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1485 1107 1509 | CH5-12: 1000 1000 2000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1485 1107 1509 | CH5-12: 1000 1000 2000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 2000 2000 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1108 1509 | CH5-12: 1000 1000 2000 2000 2000 2000 1000 1000
+ÿ
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 17
+Motor tests 10 and 14 are NOT selected â€” no motor output.
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 17: RC Channel Finder (motors OFF)
+========================================
+Flip ONE switch / press ONE button at a time and watch for '>>> CHn'.
+Currently configured: ARM = CH6, MODE = CH5  (fc_config.h, RC_CH_ARM = channel - 1)
+
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+  no RC frames yet... bytes received 56, frames 0  (bytes but no frames: receiver not CRSF/420000?)
+>>> RADIO LINK UP â€” starting positions recorded
+  LQ 100 | sticks CH1-4: 1510 1485 1107 1500 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1485 1107 1500 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1094 1500 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1508 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1482 1108 1508 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1108 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1508 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1512 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+>>> CH3 (stick) changed 1107 -> 1671 us
+  LQ 100 | sticks CH1-4: 1510 1484 1887 1511 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1887 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+>>> CH3 (stick) changed 1671 -> 1221 us
+  LQ 100 | sticks CH1-4: 1510 1482 1107 1507 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1105 1500 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1485 1107 1507 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1482 1107 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1482 1107 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1485 1106 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 98 | sticks CH1-4: 1510 1485 1106 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1485 1098 1500 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1485 1107 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1508 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1084 1500 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1078 1500 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1078 1500 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1485 1105 1507 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1485 1107 1507 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1510 1484 1107 1507 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+>>> CH1 (stick) changed 1510 -> 1826 us
+  LQ 100 | sticks CH1-4: 1897 1546 1107 1508 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+>>> CH1 (stick) changed 1826 -> 1514 us
+>>> CH1 (stick) changed 1514 -> 1167 us
+  LQ 100 | sticks CH1-4: 1116 1485 1107 1508 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1116 1484 1107 1507 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+>>> CH1 (stick) changed 1167 -> 1509 us
+  LQ 100 | sticks CH1-4: 1509 1485 1107 1507 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1485 1327 1509 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+>>> CH3 (stick) changed 1107 -> 1437 us
+>>> CH3 (stick) changed 1437 -> 1740 us
+  LQ 100 | sticks CH1-4: 1509 1485 1886 1512 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+>>> CH3 (stick) changed 1740 -> 1299 us
+  LQ 100 | sticks CH1-4: 1509 1485 1108 1507 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+>>> CH8 changed 880 -> 1503 us
+  LQ 100 | sticks CH1-4: 1509 1485 1108 1500 | CH5-12: 1000 1000 1000 1503 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1487 1108 1500 | CH5-12: 1000 1000 1000 1503 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1487 1108 1507 | CH5-12: 1000 1000 1000 1503 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1487 1108 1500 | CH5-12: 1000 1000 1000 1503 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1485 1108 1507 | CH5-12: 1000 1000 1000 1503 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1508 1485 1108 1507 | CH5-12: 1000 1000 1000 1503 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1485 1108 1507 | CH5-12: 1000 1000 1000 1503 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1487 1108 1500 | CH5-12: 1000 1000 1000 1503 1000 1000 1000 1000
+>>> CH8 changed 1503 -> 2000 us
+  LQ 100 | sticks CH1-4: 1509 1487 1107 1500 | CH5-12: 1000 1000 1000 2000 1000 1000 1000 1000
+>>> CH8 changed 2000 -> 1000 us
+  LQ 100 | sticks CH1-4: 1509 1487 1108 1500 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1487 1108 1500 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1487 1108 1500 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1487 1108 1507 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1485 1107 1500 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1485 1108 1500 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1485 1108 1500 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1485 1107 1500 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1485 1108 1500 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1509 1485 1108 1500 | CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000
+ÿÿBarometer: settling...
+LEVEL: ** no stored calibration ** - boot surface is taken as level.
+       Run once: make flash-test TESTS=18, then make flash.
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.014,+1.497,-8.000,1509,1485,1108,1500,1000,1000,133,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.012,+0.989,-5.217,1509,1487,1107,1500,1000,1000,157,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.001,+0.388,-2.250,1509,1487,1107,1500,1000,1000,180,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.042,-0.241,-0.264,1509,1485,1108,1500,1000,1000,204,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.017,-0.305,-0.183,1509,1485,1108,1507,1000,1000,227,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.028,-0.221,-0.195,1509,1485,1108,1507,1000,1000,250,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.050,-0.157,-0.184,1509,1485,1108,1500,1000,1000,275,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.050,-0.095,-0.175,1509,1485,1108,1500,1000,1000,297,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.020,-0.027,-0.093,1509,1485,1108,1500,1000,1000,321,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.039,+0.001,-0.037,1509,1485,1108,1500,1000,1000,344,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.012,-0.156,-0.164,1509,1485,1108,1500,1000,1000,368,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.042,-0.108,+0.019,1509,1485,1108,1500,1000,1000,391,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.018,+0.472,+0.080,1509,1485,1107,1500,1000,1000,414,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.028,-0.029,-0.036,1509,1485,1108,1507,1000,1000,438,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.018,+0.099,+0.201,1509,1485,1107,1500,1000,1000,461,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.009,+0.083,+0.233,1509,1485,1107,1500,1000,1000,485,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.019,+0.083,+0.002,1509,1487,1108,1500,1000,1000,508,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.022,+0.045,-0.061,1509,1487,1107,1500,1000,1000,532,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.004,+0.142,+0.010,1509,1485,1108,1500,1000,1000,555,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.008,+0.064,+0.018,1509,1485,1108,1500,1000,1000,579,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.005,+0.053,+0.140,1509,1485,1108,1500,1000,1000,601,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.033,+0.001,+0.162,1509,1485,1108,1500,1000,1000,624,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.009,+0.008,+0.052,1509,1485,1107,1507,1000,1000,648,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.021,+0.017,-0.016,1509,1487,1108,1500,1000,1000,671,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.015,+0.233,-0.336,1509,1485,1108,1500,1000,1000,695,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.011,+0.146,-0.436,1509,1485,1108,1507,1000,1000,719,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.023,+0.554,-0.412,1509,1485,1108,1507,1000,1000,743,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.018,-0.384,-0.398,1509,1487,1108,1500,1000,1000,766,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.019,-0.180,-0.217,1509,1485,1108,1507,1000,1000,789,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.001,-0.501,-0.180,1509,1485,1108,1507,1000,1000,813,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.009,-0.408,+0.029,1509,1485,1108,1507,1000,1000,836,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.005,-0.285,-0.238,1509,1485,1108,1507,1000,1000,860,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.015,-0.242,-0.342,1509,1485,1108,1500,1000,1000,883,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.006,-0.168,-0.095,1509,1485,1108,1507,1000,1000,906,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.003,-0.182,-0.333,1509,1485,1108,1500,1000,1000,929,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.019,-0.194,-0.277,1509,1485,1108,1500,1000,1000,952,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.035,-0.182,-0.240,1509,1485,1108,1500,1000,1000,976,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.005,-0.271,-0.233,1509,1485,1108,1500,1000,1000,999,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.022,+0.013,-0.134,1509,1485,1108,1500,1000,1000,1023,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.024,-0.046,-0.212,1509,1485,1108,1500,1000,1000,1046,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.029,-0.100,-0.212,1509,1485,1108,1507,1000,1000,1070,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.012,-0.326,-0.220,1509,1485,1108,1500,1000,1000,1093,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.001,-0.182,-0.168,1509,1485,1107,1500,1000,1000,1117,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.001,-0.331,-0.088,1509,1485,1108,1500,1000,1000,1140,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.002,-0.230,-0.329,1509,1485,1108,1500,1000,1000,1164,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.006,-0.182,-0.331,1509,1485,1108,1500,1000,1000,1188,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.027,-0.147,-0.225,1509,1485,1108,1500,1000,1000,1210,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.026,-0.044,-0.145,1512,1485,1108,1507,1000,1000,1234,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.017,-0.277,-0.221,1510,1482,1107,1500,1000,1000,1257,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.003,-0.204,-0.338,1508,1480,1108,1500,1000,1000,1281,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.026,-0.289,-0.292,1510,1480,1108,1500,1000,1000,1304,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.044,-0.010,-0.303,1440,1344,1107,1500,1000,1000,1327,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.006,-0.242,-0.119,1508,1485,1108,1507,1000,1000,1351,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.020,-0.094,-0.236,1509,1485,1107,1500,1000,1000,1374,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.011,-0.175,-0.313,1509,1485,1107,1500,1000,1000,1398,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.011,-0.215,-0.395,1509,1485,1107,1500,1000,1000,1421,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.007,-0.002,-0.352,1509,1485,1108,1500,1000,1000,1445,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.005,-0.177,-0.367,1509,1485,1107,1500,1000,1000,1468,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.012,-0.134,-0.171,1508,1485,1108,1508,1000,1000,1491,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.037,-0.081,-0.239,1509,1485,1108,1508,1000,1000,1514,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.018,-0.189,-0.217,1509,1485,1108,1485,1000,1000,1537,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.004,-0.186,-0.247,1509,1485,1153,1455,1000,1000,1561,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.007,-0.100,-0.309,1509,1485,1117,1509,1000,1000,1585,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.008,-0.117,-0.437,1509,1485,1309,1500,1000,1000,1609,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.008,-0.034,-0.252,1509,1485,1450,1500,1000,1000,1632,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.024,-0.076,-0.213,1509,1485,1492,1510,1000,1000,1655,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.024,-0.142,-0.164,1509,1485,1504,1589,1000,1000,1679,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.009,-0.152,-0.250,1508,1485,1598,1509,1000,1000,1702,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.003,-0.226,-0.312,1500,1475,1597,1509,1000,1000,1726,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.019,-0.046,-0.367,1510,1477,1598,1509,1000,1000,1749,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.029,-0.203,-0.364,1511,1487,1112,1508,1000,1000,1773,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.003,-0.169,-0.367,1510,1480,1108,1508,1000,1000,1795,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.014,-0.358,-0.482,1510,1500,1102,1475,1000,1000,1819,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.004,-0.564,-0.814,1510,1482,1116,1508,1000,1000,1842,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.057,-0.181,-1.010,1510,1482,1117,1508,1000,1000,1865,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.012,-0.016,-0.704,1510,1482,1117,1509,1000,1000,1889,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.020,-0.145,-0.350,1510,1482,1116,1507,1000,1000,1912,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.011,-0.060,-0.074,1510,1482,1116,1508,1000,1000,1936,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.020,-0.250,-0.077,1510,1482,1116,1509,1000,1000,1959,1,0
+RCS,1,93,0,HOVER,4,+0.000,+0.000,+0.300,-0.015,-0.209,-0.212,1510,1482,1116,1509,1000,1000,1976,1,0
+RCS,0,70,0,HOVER,5,+0.000,+0.000,+0.300,+0.032,-0.366,-0.229,1510,1482,1116,1509,1000,1000,1976,1,0
+RCS,0,47,0,HOVER,5,+0.000,+0.000,+0.300,-0.002,-0.155,-0.130,1510,1482,1116,1509,1000,1000,1976,1,0
+RCS,0,28,0,HOVER,5,+0.000,+0.000,+0.300,+0.021,-0.172,-0.058,1510,1482,1116,1509,1000,1000,1976,1,0
+RCS,0,4,0,HOVER,5,+0.000,+0.000,+0.300,+0.013,-0.388,-0.204,1510,1482,1116,1509,1000,1000,1976,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.039,-0.132,-0.293,1510,1482,1116,1509,1000,1000,1976,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.010,-0.206,-0.298,1510,1482,1116,1509,1000,1000,1976,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,-0.018,-0.220,-0.172,1510,1482,1116,1509,1000,1000,1976,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.023,-0.206,-0.139,1510,1482,1116,1509,1000,1000,1976,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,-0.008,-0.207,-0.106,1510,1482,1116,1509,1000,1000,1976,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.024,-0.120,-0.144,1510,1482,1116,1509,1000,1000,1976,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,-0.024,-0.248,-0.185,1510,1482,1116,1509,1000,1000,1976,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,-0.008,-0.178,-0.317,1510,1482,1116,1509,1000,1000,1976,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.008,-0.182,-0.300,1510,1482,1116,1509,1000,1000,1976,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.006,-0.095,-0.214,1510,1482,1116,1509,1000,1000,1976,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,-0.037,-0.255,-0.220,1510,1482,1116,1509,1000,1000,1976,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.008,-0.033,-0.135,1510,1482,1116,1509,1000,1000,1976,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.007,-0.311,-0.237,1510,1482,1116,1509,1000,1000,1976,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,-0.010,-0.171,-0.344,1510,1482,1116,1509,1000,1000,1976,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,-0.031,-0.169,-0.263,1510,1482,1116,1509,1000,1000,1976,1,0
+RCS,1,24,0,HOVER,4,+0.000,+0.000,+0.300,+0.023,-0.162,-0.273,1509,1485,1157,1507,1000,1000,2000,1,0
+RCS,1,47,0,HOVER,4,+0.000,+0.000,+0.300,-0.012,-0.208,-0.078,1509,1485,1157,1508,1000,1000,2023,1,0
+RCS,1,72,0,HOVER,4,+0.000,+0.000,+0.300,-0.009,-0.150,-0.090,1509,1485,1157,1508,1000,1000,2047,1,0
+RCS,1,95,0,HOVER,4,+0.000,+0.000,+0.300,-0.042,-0.207,-0.214,1509,1485,1157,1507,1000,1000,2070,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.018,-0.135,-0.253,1509,1500,1110,1500,1000,1000,2093,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.058,-0.172,-0.238,1132,1090,1826,1738,1000,1000,2117,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.023,-0.163,-0.286,1887,1658,1289,1120,1000,1000,2140,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.016,-0.205,-0.281,1127,1835,1105,1890,1000,1000,2164,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.021,-0.255,-0.229,1125,1091,1839,1886,1000,1000,2187,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.010,-0.160,-0.285,1819,1234,1809,1120,1000,1000,2212,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.008,-0.118,-0.220,1407,1901,1102,1322,1000,1000,2235,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.025,+0.209,-0.025,1514,1487,1123,1508,1000,1000,2258,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.016,-0.220,-0.391,1514,1487,1124,1509,1000,1000,2281,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.034,-0.144,-0.361,1513,1487,1124,1509,1000,1000,2304,1,0
+ÿBarometer: settling...
+LEVEL: ** no stored calibration ** - boot surface is taken as level.
+       Run once: make flash-test TESTS=18, then make flash.
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.004,+1.547,-7.846,1510,1485,1106,1508,1000,1503,127,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.006,+0.988,-5.030,1510,1485,1106,1508,1000,1503,151,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.014,+0.428,-2.149,1510,1485,1107,1509,1000,1503,174,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.005,-0.013,-0.120,1509,1485,1107,1509,1000,1503,196,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.003,+0.014,-0.018,1510,1485,1107,1509,1000,1503,220,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.050,-0.031,+0.035,1510,1485,1106,1509,1000,1503,243,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.020,-0.039,-0.055,1510,1485,1106,1509,1000,1503,267,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.009,-0.022,-0.009,1510,1485,1107,1509,1000,1503,290,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.002,+0.029,+0.073,1509,1485,1107,1509,1000,1503,314,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.009,+0.018,+0.072,1510,1485,1107,1509,1000,1503,337,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.035,+0.018,+0.136,1510,1485,1106,1509,1000,1503,361,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.013,+0.007,-0.015,1510,1485,1107,1509,1000,1503,384,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.004,-0.011,+0.083,1510,1485,1106,1509,1000,1503,407,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.012,-0.064,-0.023,1510,1485,1106,1509,1000,1503,431,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.011,+0.013,+0.051,1510,1485,1106,1509,1000,2000,454,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.011,-0.066,+0.171,1510,1485,1107,1508,1000,2000,477,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.027,+0.014,+0.109,1510,1485,1106,1508,1000,2000,501,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.047,+0.015,+0.116,1510,1485,1107,1509,1000,2000,525,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.037,-0.013,+0.021,1509,1485,1107,1509,1000,1000,548,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.008,-0.058,-0.065,1510,1485,1107,1508,1000,1000,571,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.018,+0.010,-0.063,1510,1485,1107,1509,1000,1000,595,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.022,-0.032,-0.023,1510,1485,1107,1508,1000,1000,618,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.032,-0.009,+0.097,1510,1485,1107,1508,1000,1000,642,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.005,-0.047,+0.084,1510,1485,1106,1509,1000,1503,665,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.006,+0.047,+0.089,1510,1485,1107,1509,1000,1503,689,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.020,+0.122,+0.137,1510,1484,1107,1509,1000,1503,712,1,0
+RCS,1,100,0,STICK,4,+0.000,+0.000,+0.246,-0.004,-0.035,-0.077,1510,1485,1106,1509,1000,1503,735,1,0
+RCS,1,100,0,STICK,4,+0.000,+0.000,+0.246,-0.011,+0.041,+0.000,1509,1485,1107,1509,1000,1503,759,1,0
+RCS,1,100,0,STICK,4,+0.000,+0.000,+0.246,+0.015,+0.007,+0.077,1510,1485,1107,1509,1000,1503,781,1,0
+RCS,1,100,0,LAND,20,+0.000,+0.000,-0.300,+0.005,-0.058,+0.153,1510,1485,1107,1508,1000,1503,805,1,0
+RCS,1,100,0,LAND,20,+0.000,+0.000,-0.300,+0.021,+0.004,+0.120,1510,1485,1107,1509,1000,1503,828,1,0
+RCS,1,100,0,LAND,20,+0.000,+0.000,-0.300,-0.024,-0.005,+0.121,1510,1485,1106,1509,1000,1503,852,1,0
+RCS,1,100,0,LAND,20,+0.000,+0.000,-0.300,-0.013,+0.121,-0.007,1510,1484,1107,1509,1000,1503,875,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.014,+0.030,-0.068,1510,1485,1107,1508,1000,1503,899,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.028,+0.054,-0.167,1510,1485,1107,1509,1000,1503,923,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.008,+0.001,-0.020,1510,1485,1106,1509,1000,1503,946,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.002,+0.014,+0.119,1510,1485,1107,1508,1000,2000,970,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.016,+0.049,+0.209,1510,1485,1106,1508,1000,2000,993,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.023,+0.030,+0.133,1510,1485,1107,1508,1000,2000,1017,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.017,+0.024,+0.090,1510,1485,1107,1509,1000,2000,1040,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.015,-0.014,-0.061,1510,1485,1106,1509,1000,2000,1064,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.007,+0.154,+0.096,1510,1485,1106,1509,1000,2000,1086,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.010,+0.706,-0.137,1509,1485,1107,1509,1000,2000,1109,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.002,+0.672,+0.011,1510,1485,1110,1507,1000,2000,1133,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.024,+0.448,+0.199,1510,1485,1109,1507,1000,2000,1156,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.015,+0.184,+0.100,1510,1485,1110,1507,1000,2000,1180,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.049,+0.464,-0.156,1510,1485,1110,1508,1000,2000,1203,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.016,-0.301,-0.148,1510,1485,1110,1507,1000,2000,1227,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.005,+0.226,-0.076,1512,1490,1110,1507,1000,2000,1250,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.003,-0.221,+0.159,1511,1490,1107,1508,1000,2000,1273,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.043,+0.069,+0.223,1511,1490,1107,1507,1000,2000,1297,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.014,-0.090,+0.193,1511,1490,1107,1507,1000,2000,1320,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.018,+0.055,-0.025,1511,1490,1108,1507,1000,2000,1344,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.018,-0.156,+0.025,1512,1490,1107,1507,1000,2000,1368,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.012,-0.004,+0.108,1510,1490,1107,1507,1000,2000,1391,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.005,+0.217,+0.144,1511,1490,1107,1507,1000,2000,1414,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.050,+0.027,+0.335,1511,1490,1107,1507,1000,2000,1437,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.051,-0.000,+0.399,1510,1490,1108,1507,1000,2000,1461,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.039,+0.158,+0.084,1510,1490,1107,1507,1000,2000,1484,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.045,+0.175,+0.212,1510,1490,1107,1500,1000,2000,1508,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.025,+0.131,+0.190,1511,1490,1107,1507,1000,2000,1531,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.006,+0.073,+0.005,1510,1490,1407,1509,1000,2000,1555,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.022,+0.064,-0.033,1511,1490,1890,1510,1000,2000,1578,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.007,+0.077,+0.047,1511,1490,1890,1510,1000,2000,1602,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.005,+0.128,+0.073,1511,1489,1890,1510,1000,2000,1625,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.015,+0.102,+0.198,1510,1490,1108,1507,1000,2000,1648,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.026,+0.011,+0.205,1511,1490,1108,1500,1000,2000,1671,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.005,-0.100,+0.189,1510,1490,1107,1500,1000,2000,1694,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.011,-0.016,+0.055,1511,1490,1107,1500,1000,2000,1718,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.033,+0.074,+0.001,1511,1490,1107,1500,1000,2000,1741,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.006,+0.108,+0.028,1510,1490,1095,1500,1000,2000,1765,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.034,+0.099,+0.199,1509,1490,1097,1500,1000,2000,1788,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.039,+0.068,+0.079,1507,1490,1097,1500,1000,2000,1812,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.010,+0.029,+0.155,1510,1487,1108,1500,1000,2000,1836,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.028,+0.039,+0.099,1510,1520,1107,1500,1000,2000,1859,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.010,+0.175,+0.022,1510,1500,1106,1500,1000,2000,1883,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.029,+0.038,+0.142,1510,1500,1087,1500,1000,2000,1906,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.016,+0.063,+0.109,1510,1492,1087,1518,1000,2000,1930,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.020,+0.017,+0.000,1510,1500,1089,1534,1000,2000,1953,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.012,+0.077,-0.047,1509,1500,1107,1510,1000,2000,1975,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.014,+0.127,+0.056,1510,1500,1090,1509,1000,2000,1999,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.015,+0.114,+0.140,1509,1494,1107,1500,1000,2000,2022,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.008,-0.010,+0.119,1510,1494,1101,1871,1000,2000,2046,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.043,+0.099,+0.114,1510,1500,1100,1670,1000,2000,2069,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.014,+0.039,+0.060,1510,1494,1097,1116,1000,2000,2093,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.003,+0.038,-0.011,1509,1494,1098,1116,1000,2000,2116,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.020,+0.109,+0.017,1510,1492,1098,1116,1000,2000,2140,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.023,+0.053,+0.059,1510,1494,1098,1255,1000,2000,2163,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.007,+0.034,+0.175,1510,1494,1107,1462,1000,2000,2186,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.021,-0.033,+0.281,1510,1492,1165,1500,1000,2000,2210,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.034,+0.196,+0.063,1509,1500,1169,1510,1000,2000,2234,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.009,+0.079,+0.085,1510,1500,1110,1500,1000,2000,2258,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.009,+0.071,-0.020,1510,1494,1108,1524,1000,2000,2280,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.007,+0.146,-0.020,1510,1487,1173,1513,1000,2000,2304,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.009,+0.297,+0.193,1511,1489,1152,1500,1000,2000,2327,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.020,+0.202,+0.165,1511,1487,1108,1558,1000,2000,2350,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.002,+0.078,+0.139,1510,1489,1108,1515,1000,2000,2374,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.016,-0.024,+0.085,1510,1487,1107,1514,1000,2000,2397,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.013,+0.135,-0.020,1511,1489,1107,1500,1000,2000,2421,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.028,+0.046,-0.014,1510,1487,1107,1507,1000,2000,2444,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.003,+0.191,+0.033,1511,1489,1107,1511,1000,2000,2468,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.002,+0.240,+0.016,1511,1487,1107,1512,1000,2000,2491,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.015,+0.011,+0.035,1510,1487,1107,1512,1000,2000,2514,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.014,+0.077,+0.078,1510,1489,1107,1511,1000,2000,2538,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.051,+0.040,+0.229,1510,1487,1107,1509,1000,2000,2561,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.004,+0.161,+0.272,1510,1489,1098,1519,1000,2000,2584,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.000,-0.008,+0.018,1510,1489,1099,1500,1000,2000,2607,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.027,+0.116,-0.024,1510,1489,1108,1511,1000,2000,2631,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.035,+0.127,-0.072,1510,1489,1099,1512,1000,2000,2654,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.001,+0.081,-0.009,1510,1489,1107,1513,1000,2000,2678,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.015,+0.106,+0.113,1511,1489,1105,1512,1000,2000,2702,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.004,+0.019,+0.191,1510,1487,1107,1511,1000,2000,2725,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.033,+0.082,+0.146,1510,1487,1422,1500,1000,2000,2749,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.002,+0.033,+0.018,1510,1489,1887,1500,1000,2000,2772,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.006,+0.054,-0.013,1510,1489,1887,1500,1000,2000,2796,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.009,+0.098,+0.047,1510,1487,1887,1508,1000,2000,2819,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.019,-0.014,+0.137,1511,1489,1887,1500,1000,2000,2843,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.032,+0.134,+0.251,1510,1489,1107,1500,1000,2000,2866,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.036,+0.064,+0.101,1511,1489,1106,1507,1000,2000,2888,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.006,+0.138,+0.039,1510,1489,1077,1513,1000,2000,2912,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.018,-0.029,+0.035,1510,1487,1074,1515,1000,2000,2935,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.011,+0.076,-0.112,1511,1487,1068,1516,1000,2000,2959,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,-0.000,+0.190,+0.082,1510,1489,1065,1524,1000,2000,2982,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.015,+0.015,+0.111,1511,1489,1068,1523,1000,2000,3006,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.022,+0.083,+0.159,1510,1487,1088,1522,1000,2000,3029,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,+0.006,-0.056,+0.148,1510,1489,1064,1535,1000,2000,3052,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,+0.023,+0.043,+0.121,1511,1487,1062,1541,1000,2000,3076,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,-0.015,+0.068,+0.007,1510,1487,1061,1540,1000,2000,3099,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,+0.020,+0.085,+0.018,1511,1487,1062,1540,1000,2000,3124,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,-0.003,+0.134,+0.063,1511,1487,1063,1539,1000,2000,3147,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,-0.005,+0.018,+0.076,1510,1487,1064,1539,1000,2000,3170,1,0
+RCS,1,100,0,HOVER,32,+0.000,+0.000,+0.300,+0.042,+0.042,+0.141,1510,1485,1065,1539,1000,2000,3193,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,-0.013,-0.018,-0.003,1510,1487,1069,1538,1000,2000,3216,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.010,+0.081,+0.004,1510,1487,1068,1538,1000,2000,3240,1,0
+RCS,1,100,0,HOVER,36,+0.000,+0.000,+0.300,+0.015,+0.043,+0.163,1510,1485,1068,1538,1000,2000,3263,1,0
+RCS,1,98,0,HOVER,36,+0.000,+0.000,+0.300,-0.013,+0.089,+0.002,1510,1485,1068,1538,1000,2000,3280,1,0
+RCS,0,74,0,HOVER,37,+0.000,+0.000,+0.300,-0.006,-0.017,-0.050,1510,1485,1068,1538,1000,2000,3280,1,0
+RCS,0,50,0,HOVER,37,+0.000,+0.000,+0.300,+0.011,-0.161,+0.003,1510,1485,1068,1538,1000,2000,3280,1,0
+RCS,0,27,0,HOVER,37,+0.000,+0.000,+0.300,-0.007,+0.128,+0.051,1510,1485,1068,1538,1000,2000,3280,1,0
+RCS,0,3,0,HOVER,37,+0.000,+0.000,+0.300,-0.017,+0.225,-0.124,1510,1485,1068,1538,1000,2000,3280,1,0
+RCS,0,0,0,HOVER,37,+0.000,+0.000,+0.300,+0.025,+0.054,-0.366,1510,1485,1068,1538,1000,2000,3280,1,0
+RCS,0,0,0,HOVER,37,+0.000,+0.000,+0.300,+0.000,-0.303,-0.225,1510,1485,1068,1538,1000,2000,3280,1,0
+RCS,0,0,0,HOVER,37,+0.000,+0.000,+0.300,-0.018,-0.278,-0.364,1510,1485,1068,1538,1000,2000,3280,1,0
+RCS,0,0,0,HOVER,37,+0.000,+0.000,+0.300,-0.027,-0.092,-0.263,1510,1485,1068,1538,1000,2000,3280,1,0
+RCS,0,0,0,HOVER,37,+0.000,+0.000,+0.300,-0.028,-0.216,-0.272,1510,1485,1068,1538,1000,2000,3280,1,0
+RCS,0,0,0,HOVER,37,+0.000,+0.000,+0.300,+0.044,-0.291,-0.225,1510,1485,1068,1538,1000,2000,3280,1,0
+RCS,0,0,0,HOVER,37,+0.000,+0.000,+0.300,-0.036,-0.300,-0.153,1510,1485,1068,1538,1000,2000,3280,1,0
+RCS,0,0,0,HOVER,37,+0.000,+0.000,+0.300,-0.016,-0.201,-0.223,1510,1485,1068,1538,1000,2000,3280,1,0
+RCS,0,0,0,HOVER,37,+0.000,+0.000,+0.300,-0.019,-0.340,-0.253,1510,1485,1068,1538,1000,2000,3280,1,0
+RCS,0,0,0,HOVER,37,+0.000,+0.000,+0.300,-0.022,-0.167,-0.261,1510,1485,1068,1538,1000,2000,3280,1,0
+RCS,0,0,0,HOVER,37,+0.000,+0.000,+0.300,-0.005,-0.238,-0.305,1510,1485,1068,1538,1000,2000,3280,1,0
+RCS,0,0,0,HOVER,37,+0.000,+0.000,+0.300,+0.020,-0.145,-0.302,1510,1485,1068,1538,1000,2000,3280,1,0
+RCS,0,0,0,HOVER,37,+0.000,+0.000,+0.300,+0.008,-0.204,-0.221,1510,1485,1068,1538,1000,2000,3280,1,0
+RCS,0,0,0,HOVER,37,+0.000,+0.000,+0.300,+0.040,-0.140,-0.095,1510,1485,1068,1538,1000,2000,3280,1,0
+RCS,0,0,0,HOVER,37,+0.000,+0.000,+0.300,+0.009,-0.315,-0.193,1510,1485,1068,1538,1000,2000,3280,1,0
+RCS,0,0,0,HOVER,37,+0.000,+0.000,+0.300,-0.025,-0.219,-0.159,1510,1485,1068,1538,1000,2000,3280,1,0
+RCS,0,0,0,HOVER,37,+0.000,+0.000,+0.300,-0.022,-0.273,-0.178,1510,1485,1068,1538,1000,2000,3280,1,0
+RCS,1,5,0,HOVER,36,+0.000,+0.000,+0.300,+0.005,-0.236,-0.263,1511,1487,1075,1507,1000,2000,3286,1,0
+RCS,1,29,0,HOVER,4,+0.000,+0.000,+0.300,-0.036,-0.172,-0.360,1511,1487,1075,1508,1000,1000,3309,1,0
+RCS,1,53,0,HOVER,4,+0.000,+0.000,+0.300,+0.016,-0.190,-0.233,1510,1487,1074,1508,1000,1000,3333,1,0
+RCS,1,76,0,HOVER,4,+0.000,+0.000,+0.300,+0.071,-0.317,-0.053,1510,1485,1103,1511,1000,1000,3356,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.005,-0.306,-0.215,1510,1487,1224,1511,1000,1000,3380,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.005,-0.064,-0.217,1511,1487,1224,1510,1000,1000,3404,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.037,-0.450,-0.278,1510,1485,1224,1512,1000,1000,3427,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.003,-0.037,-0.302,1511,1487,1224,1511,1000,1000,3451,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.017,-0.300,-0.198,1510,1487,1224,1512,1000,1000,3474,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.017,-0.091,-0.257,1511,1487,1224,1511,1000,1000,3498,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.014,-0.212,-0.202,1510,1487,1224,1511,1000,1000,3521,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.030,-0.198,-0.152,1510,1485,1109,1512,1000,1000,3545,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.021,-0.326,-0.225,1510,1487,1109,1512,1000,1000,3568,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.036,-0.332,-0.248,1511,1487,1088,1514,1000,1000,3591,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.013,-0.154,-0.225,1510,1487,1074,1500,1000,1000,3614,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,-0.016,-0.207,-0.278,1510,1485,1065,1500,1000,1000,3637,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.023,-0.166,-0.217,1511,1487,1064,1500,1000,1000,3661,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,-0.045,-0.225,-0.162,1510,1487,1064,1500,1000,1000,3684,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.015,-0.241,-0.139,1510,1487,1062,1500,1000,1000,3708,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.006,-0.346,-0.190,1511,1487,1105,1500,1000,1000,3731,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.018,-0.291,-0.308,1510,1487,1110,1507,1000,1000,3755,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.037,-0.194,-0.324,1511,1487,1108,1507,1000,1000,3778,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.000,-0.323,-0.341,1511,1487,1102,1515,1000,1000,3801,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.000,-0.126,-0.103,1510,1487,1069,1524,1000,1000,3826,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,-0.001,-0.265,-0.092,1511,1487,1062,1523,1000,1000,3849,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.019,-0.280,-0.219,1510,1487,1063,1529,1000,1000,3873,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,-0.009,-0.232,-0.214,1510,1487,1060,1529,1000,1000,3895,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,-0.013,-0.258,-0.249,1510,1487,1060,1529,1000,1000,3919,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.009,-0.210,-0.251,1510,1487,1060,1530,1000,1000,3942,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.026,-0.226,-0.248,1510,1487,1344,1512,1000,1000,3965,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.018,-0.197,-0.124,1510,1487,1344,1512,1000,1000,3989,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.001,-0.249,-0.180,1510,1487,1167,1512,1000,1000,4012,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.017,-0.280,-0.116,1510,1487,1107,1511,1000,1000,4036,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.021,-0.206,-0.228,1511,1487,1106,1511,1000,1000,4059,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.034,-0.128,-0.257,1511,1487,1106,1512,1000,1000,4083,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.009,-0.157,-0.219,1510,1487,1107,1511,1000,1000,4106,1,0
+RCS,1,92,0,HOVER,4,+0.000,+0.000,+0.300,-0.035,-0.160,-0.089,1510,1487,1107,1511,1000,1000,4120,1,0
+RCS,0,69,0,HOVER,5,+0.000,+0.000,+0.300,-0.012,-0.227,-0.069,1510,1487,1107,1511,1000,1000,4120,1,0
+RCS,0,45,0,HOVER,5,+0.000,+0.000,+0.300,+0.015,-0.191,-0.166,1510,1487,1107,1511,1000,1000,4120,1,0
+RCS,0,21,0,HOVER,5,+0.000,+0.000,+0.300,+0.027,-0.193,-0.149,1510,1487,1107,1511,1000,1000,4120,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.006,-0.325,-0.187,1510,1487,1107,1511,1000,1000,4120,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.007,-0.219,-0.229,1510,1487,1107,1511,1000,1000,4120,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.005,-0.056,-0.170,1510,1487,1107,1511,1000,1000,4120,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,-0.011,-0.106,-0.089,1510,1487,1107,1511,1000,1000,4120,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.001,-0.127,-0.069,1510,1487,1107,1511,1000,1000,4120,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.021,-0.280,-0.133,1510,1487,1107,1511,1000,1000,4120,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,-0.028,-0.146,-0.295,1510,1487,1107,1511,1000,1000,4120,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.025,-0.240,-0.311,1510,1487,1107,1511,1000,1000,4120,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,-0.010,-0.172,-0.166,1510,1487,1107,1511,1000,1000,4120,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,-0.020,-0.297,-0.073,1510,1487,1107,1511,1000,1000,4120,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.013,-0.254,-0.089,1510,1487,1107,1511,1000,1000,4120,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,-0.032,-0.305,-0.117,1510,1487,1107,1511,1000,1000,4120,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.006,-0.208,-0.235,1510,1487,1107,1511,1000,1000,4120,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,-0.004,-0.184,-0.324,1510,1487,1107,1511,1000,1000,4120,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,-0.008,-0.276,-0.153,1510,1487,1107,1511,1000,1000,4120,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.007,-0.184,-0.157,1510,1487,1107,1511,1000,1000,4120,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.001,-0.253,-0.221,1510,1487,1107,1511,1000,1000,4120,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,-0.019,-0.253,-0.092,1510,1487,1107,1511,1000,1000,4120,1,0
+RCS,1,5,0,HOVER,4,+0.000,+0.000,+0.300,-0.004,-0.172,-0.088,1510,1487,1075,1500,1000,1000,4123,1,0
+RCS,1,29,0,HOVER,4,+0.000,+0.000,+0.300,-0.006,-0.203,-0.123,1511,1487,1113,1507,1000,1000,4147,1,0
+RCS,1,53,0,HOVER,4,+0.000,+0.000,+0.300,-0.008,-0.188,-0.171,1510,1487,1114,1508,1000,1000,4170,1,0
+RCS,1,76,0,HOVER,4,+0.000,+0.000,+0.300,-0.011,-0.259,-0.086,1512,1487,1113,1507,1000,1000,4193,1,0
+RCS,1,95,0,HOVER,4,+0.000,+0.000,+0.300,-0.029,-0.200,-0.341,1510,1487,1114,1508,1000,1000,4217,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.021,-0.072,-0.319,1510,1487,1113,1507,1000,1000,4240,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.005,-0.073,-0.244,1510,1487,1113,1507,1000,1000,4264,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.024,-0.084,-0.053,1511,1487,1113,1507,1000,1000,4288,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.013,-0.073,-0.125,1511,1487,1114,1507,1000,1000,4312,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.008,-0.046,-0.187,1510,1487,1110,1507,1000,1000,4335,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.002,-0.208,+0.008,1511,1487,1110,1507,1000,1000,4358,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.032,-0.018,-0.201,1510,1487,1087,1509,1000,1000,4382,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.005,-0.166,-0.274,1510,1490,1074,1507,1000,1000,4405,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.005,-0.164,-0.166,1511,1489,1070,1507,1000,1000,4428,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.001,-0.096,-0.088,1511,1490,1071,1507,1000,1000,4451,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.030,-0.220,-0.022,1511,1490,1071,1500,1000,1000,4475,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.015,-0.287,-0.187,1511,1487,1104,1508,1000,1000,4498,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.000,-0.247,-0.254,1510,1489,1106,1508,1000,1000,4521,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.014,-0.051,-0.225,1511,1487,1105,1500,1000,1000,4545,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.025,-0.191,-0.220,1512,1500,1103,1500,1000,1000,4568,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.008,-0.153,-0.186,1512,1492,1098,1508,1000,1000,4592,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.008,-0.260,-0.196,1513,1500,1070,1500,1000,1000,4615,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.023,-0.223,-0.164,1512,1492,1514,1508,1000,1000,4639,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.006,-0.145,-0.105,1512,1492,1514,1507,1000,1000,4662,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.021,-0.227,-0.124,1512,1492,1514,1508,1000,1000,4686,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.003,-0.324,-0.137,1512,1492,1514,1508,1000,1000,4710,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.003,-0.395,-0.229,1512,1492,1107,1508,1000,1000,4732,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.012,-0.121,-0.264,1512,1492,1106,1507,1000,1000,4756,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.000,-0.185,-0.253,1512,1492,1106,1507,1000,1000,4779,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.049,-0.109,-0.282,1511,1492,1106,1507,1000,1000,4803,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.020,-0.131,-0.108,1512,1492,1106,1507,1000,1000,4826,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.002,-0.116,-0.195,1512,1492,1106,1507,1000,1000,4850,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.029,-0.241,-0.153,1512,1490,1106,1507,1000,1000,4873,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.009,-0.225,-0.128,1512,1492,1100,1513,1000,1000,4896,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.006,-0.186,-0.124,1512,1492,1080,1508,1000,1000,4920,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.009,-0.177,-0.004,1512,1492,1070,1507,1000,1000,4943,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.007,-0.284,-0.154,1512,1492,1069,1500,1000,1000,4967,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.032,-0.234,-0.257,1512,1492,1069,1507,1000,1000,4990,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.013,-0.181,-0.268,1512,1492,1069,1507,1000,1000,5014,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.014,-0.174,-0.171,1512,1492,1068,1507,1000,1000,5036,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.006,-0.267,-0.164,1512,1492,1067,1507,1000,1000,5059,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.045,-0.283,-0.066,1511,1492,1060,1500,1000,1000,5083,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,-0.013,-0.284,-0.105,1512,1492,1060,1500,1000,1000,5106,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.064,-0.235,-0.109,1512,1492,1060,1500,1000,1000,5131,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.020,-0.230,-0.249,1512,1492,1060,1500,1000,1000,5154,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.014,-0.289,-0.226,1512,1492,1063,1500,1000,1000,5178,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.006,-0.093,-0.212,1512,1492,1065,1500,1000,1000,5201,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.014,-0.147,-0.150,1512,1492,1065,1500,1000,1000,5224,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.014,-0.163,-0.153,1512,1492,1065,1500,1000,1000,5248,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,-0.008,-0.203,-0.166,1512,1492,1065,1500,1000,1000,5271,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.016,-0.265,-0.084,1511,1492,1064,1500,1000,1000,5295,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.017,-0.288,-0.084,1512,1492,1065,1500,1000,1000,5317,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.001,-0.271,-0.301,1512,1492,1103,1508,1000,1000,5341,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.014,-0.209,-0.352,1512,1490,1105,1509,1000,1000,5364,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.001,-0.204,-0.241,1512,1492,1105,1509,1000,1000,5388,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.009,-0.193,-0.148,1512,1490,1105,1509,1000,1000,5411,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.013,-0.166,-0.068,1512,1492,1105,1508,1000,1000,5434,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.027,-0.206,-0.069,1512,1490,1105,1509,1000,1000,5458,1,0
+RCS,0,84,0,HOVER,5,+0.000,+0.000,+0.300,+0.016,-0.230,-0.117,1512,1490,1105,1509,1000,1000,5461,1,0
+RCS,0,60,0,HOVER,5,+0.000,+0.000,+0.300,-0.008,-0.214,-0.286,1512,1490,1105,1509,1000,1000,5461,1,0
+RCS,0,37,0,HOVER,5,+0.000,+0.000,+0.300,-0.028,-0.255,-0.331,1512,1490,1105,1509,1000,1000,5461,1,0
+RCS,0,13,0,HOVER,5,+0.000,+0.000,+0.300,-0.028,-0.255,-0.231,1512,1490,1105,1509,1000,1000,5461,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,-0.023,-0.209,-0.060,1512,1490,1105,1509,1000,1000,5461,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,-0.013,-0.183,-0.131,1512,1490,1105,1509,1000,1000,5461,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.009,-0.126,-0.105,1512,1490,1105,1509,1000,1000,5461,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,-0.021,-0.242,-0.165,1512,1490,1105,1509,1000,1000,5461,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,-0.009,-0.180,-0.211,1512,1490,1105,1509,1000,1000,5461,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.021,-0.051,-0.197,1512,1490,1105,1509,1000,1000,5461,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.020,-0.177,-0.214,1512,1490,1105,1509,1000,1000,5461,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,-0.006,-0.149,-0.282,1512,1490,1105,1509,1000,1000,5461,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,-0.006,-0.258,-0.108,1512,1490,1105,1509,1000,1000,5461,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.059,-0.181,-0.085,1512,1490,1105,1509,1000,1000,5461,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.010,-0.253,-0.048,1512,1490,1105,1509,1000,1000,5461,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,-0.013,-0.224,-0.238,1512,1490,1105,1509,1000,1000,5461,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.014,-0.241,-0.182,1512,1490,1105,1509,1000,1000,5461,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.037,-0.157,-0.148,1512,1490,1105,1509,1000,1000,5461,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.012,-0.225,-0.060,1512,1490,1105,1509,1000,1000,5461,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.004,-0.260,-0.071,1512,1490,1105,1509,1000,1000,5461,1,0
+RCS,0,0,0,HOVER,5,+0.000,+0.000,+0.300,+0.052,-0.202,-0.043,1512,1490,1105,1509,1000,1000,5461,1,0
+RCS,1,5,0,HOVER,0,+0.000,+0.000,+0.300,-0.007,-0.159,-0.093,1512,1490,1057,1513,1000,1000,5464,1,0
+RCS,1,29,0,HOVER,0,+0.000,+0.000,+0.300,+0.017,-0.081,-0.270,1511,1492,1057,1513,1000,1000,5488,1,0
+RCS,1,53,0,HOVER,0,+0.000,+0.000,+0.300,+0.030,-0.235,-0.096,1512,1490,1057,1513,1000,1000,5511,1,0
+RCS,1,72,0,HOVER,0,+0.000,+0.000,+0.300,+0.002,-0.168,-0.186,1512,1490,1057,1513,1000,1000,5534,1,0
+RCS,1,95,0,HOVER,0,+0.000,+0.000,+0.300,-0.018,-0.188,-0.057,1512,1492,1058,1514,1000,1000,5558,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,+0.019,-0.363,-0.241,1512,1490,1057,1514,1000,1000,5581,1,0
+RCS,1,100,0,HOVER,0,+0.000,+0.000,+0.300,-0.003,-0.248,-0.067,1512,1490,1062,1516,1000,1000,5605,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.001,-0.343,-0.059,1512,1490,1105,1510,1000,1000,5628,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.013,-0.224,-0.114,1512,1490,1105,1510,1000,1000,5652,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.003,-0.171,-0.311,1512,1490,1105,1510,1000,1000,5676,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.020,-0.214,-0.319,1512,1490,1105,1511,1000,1000,5699,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.040,-0.235,-0.183,1512,1490,1105,1511,1000,1000,5723,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.048,-0.144,-0.158,1512,1490,1105,1511,1000,1000,5746,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.020,-0.244,-0.155,1512,1490,1105,1509,1000,1000,5769,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.001,-0.209,-0.102,1512,1490,1105,1512,1000,1000,5792,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.025,-0.222,-0.227,1512,1490,1106,1509,1000,1000,5816,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.055,-0.228,-0.305,1512,1490,1108,1509,1000,1000,5839,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.002,-0.340,-0.157,1512,1490,1110,1460,1000,1000,5862,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.014,+0.016,-0.120,1512,1490,1110,1509,1000,1000,5886,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.018,-0.255,-0.058,1512,1490,1166,1510,1000,1000,5909,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.003,-0.234,-0.172,1512,1490,1111,1417,1000,1000,5933,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.021,-0.538,-0.098,1512,1490,1289,1508,1000,1000,5956,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.005,-0.304,-0.202,1516,1183,1108,1539,1000,1000,5980,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.006,-0.359,-0.238,1510,1484,1107,1509,1000,1000,6003,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.036,-0.145,-0.116,1510,1482,1107,1509,1000,1000,6027,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.021,-0.217,-0.179,1510,1484,1107,1509,1000,1000,6050,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.005,-0.189,-0.196,1510,1484,1107,1509,1000,1000,6072,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.031,-0.379,-0.136,1510,1482,1107,1509,1000,1000,6096,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.036,-0.019,-0.304,1510,1485,1107,1508,1000,1000,6120,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.000,+0.676,-0.486,1510,1484,1107,1509,1000,1000,6144,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.000,+0.619,-0.012,1510,1484,1111,1509,1000,1000,6167,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.030,+0.405,-0.116,1509,1487,1116,1507,1000,1000,6191,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.001,+0.663,+0.018,1510,1485,1116,1508,1000,1000,6214,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.011,+0.632,-0.174,1510,1487,1108,1508,1000,1000,6237,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.024,+0.661,+0.054,1510,1485,1110,1507,1000,1000,6261,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.001,+0.692,+0.162,1509,1485,1110,1507,1000,1000,6284,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.012,+0.706,-0.226,1510,1485,1110,1507,1000,1000,6308,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.027,+0.737,-0.218,1510,1485,1110,1507,1000,1000,6331,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.004,+0.604,-0.175,1510,1485,1110,1507,1000,1000,6355,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.039,+0.531,+0.002,1509,1485,1110,1507,1000,1000,6377,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.014,+0.583,+0.079,1510,1485,1110,1507,1000,1000,6400,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.029,+0.513,-0.007,1510,1485,1110,1507,1000,1000,6424,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.014,+0.700,-0.051,1510,1485,1110,1507,1000,1000,6447,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.007,+0.612,-0.015,1510,1485,1110,1507,1000,1000,6471,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.040,+0.565,-0.085,1510,1485,1110,1507,1000,1000,6494,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.012,+0.632,-0.101,1510,1485,1110,1507,1000,1000,6518,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.013,+0.710,+0.021,1510,1485,1110,1507,1000,1000,6542,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.002,+0.772,+0.129,1510,1485,1110,1507,1000,1000,6565,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.021,+0.653,-0.007,1510,1485,1110,1507,1000,1000,6589,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.018,+0.548,-0.062,1510,1485,1110,1507,1000,1000,6612,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.008,+0.712,+0.026,1510,1485,1110,1507,1000,1000,6636,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.011,+0.773,+0.019,1509,1485,1110,1507,1000,1000,6658,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.003,+0.899,+0.044,1510,1485,1110,1507,1000,1000,6682,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.015,+0.574,-0.033,1510,1485,1110,1507,1000,1000,6705,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.000,+0.703,+0.002,1510,1485,1110,1507,1000,1000,6729,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.019,+0.728,+0.108,1510,1485,1110,1507,1000,1000,6752,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.001,+0.833,+0.056,1510,1485,1110,1507,1000,1000,6775,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.003,+0.462,-0.026,1510,1485,1110,1507,1000,1000,6799,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.006,+0.588,-0.129,1510,1485,1110,1507,1000,1000,6822,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.002,+0.677,-0.166,1510,1485,1110,1507,1000,1000,6846,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.016,+0.627,-0.007,1510,1485,1110,1507,1000,1000,6869,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.014,+0.599,-0.091,1510,1485,1110,1507,1000,1000,6893,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.007,+0.766,-0.004,1510,1485,1110,1507,1000,1000,6916,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.035,+0.709,+0.028,1510,1485,1110,1507,1000,1000,6939,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.032,+0.562,+0.081,1510,1485,1110,1507,1000,1000,6962,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.008,+0.687,+0.077,1510,1485,1110,1507,1000,1000,6986,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.009,+0.706,+0.005,1509,1485,1110,1507,1000,1000,7010,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.012,+0.684,+0.054,1510,1485,1110,1507,1000,1000,7033,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.005,+0.563,+0.116,1510,1485,1110,1507,1000,1000,7057,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.017,+0.141,+0.206,1510,1485,1110,1507,1000,1000,7080,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.017,+0.193,+0.182,1509,1485,1110,1507,1000,1000,7103,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.020,+0.553,+0.635,1510,1485,1110,1507,1000,1000,7127,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.009,+0.499,+0.733,1509,1485,1106,1526,1000,1000,7150,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.004,+0.100,+0.229,1510,1485,1105,1512,1000,1000,7174,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.010,-0.436,-0.196,1510,1485,1141,1514,1000,1000,7197,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.016,+0.204,-0.228,1500,1470,1110,1511,1000,1000,7221,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.003,-0.298,-0.118,1508,1480,1108,1509,1000,1000,7244,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.008,-0.053,-0.075,1508,1480,1106,1510,1000,1000,7267,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.036,-0.111,-0.085,1509,1480,1107,1507,1000,1000,7290,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.011,+0.165,-0.223,1508,1480,1107,1508,1000,1000,7313,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.008,+0.194,-0.189,1508,1480,1107,1507,1000,1000,7337,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.007,+0.982,+0.010,1510,1485,1113,1509,1000,1000,7360,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.016,+0.386,-0.011,1510,1485,1115,1509,1000,1000,7384,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.007,+0.593,+0.003,1511,1485,1113,1509,1000,1000,7408,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.011,+0.531,+0.004,1511,1484,1114,1509,1000,1000,7432,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.011,+0.532,-0.051,1511,1485,1114,1509,1000,1000,7455,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.021,+0.289,-0.086,1510,1485,1115,1509,1000,1000,7478,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.023,+0.707,+0.017,1510,1485,1114,1509,1000,1000,7502,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.003,+0.605,-0.137,1510,1485,1114,1509,1000,1000,7525,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.006,+0.216,-0.256,1510,1485,1115,1509,1000,1000,7549,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.007,+0.429,-0.482,1510,1485,1114,1509,1000,1000,7571,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.010,+0.104,-0.126,1510,1485,1113,1509,1000,1000,7595,1,0
+ÿÿ
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 18
+Motor tests 10 and 14 are NOT selected â€” no motor output.
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 18: Level calibration (stored in flash)
+========================================
+  No calibration stored yet.
+
+  PROPS OFF. Stand the drone on its landing gear on a firm, flat
+  surface (a table). It does NOT need to be perfectly level.
+  Hands off. Step 1 of 2 starts in 5 s...
+  Measuring position 1 (3 s, don't touch)...
+    ax +0.021  ay -0.017  az +0.986 g
+
+  Step 2 of 2: ROTATE the drone 180 deg IN PLACE (spin it around on
+  the same spot, keep it standing on the surface), then let go.
+  The angle is printed live; it continues once it reads 170-190 deg
+  and the drone is still for 1.5 s.
+    rotated +0.000 deg
+    rotated +0.005 deg
+    rotated +0.007 deg
+    rotated +0.008 deg
+    rotated +0.011 deg
+    rotated +0.013 deg
+    rotated +0.014 deg
+    rotated +0.015 deg
+    rotated +0.014 deg
+    rotated +0.013 deg
+    rotated +0.014 deg
+    rotated +0.019 deg
+    rotated +0.025 deg
+    rotated +0.027 deg
+    rotated +0.030 deg
+    rotated +0.033 deg
+    rotated +0.034 deg
+    rotated +0.039 deg
+    rotated +0.043 deg
+    rotated +0.045 deg
+    rotated +0.032 deg
+    rotated +0.048 deg
+    rotated +0.045 deg
+    rotated +6.280 deg
+    rotated +39.976 deg
+    rotated +102.138 deg
+    rotated +143.879 deg
+    rotated +183.603 deg
+    rotated +182.793 deg
+    rotated +182.793 deg
+    rotated +182.792 deg
+    rotation accepted: +182.789 deg
+  Measuring position 2 (3 s, don't touch)...
+    ax +0.022  ay -0.031  az +0.991 g
+
+  RESULT
+    Board/frame level offset (now corrected): roll -1.396 deg, pitch -1.215 deg
+    offset ax +0.021  ay -0.024  az -0.012 g
+    Your surface slope (ignored): roll +0.395 deg, pitch +0.032 deg
+    (the old boot calibration would have flown leaning by
+     offset + slope; now only the gear plane counts)
+  Saving to flash (sector 10)...
+  [PASS] TEST 18: level calibration saved and read back
+  Now flash the flight firmware: make flash
+  Its boot message should say: LEVEL: stored calibration
+
+========================================
+ALL SELECTED TESTS COMPLETE
+========================================
+Review output above for PASS/FAIL.
+LED solid = done.
+ÿÿBarometer: settling...
+LEVEL: stored calibration  offset roll -1.3 deg, pitch -1.2 deg
+LEVEL: boot surface tilt roll -0.3 deg, pitch -0.0 deg (not used as level)
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.040,-0.422,-0.038,1510,1482,1210,1507,1000,1000,133,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.013,-0.372,-0.057,1509,1484,1210,1507,1000,1000,156,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.012,-0.379,-0.039,1510,1484,1210,1507,1000,1000,180,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.035,-0.341,-0.068,1510,1482,1210,1507,1000,1000,203,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.015,-0.298,-0.032,1509,1482,1210,1508,1000,1000,227,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.007,-0.392,-0.091,1510,1484,1210,1507,1000,1000,250,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,-0.034,-0.323,-0.066,1510,1484,1210,1508,1000,1000,275,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.009,-0.348,-0.099,1510,1482,1210,1508,1000,1000,298,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.010,-0.396,-0.027,1510,1484,1210,1508,1000,1000,320,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.012,-0.360,-0.003,1510,1484,1210,1507,1000,1000,344,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.027,-0.344,-0.021,1509,1484,1210,1507,1000,1000,367,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.013,-0.354,-0.038,1510,1482,1210,1508,1000,1000,391,1,0
+RCS,1,96,0,HOVER,4,+0.000,+0.000,+0.300,-0.006,-0.339,-0.076,1510,1484,1210,1508,1000,1000,410,1,0
+RCS,1,96,0,HOVER,4,+0.000,+0.000,+0.300,+0.002,-0.292,-0.099,1510,1484,1210,1507,1000,1000,434,1,0
+RCS,1,96,0,HOVER,4,+0.000,+0.000,+0.300,-0.010,-0.377,-0.075,1510,1482,1210,1508,1000,1000,457,1,0
+RCS,1,96,0,HOVER,4,+0.000,+0.000,+0.300,-0.014,-0.404,-0.013,1510,1484,1210,1508,1000,1000,480,1,0
+RCS,1,99,0,HOVER,4,+0.000,+0.000,+0.300,-0.011,-0.468,-0.049,1510,1482,1210,1508,1000,1000,504,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.004,-0.464,-0.053,1510,1484,1210,1507,1000,1000,527,1,0
+RCS,1,100,0,HOVER,4,+0.000,+0.000,+0.300,+0.036,-0.401,+0.012,1510,1484,1210,1507,1000,1000,551,1,0

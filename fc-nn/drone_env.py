@@ -309,6 +309,25 @@ FIRMWARE_CONTRACT_DEFAULTS = dict(
     # Firmware feeds absolute roll/pitch (no setpoint); legacy training also
     # practised tracking random attitude commands.  Off by default.
     attitude_setpoints=False,
+    # Setpoint range when attitude_setpoints is on (pilot right stick,
+    # fc_config.h RC_MAX_ANGLE_DEG 8): max |angle| in degrees grows from [0]
+    # at curriculum 0 to [1] at 1; changes are slew-limited like rc.c
+    # (RC_ANGLE_RATE_DPS). Horizontal-speed penalty is off while a lean is
+    # commanded (leaning on purpose makes the drone move).
+    cmd_angle_deg=(5.0, 10.0),
+    setpoint_slew_dps=30.0,
+    # Steady yaw disturbance torque (issue 003: the real drone spun ~15°/s CW
+    # with the CW pair already ~36 µs/motor high, ≈ 0.02–0.04 N·m — e.g. a
+    # tilted motor, which the sim never had). |τ| ~ U(range) × curriculum
+    # progress (if actuator_curriculum), random sign. Option
+    # "yaw_disturbance_nm" overrides.
+    yaw_disturbance_nm=(0.0, 0.04),
+    # Global multiplier on KM_KF_RATIO (0.02 is a guess; 10" props are often
+    # 0.012–0.016, i.e. weaker yaw authority). Option "km_scale" overrides.
+    km_scale_range=(0.6, 1.2),
+    # Rotor drag coefficient range, N per m/s (see rotor_drag_force).
+    # Option "rotor_drag" overrides; deterministic resets use the nominal.
+    rotor_drag_range=(0.1, 0.5),
     # Yaw-rate term inside the tracking reward (contract mode only):
     #   r_track = exp(-5·tilt² - 4·alt_err² - w·min(gz, cap)²),
     #   w = yaw_track_weight × curriculum progress (if yaw_weight_curriculum)
@@ -343,7 +362,8 @@ def resolve_firmware_contract(firmware_contract) -> Optional[dict]:
     elif firmware_contract is not True:
         raise TypeError("firmware_contract must be bool or dict")
     for k in ("baro_noise_std", "thrust_scale_range", "air_start_alt_agl",
-              "motor_tau_s", "inertia_scale_range"):
+              "motor_tau_s", "inertia_scale_range", "cmd_angle_deg",
+              "yaw_disturbance_nm", "km_scale_range", "rotor_drag_range"):
         v = cfg[k]
         cfg[k] = (float(v), float(v)) if np.isscalar(v) else tuple(float(x) for x in v)
     return cfg
@@ -372,6 +392,23 @@ def _quat_rotate_vec(q: np.ndarray, v: np.ndarray) -> np.ndarray:
     out = np.zeros(3)
     mujoco.mju_rotVecQuat(out, v, q)
     return out
+
+
+# Rotor drag (issue 003): spinning props resist sideways motion with a force
+# in the rotor plane ≈ −c·v (body x/y). MuJoCo has no air drag, so without
+# this the accelerometer never feels the drone sliding. c in N per m/s;
+# literature values for ~1 kg quads are ~0.2–0.5. Not yet measured here.
+ROTOR_DRAG_NOMINAL = 0.3
+
+
+def rotor_drag_force(quat: np.ndarray, vel_world: np.ndarray, coeff: float) -> np.ndarray:
+    """World-frame drag force −coeff·(v projected on the body x/y plane)."""
+    if coeff == 0.0:
+        return np.zeros(3)
+    q_inv = np.array([quat[0], -quat[1], -quat[2], -quat[3]])
+    v_body = _quat_rotate_vec(q_inv, np.asarray(vel_world, dtype=np.float64))
+    f_body = np.array([-coeff * v_body[0], -coeff * v_body[1], 0.0])
+    return _quat_rotate_vec(quat, f_body)
 
 
 class QuadrotorEnv(gym.Env):
@@ -476,6 +513,11 @@ class QuadrotorEnv(gym.Env):
         self._cmd_pitch     = 0.0
         self._cmd_yaw_rate  = 0.0
         self._cmd_alt       = TARGET_ALT
+        self._cmd_roll_tgt  = 0.0            # slew targets (contract setpoints)
+        self._cmd_pitch_tgt = 0.0
+        self._yaw_dist      = 0.0            # contract: steady yaw torque, N·m
+        self._km_scale      = 1.0
+        self._rotor_drag    = 0.0
 
         # When True (training), each episode gets a fresh random setpoint so
         # the model learns to track arbitrary roll/pitch/alt commands.
@@ -596,11 +638,16 @@ class QuadrotorEnv(gym.Env):
         """
         self._cmd_roll     = math.radians(roll_deg)
         self._cmd_pitch    = math.radians(pitch_deg)
+        self._cmd_roll_tgt, self._cmd_pitch_tgt = self._cmd_roll, self._cmd_pitch
         self._cmd_yaw_rate = math.radians(yaw_rate_dps)
         if self.contract is None:
             self._cmd_alt  = float(alt_m)
         # Firmware contract: the altitude target is fixed (TARGET_ALT above the
         # baro ground reference); alt_m is ignored.
+
+    def _contract_cmd_angle(self) -> float:
+        lo, hi = self.contract["cmd_angle_deg"]
+        return lo + (hi - lo) * self._curriculum
 
     # ---- Gymnasium API ---------------------------------------------------
 
@@ -639,6 +686,12 @@ class QuadrotorEnv(gym.Env):
         wind_dir         = rng.normal(size=3)
         wind_dir        /= (np.linalg.norm(wind_dir) + 1e-8)
         self._wind_force = wind_dir * float(rng.uniform(0.0, 0.5))
+        if c is not None:
+            p_dist = self._curriculum if c["actuator_curriculum"] else 1.0
+            self._yaw_dist = (float(rng.uniform(*c["yaw_disturbance_nm"])) * p_dist
+                              * (1.0 if rng.random() < 0.5 else -1.0))
+            self._km_scale = float(rng.uniform(*c["km_scale_range"]))
+            self._rotor_drag = float(rng.uniform(*c["rotor_drag_range"]))
 
         # Public deterministic-reset interface for validation and experiments.
         # Still consume the usual domain draws, preserving the noise sequence.
@@ -653,12 +706,21 @@ class QuadrotorEnv(gym.Env):
                 self._act_delay = ACT_DELAY_TICKS_NOMINAL
                 self._act_tau = ACT_TAU_NOMINAL
                 self._inertia_scale = INERTIA_SCALE_NOMINAL
+                self._yaw_dist = 0.0
+                self._km_scale = 1.0
+                self._rotor_drag = ROTOR_DRAG_NOMINAL
         if c is not None:
             self._act_delay = int(options.get("actuator_delay_ticks", self._act_delay))
             self._act_tau = float(options.get("motor_tau_s", self._act_tau))
             self._inertia_scale = float(options.get("inertia_scale", self._inertia_scale))
             if self._act_delay < 0 or self._act_tau < 0 or self._inertia_scale <= 0:
                 raise ValueError("actuator delay/tau must be >= 0 and inertia_scale > 0")
+            self._yaw_dist = float(options.get("yaw_disturbance_nm", self._yaw_dist))
+            self._km_scale = float(options.get("km_scale", self._km_scale))
+            self._rotor_drag = float(options.get("rotor_drag", self._rotor_drag))
+            if not (np.isfinite(self._yaw_dist) and self._km_scale > 0 and self._rotor_drag >= 0):
+                raise ValueError("yaw disturbance must be finite, km_scale > 0, rotor_drag >= 0")
+            self._km_kf = self._km_kf * self._km_scale
         if c is not None and "thrust_scale" in options:
             # Deterministic collective thrust-map error (e.g. 0.75 = 25 % weak)
             s = float(options["thrust_scale"])
@@ -710,11 +772,14 @@ class QuadrotorEnv(gym.Env):
             self._cmd_pitch = 0.0
             self._cmd_alt = GROUND_REST_Z + c["target_alt_agl"]
             if self._episode_randomize_setpoints and c["attitude_setpoints"]:
-                _cmd_angle = CURRIC_CMD_ANGLE_START + (CURRIC_CMD_ANGLE_END - CURRIC_CMD_ANGLE_START) * self._curriculum
+                _cmd_angle = self._contract_cmd_angle()
                 _hover_frac = CURRIC_HOVER_FRAC_START + (CURRIC_HOVER_FRAC_END - CURRIC_HOVER_FRAC_START) * self._curriculum
                 if rng.random() >= _hover_frac:
                     self._cmd_roll  = math.radians(float(rng.uniform(-_cmd_angle, _cmd_angle)))
                     self._cmd_pitch = math.radians(float(rng.uniform(-_cmd_angle, _cmd_angle)))
+            # Slew-limited targets (rc.c): mid-episode changes ramp at
+            # setpoint_slew_dps; the episode's first setpoint applies at once.
+            self._cmd_roll_tgt, self._cmd_pitch_tgt = self._cmd_roll, self._cmd_pitch
         elif self._episode_randomize_setpoints:
             _hover_frac = CURRIC_HOVER_FRAC_START + (CURRIC_HOVER_FRAC_END - CURRIC_HOVER_FRAC_START) * self._curriculum
             _cmd_angle  = CURRIC_CMD_ANGLE_START  + (CURRIC_CMD_ANGLE_END  - CURRIC_CMD_ANGLE_START)  * self._curriculum
@@ -797,7 +862,8 @@ class QuadrotorEnv(gym.Env):
             info.update(ground_start=self._ground_start, thrust_scale=self._thrust_scale,
                         baro_noise_std=self._baro_noise, target_z=self.target_z,
                         actuator_delay_ticks=self._act_delay, motor_tau_s=self._act_tau,
-                        inertia_scale=self._inertia_scale)
+                        inertia_scale=self._inertia_scale, yaw_disturbance_nm=self._yaw_dist,
+                        km_scale=self._km_scale, rotor_drag=self._rotor_drag)
         return obs, info
 
     def step(self, action):
@@ -859,10 +925,15 @@ class QuadrotorEnv(gym.Env):
         # --- Yaw reaction torque (body Z) → world frame -------------------
         yaw_torque = float(np.sum(MOTOR_DIRS * self._km_kf * thrusts))
         quat = self._data.qpos[3:7].copy()
+        force_world = self._wind_force
+        if c is not None:
+            # Steady airframe yaw torque (tilted motor etc.) + rotor drag
+            yaw_torque += self._yaw_dist
+            force_world = force_world + rotor_drag_force(quat, self._data.qvel[0:3], self._rotor_drag)
         torque_world = _quat_rotate_vec(quat, np.array([0.0, 0.0, yaw_torque]))
 
-        # External forces on the drone body: wind + yaw torque
-        self._data.xfrc_applied[self._drone_body_id, 0:3] = self._wind_force
+        # External forces on the drone body: wind (+ drag) + yaw torque
+        self._data.xfrc_applied[self._drone_body_id, 0:3] = force_world
         self._data.xfrc_applied[self._drone_body_id, 3:6] = torque_world
 
         # Step physics FRAMESKIP times (policy at 100 Hz, physics at 4 kHz)
@@ -876,13 +947,17 @@ class QuadrotorEnv(gym.Env):
             if (self._episode_randomize_setpoints and c["attitude_setpoints"]
                     and self._step_count % 200 == 0):
                 rng = self.np_random
-                _cmd_angle = CURRIC_CMD_ANGLE_START + (CURRIC_CMD_ANGLE_END - CURRIC_CMD_ANGLE_START) * self._curriculum
+                _cmd_angle = self._contract_cmd_angle()
                 r = rng.random()
                 if r < 0.35:
-                    self._cmd_roll = self._cmd_pitch = 0.0
+                    self._cmd_roll_tgt = self._cmd_pitch_tgt = 0.0
                 elif r < 0.7:
-                    self._cmd_roll  = math.radians(float(rng.uniform(-_cmd_angle, _cmd_angle)))
-                    self._cmd_pitch = math.radians(float(rng.uniform(-_cmd_angle, _cmd_angle)))
+                    self._cmd_roll_tgt  = math.radians(float(rng.uniform(-_cmd_angle, _cmd_angle)))
+                    self._cmd_pitch_tgt = math.radians(float(rng.uniform(-_cmd_angle, _cmd_angle)))
+            if c["attitude_setpoints"]:
+                step = math.radians(c["setpoint_slew_dps"]) * DT * FRAMESKIP
+                self._cmd_roll += float(np.clip(self._cmd_roll_tgt - self._cmd_roll, -step, step))
+                self._cmd_pitch += float(np.clip(self._cmd_pitch_tgt - self._cmd_pitch, -step, step))
             self._update_alt_sensor()
         elif self._episode_randomize_setpoints and self._step_count % 200 == 0:
             rng = self.np_random
@@ -1040,6 +1115,8 @@ class QuadrotorEnv(gym.Env):
 
         # 3. Velocity damping (matches PPO_1 proven coefficients)
         hvel_sq = vel[0] ** 2 + vel[1] ** 2
+        if self.contract is not None and (self._cmd_roll_tgt != 0.0 or self._cmd_pitch_tgt != 0.0):
+            hvel_sq = 0.0        # a commanded lean is supposed to move the drone
         r_vel = -0.02 * hvel_sq - 0.15 * vel[2] ** 2
 
         # 4. Angular velocity penalty (slightly heavier on yaw)

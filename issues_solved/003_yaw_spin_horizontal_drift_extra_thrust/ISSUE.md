@@ -150,3 +150,39 @@ python analyze_drift.py
     - host test `host_test/test_level_cal_host.c` (in `make host-regression`).
   - **To verify:** the next log's summary should say `level reference: stored calibration`. Compare
     mean roll/pitch and the drift direction with this flight.
+- **2026-11-22 11:11, sim changes + retrain (A/B fixes, not yet flown).** `drone_env.py`
+  contract mode now has:
+  - a steady yaw disturbance torque, |τ| ≤ 0.04 N·m, random sign, phased in with the curriculum;
+  - a prop torque ratio scale of 0.6–1.2× `KM_KF_RATIO`;
+  - rotor drag 0.1–0.5 N per m/s in the rotor plane, so the accelerometer feels sliding
+    (MuJoCo had no air drag);
+  - optional slew-limited stick lean setpoints, ±5→10°, at 30°/s like `rc.c`. No speed
+    penalty while a lean is commanded.
+
+  The same drag and yaw torque are in `test_firmware_sim.Plant`. A new advisory gate,
+  `yaw_torque_cw` (−0.03 N·m), and 6 tests are in `test_contract.py` (47/47 pass, legacy still
+  bit-identical).
+
+  Runs, both warm from `delayc_s2_warm_20261122/best_model`, 12M steps, curriculum from 0:
+  - `stick_s1_warm_20261122`: with stick setpoints. Needs `RC_STICK_LEAN_ENABLE 1` to use them.
+  - `physc_s2_warm_20261122`: without setpoints. Fallback, and a check that setpoints don't hurt hover.
+- **2026-11-22 12:40, results (simulator).** Gates were re-run on all three models with the new physics.
+
+  | | flown `delayc_s2_warm` | **`stick_s1_warm`** | `physc_s2_warm` |
+  |---|---|---|---|
+  | hover mean lean (roll / pitch) | −1.10° / +0.96° | **+0.04° / +0.10°** | +0.62° / +0.07° |
+  | yaw under −0.03 N·m | −10.0°/s | **−4.9°/s** | −5.9°/s |
+  | yaw under −0.04 N·m, km 0.8 | −19.2°/s | **−9.0°/s** | −15.7°/s |
+  | slide after a 1 m/s push (10 s) | 8.1 m | **3.5 m** | 4.9 m |
+  | 8° stick command held | 6.6° | **7.6°** | 6.5° |
+  | thrust −25 % (advisory) | 0/5 | **5/5** | 5/5 |
+  | gated episodes | 22/40 | 15/40 | 20/40 |
+
+  The stick model's lower gate count comes from two things:
+  - **Altitude:** RMSE about 0.10 m against a 0.10 m limit, and all three models fail this.
+  - **Tilt recoveries:** momentary 20–25°/s rate spikes while already level (tilt < 1°) push some
+    past the 2 s deadline. These are borderline trips, not slow recoveries.
+
+  Exported `stick_s1_warm_20261122/best_model` → `weights.h`; the previous weights are in
+  `weights_delayc_s2_warm_20261122.h`. Still to fix: steady yaw error (needs a heading input)
+  and altitude band.

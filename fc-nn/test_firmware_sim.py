@@ -43,6 +43,7 @@ import mujoco
 from drone_env import (
     QuadrotorEnv, BASE_MASS, MAX_THRUST, HOVER_THROTTLE, ACTION_SCALE, thrust_fraction,
     ActuatorModel, ACT_DELAY_TICKS_NOMINAL, ACT_TAU_NOMINAL,
+    ROTOR_DRAG_NOMINAL, rotor_drag_force,
     KM_KF_RATIO, MOTOR_DIRS, GRAVITY, FRAMESKIP, DT,
     GYRO_NOISE_STD, ACCEL_NOISE_STD, GROUND_REST_Z, LIFTOFF_AGL,
     _quat_to_euler, _quat_rotate_vec,
@@ -64,7 +65,9 @@ class Plant:
     def __init__(self, start_alt: float, thrust_scale: float = 1.0,
                  seed: int = 0, ground_start: bool = False,
                  delay_ticks: int = ACT_DELAY_TICKS_NOMINAL,
-                 motor_tau_s: float = ACT_TAU_NOMINAL):
+                 motor_tau_s: float = ACT_TAU_NOMINAL,
+                 rotor_drag: float = ROTOR_DRAG_NOMINAL,
+                 yaw_disturbance_nm: float = 0.0):
         # Legacy env: everything below is set by hand, the contract layer is
         # firmware territory (FirmwareController / BaroModel) here.
         self.env = QuadrotorEnv(render_mode=None, firmware_contract=False)
@@ -95,6 +98,9 @@ class Plant:
         # Real motors: measured ~40 ms dead time + spin-up lag (issue 002).
         init = 0.0 if ground_start else float(thrust_fraction(HOVER_THROTTLE))
         self.actuator = ActuatorModel(delay_ticks, motor_tau_s, np.full(4, init))
+        # Same extra physics as the contract env (issue 003)
+        self.rotor_drag = rotor_drag
+        self.yaw_disturbance_nm = yaw_disturbance_nm
 
     def step(self, motor_cmd, dt_ticks: int = 1):
         e = self.env
@@ -104,9 +110,11 @@ class Plant:
             frac = self.actuator.step(cmd_frac)
             thrusts = frac * e._max_thrust
             e._data.ctrl[e._act_ids] = frac
-            yaw_torque = float(np.sum(MOTOR_DIRS * e._km_kf * thrusts))
+            yaw_torque = float(np.sum(MOTOR_DIRS * e._km_kf * thrusts)) + self.yaw_disturbance_nm
             quat = e._data.qpos[3:7].copy()
             tw = _quat_rotate_vec(quat, np.array([0.0, 0.0, yaw_torque]))
+            e._data.xfrc_applied[e._drone_body_id, 0:3] = rotor_drag_force(
+                quat, e._data.qvel[0:3], self.rotor_drag)
             e._data.xfrc_applied[e._drone_body_id, 3:6] = tw
             for _ in range(FRAMESKIP):
                 mujoco.mj_step(e._model, e._data)
