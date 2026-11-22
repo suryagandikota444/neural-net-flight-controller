@@ -4,9 +4,9 @@ main.py  –  End-to-end pipeline helper.
 Typical workflow
 ----------------
 1. Train:
-       python main.py train
+       python main.py train --save_dir runs/contract_s1 --seed 1
    or with custom options:
-       python main.py train --timesteps 5000000 --n_envs 8
+       python main.py train --save_dir runs/contract_s1 --timesteps 5000000 --n_envs 8
 
 2. Visualise live (3D MuJoCo window):
        python main.py view                            # random actions (test MJCF model)

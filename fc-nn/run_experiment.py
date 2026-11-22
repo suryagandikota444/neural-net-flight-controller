@@ -9,15 +9,24 @@ import subprocess
 import time
 import numpy as np
 import mujoco
-from drone_env import QuadrotorEnv, BASE_MASS, MAX_THRUST, KM_KF_RATIO
+from drone_env import QuadrotorEnv, BASE_MASS, LEGACY_MAX_THRUST as MAX_THRUST, KM_KF_RATIO
 from evaluation import evaluate, summarize, SCENARIOS
 from fw_common import load_sb3_weights, nn_forward_np
 
 
+class LegacyContractEnv(QuadrotorEnv):
+    """QuadrotorEnv with firmware_contract=False (what this experiment used)."""
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("firmware_contract", False)
+        super().__init__(*args, **kwargs)
+
+
 def plant_factory(variant, legacy_source=None):
-    if variant == "corrected": return QuadrotorEnv
+    # This experiment (2026-09-12 fixes 1–6) predates the firmware contract;
+    # its plants stay on the legacy observation/control path.
+    if variant == "corrected": return LegacyContractEnv
     if variant == "mass_only":
-        class NoCogEnv(QuadrotorEnv):
+        class NoCogEnv(LegacyContractEnv):
             def reset(self, *, seed=None, options=None):
                 return super().reset(seed=seed, options={**(options or {}), "cog_offset": [0,0,0]})
         return NoCogEnv
@@ -96,7 +105,7 @@ def train(args):
     (out/'manifest.json').write_text(json.dumps(manifest,indent=2))
     (out/'source.patch').write_bytes(subprocess.check_output(['git','diff'],cwd=root))
     # Fixed curriculum isolates physics corrections; no implicit callback resume.
-    env=make_vec_env(QuadrotorEnv,n_envs=args.n_envs,seed=args.seed,vec_env_cls=SubprocVecEnv)
+    env=make_vec_env(LegacyContractEnv,n_envs=args.n_envs,seed=args.seed,vec_env_cls=SubprocVecEnv)
     kwargs={**PPO_KWARGS,"tensorboard_log":str(out/'tensorboard'),"seed":args.seed,"device":"cpu"}
     model=PPO.load(args.model,env=env,**kwargs)
     initial_steps=model.num_timesteps
@@ -110,7 +119,7 @@ def train(args):
 
         def benchmark(self,label):
             weights=weights_from_model(self.model)
-            results=evaluate(lambda obs:nn_forward_np(weights,obs),
+            results=evaluate(lambda obs:nn_forward_np(weights,obs),env_factory=LegacyContractEnv,
                              seeds=range(100,105),output=out/f'eval_{label}.json')
             score=selection_score(results)
             record=dict(label=label,additional_timesteps=self.model.num_timesteps-initial_steps,

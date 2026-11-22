@@ -277,11 +277,14 @@ def _overlay_text(env, obs, action, step, ep_reward, joy_sp: dict | None = None)
     return "\n".join(lines)
 
 
-def run_viewer(model_path=None, record_path=None, max_episodes=0, slow_factor=1.0):
+def run_viewer(model_path=None, record_path=None, max_episodes=0, slow_factor=1.0,
+               legacy=False):
     from drone_env import QuadrotorEnv
 
     render_mode = "rgb_array" if record_path else "human"
-    env = QuadrotorEnv(render_mode=render_mode)
+    # Firmware contract by default (altitude setpoint fixed at 0.3 m AGL);
+    # --legacy for pre-contract checkpoints.
+    env = QuadrotorEnv(render_mode=render_mode, firmware_contract=not legacy)
     policy = _load_policy(model_path)
 
     # ---- Input (joystick preferred, keyboard fallback) ------------------
@@ -408,6 +411,8 @@ def main():
                         help="Path to save an MP4 recording (e.g. flight.mp4).")
     parser.add_argument("--episodes", type=int, default=0,
                         help="Number of episodes to run (0 = infinite).")
+    parser.add_argument("--legacy", action="store_true",
+                        help="Use the pre-firmware-contract env (old checkpoints).")
     parser.add_argument("--slow", type=float, default=1.0,
                         help="Slow-motion factor. 2.0 = half speed.")
     args = parser.parse_args()
@@ -425,6 +430,7 @@ def main():
         record_path=args.record,
         max_episodes=args.episodes,
         slow_factor=args.slow,
+        legacy=args.legacy,
     )
 
 

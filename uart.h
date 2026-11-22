@@ -23,11 +23,22 @@
  * Typical use: uart_init(115200) */
 void uart_init(uint32_t baud);
 
-/* Transmit a single character (blocking — spins until TX register is empty). */
+/* Queue a single character for background (interrupt-driven) transmission.
+ * Returns immediately unless the 1 KB transmit buffer is full, in which
+ * case it waits for space — so no output is ever lost. */
 void uart_write_char(char c);
 
-/* Transmit a null-terminated string (blocking). */
+/* Queue a null-terminated string (same rules as uart_write_char). */
 void uart_write_string(const char *s);
+
+/* Bytes that can be queued right now without waiting. Real-time code
+ * (the flight loop) checks this before printing and skips the message
+ * if it would not fit, so it never blocks. */
+uint32_t uart_tx_free(void);
+
+/* Wait until every queued byte has been transmitted (e.g. before a
+ * reset or before a timing measurement). */
+void uart_tx_flush(void);
 
 /* Print an unsigned 32-bit integer in decimal (no leading zeros). */
 void uart_write_uint32(uint32_t val);

@@ -70,6 +70,10 @@
 #include "nn.h"        /* Also provides NN_HOVER_THROTTLE, NN_ACTION_SCALE */
 #include "i2c.h"
 #include "baro.h"
+#include "fc_config.h"  /* shared: axis alignment, obs scales, altitude gains, action filter */
+#include "crsf.h"       /* ExpressLRS / CRSF decoder                                   */
+#include "rc.h"         /* arming, kill switch, failsafe, modes, stick setpoints       */
+#include "rc_input.h"   /* USART2 receiver driver                                      */
 
 
 /* ============================================================
@@ -97,19 +101,29 @@
 #endif
 
 /*
- * RAW_LOG_MODE: Set to 1 to stream raw IMU samples at 100 Hz for noise analysis.
- *   Build with: make CFLAGS_EXTRA="-DRAW_LOG_MODE=1"
- *
- *   Output (one line per tick, CSV):
- *     RAW,+gx,+gy,+gz,+ax,+ay,+az    (rad/s and g, 3 decimal places)
+ * RAW_LOG_MODE: 1 (default) streams a TEL telemetry line at 5 Hz from the
+ *   control loop (see "Full telemetry log" below). Transmission is
+ *   interrupt-driven and non-blocking.
  *
  *   Log 45 s with:  python fc-nn/log_imu.py --port /dev/cu.SLAB_USBtoUART --seconds 45
  *   Then analyse:   python fc-nn/analyze_imu.py imu_log.csv
  *
- *   ** Motors are disabled in this mode — safe on bench **
+ *   ** This does NOT disable motors. Since 2026-11-21 the firmware only
+ *      arms from the radio's ARM switch (see rc.h) and no longer runs the
+ *      boot motor test (MOTOR_ID_TEST=0), but bench-test props-off anyway. **
  */
 #ifndef RAW_LOG_MODE
 #define RAW_LOG_MODE 1
+#endif
+
+/*
+ * MOTOR_ID_TEST: 1 spins each motor to 50 % for 300 ms at boot (props OFF!)
+ *   to check motor order. Default 0 since RC arming was added: the flight
+ *   firmware must never spin a motor without the ARM switch.
+ *   Harness TEST 10 does the same check.  Build with: make MOTOR_ID_TEST=1
+ */
+#ifndef MOTOR_ID_TEST
+#define MOTOR_ID_TEST 0
 #endif
 
 
@@ -235,11 +249,17 @@ static void print_loop_timing_us(uint32_t total_cycles,
 
 
 /* ============================================================
- * SENSOR CONVERSION CONSTANTS
+ * SENSOR CONVERSION / OBSERVATION / ALTITUDE CONSTANTS
+ *
+ * GYRO_RAW_TO_RADS, MAX_GYRO_RADS, ANGLE_OBS_SCALE, TARGET_ALT,
+ * ALT_SCALE, VVEL_SCALE, HVEL_SCALE, ALT_OBS_CLAMP, ALT_KP, ALT_KD,
+ * ALT_ADJ_MAX, the ALIGN_xx macros and the action filter all come from
+ * fc_config.h so test_harness.c and the host tests use identical values.
+ *
+ * Altitude design (unchanged): a simple P+D loop adjusts base throttle;
+ * the NN's obs[8] is clamped to ±ALT_OBS_CLAMP.
+ *   alt_throttle_adj = ALT_KP*(target - alt) + ALT_KD*(-vvel)
  * ============================================================ */
-#define GYRO_RAW_TO_RADS   (1.0f / 939.65f)
-#define MAX_GYRO_RADS      34.907f
-#define ANGLE_OBS_SCALE    (1.0f / 45.0f)
 
 /* Accel scale factor — set at runtime based on detected IMU:
  *   ICM42688P: ±16g → 2048 LSB/g → 1/2048
@@ -248,48 +268,17 @@ static void print_loop_timing_us(uint32_t total_cycles,
  */
 static float accel_raw_to_g;
 
-/* Observation scaling for barometer (must match drone_env.py) */
-#define TARGET_ALT         0.3f     /* hover 30 cm above baro ground reference */
-#define ALT_SCALE          2.0f     /* ±2 m altitude error maps to ±1 */
-#define VVEL_SCALE         5.0f     /* ±5 m/s vertical vel maps to ±1 */
-#define HVEL_SCALE         3.0f     /* ±3 m/s horizontal vel maps to ±1 */
-
-/* Simple P-altitude controller — supplements the NN which is only good
- * at attitude control.  The NN's obs[8] is clamped to a tiny band so
- * it stays in its trained regime; this P-loop handles the rest.
- *
- * alt_throttle_adj = Kp*(target - alt) + Kd*(-vvel)
- * Added to NN_HOVER_THROTTLE before mixing with NN residual.
- */
-#define ALT_OBS_CLAMP      0.05f    /* clamp obs[8] to ±0.05 — NN comfort zone */
-#define ALT_KP             0.15f    /* throttle/m — gentle P gain */
-#define ALT_KD             0.02f    /* throttle/(m/s) — damp oscillation */
-#define ALT_ADJ_MAX        0.10f    /* cap P-altitude adjustment ±10% throttle */
-
 
 /* ============================================================
  * AXIS ALIGNMENT — Sologood F405 IMU mounting
  *
- * Empirically verified (test phases 2 & 3):
- *   Chip X = Board X (forward)    — no sign change
- *   Chip Y = Board Y (left)       — no sign change
- *   Chip Z = Board Z (up)         — no sign change
- *
- * The chip's native frame matches the MuJoCo NWU convention
- * (X-forward, Y-left, Z-up) directly. At rest:
- *   ax≈0, ay≈0, az≈+1g. Tilt right → ay>0. Nose down → ax>0.
- *
- * NOTE: Betaflight reports this board as "CW180°", but that
- * refers to BF's NED body frame, not NWU.  When converting
- * CW180°-in-NED to NWU the negations cancel out, yielding
- * identity alignment.
+ * Defined in fc_config.h (ALIGN_AX … ALIGN_GZ). The board is mounted
+ * CW180, so chip → body is (-x, -y, +z) for BOTH gyro and accel.
+ * Expected on the bench (training convention, drone_env.py):
+ *   nose down  → ax < 0, pitch > 0
+ *   right down → ay > 0, roll  > 0
+ *   CW from above → gz < 0
  * ============================================================ */
-#define ALIGN_AX(raw)  ( (raw))
-#define ALIGN_AY(raw)  ( -(raw))
-#define ALIGN_AZ(raw)  ( (raw))
-#define ALIGN_GX(raw)  ( -(raw))
-#define ALIGN_GY(raw)  ( (raw))
-#define ALIGN_GZ(raw)  ( (raw))
 
 
 /* ============================================================
@@ -430,6 +419,44 @@ static void motors_full_throttle(void)
 
 
 /* ============================================================
+ * RC STATUS LINE (2 Hz, armed or not)
+ *
+ *   RCS,link,lq,armed,mode,block,cmd_roll,cmd_pitch,target_alt,alt,
+ *       roll,pitch,ch1..ch6(us),rc_frames,crc_err,failsafes
+ *
+ * block = RC_BLOCK_* bitmask from rc.h (why arming is refused).
+ * Non-blocking: skipped if the TX buffer cannot take the whole line.
+ * ============================================================ */
+static void print_rc_status(const crsf_t *c, const rc_state_t *r, int link_ok,
+                            float alt, float roll, float pitch)
+{
+	static uint32_t div = 0;
+	if (++div < 50) return;
+	div = 0;
+	if (uart_tx_free() < 200U) return;
+	uart_write_string("RCS,");
+	uart_write_uint32((uint32_t)link_ok);      uart_write_char(',');
+	uart_write_uint32(c->lq);                  uart_write_char(',');
+	uart_write_uint32((uint32_t)r->armed);     uart_write_char(',');
+	uart_write_string(rc_mode_name(r->mode));  uart_write_char(',');
+	uart_write_uint32((uint32_t)r->block);     uart_write_char(',');
+	print_float3(r->cmd_roll_deg);             uart_write_char(',');
+	print_float3(r->cmd_pitch_deg);            uart_write_char(',');
+	print_float3(r->target_alt);               uart_write_char(',');
+	print_float3(alt);                         uart_write_char(',');
+	print_float3(roll);                        uart_write_char(',');
+	print_float3(pitch);                       uart_write_char(',');
+	for (int k = 0; k < 6; k++) {
+		uart_write_uint32(crsf_to_us(c->ch[k])); uart_write_char(',');
+	}
+	uart_write_uint32(c->rc_frames);           uart_write_char(',');
+	uart_write_uint32(c->crc_errors);          uart_write_char(',');
+	uart_write_uint32(r->failsafe_count);
+	uart_write_string("\r\n");
+}
+
+
+/* ============================================================
  * MAIN
  * ============================================================ */
 int main(void)
@@ -450,6 +477,9 @@ int main(void)
     /* ── 3. UART (debug output) ─────────────────────────────── */
     uart_init(115200);
     delay_ms(500);  /* give terminal time to connect */
+
+    /* ── 3b. RC receiver (ExpressLRS, CRSF on USART2) ───────── */
+    rc_input_init();
 
 
 	dwt_cycle_counter_init();
@@ -543,6 +573,7 @@ int main(void)
 	/* ── 9. ESC arming (3 seconds of idle PWM) ──────────────── */
 	delay_ms(3000);
 
+	#if MOTOR_ID_TEST
 	/* ── 9b. Motor identification test ──────────────────────
 		* Fires each motor individually at ~30% throttle for 300 ms.
 		* Order: FL → FR → RL → RR
@@ -567,6 +598,7 @@ int main(void)
 		}
 		uart_write_string("MOTOR TEST DONE\r\n");
 	}
+	#endif /* MOTOR_ID_TEST */
 
 	/* ── 10. Barometer ground reference ─────────────────────── */
 	if (baro_ok) {
@@ -589,8 +621,22 @@ int main(void)
 	imu_raw_t  sample;
 	float      motor_cmd[4] = {0};
 	uint32_t   tick_count = 0;
-	int        armed = 0;
+	int        calibrated = 0;     /* IMU bias calibration done (2 s settle) */
 	uint32_t   ramp_counter = 0;
+
+	/* RC link + pilot command state (see rc.h) */
+	static crsf_t     crsf;
+	static rc_state_t rc;
+	crsf_init(&crsf);
+	rc_init(&rc);
+	uint32_t   rc_link_age = RC_LINK_TIMEOUT_TICKS;   /* ticks since last RC frame */
+
+	/* Baro ground reference, re-taken at every arm (fc_config.h ALT_ZERO_ALPHA) */
+	float      alt_zero = 0.0f;
+	int        alt_zero_init = 0;
+
+	/* NN action filter state — reset on every arm */
+	float      nn_smoothed[4] = {0.0f, 0.0f, 0.0f, 0.0f};
 	float gyro_bias[3]  = {0.0f, 0.0f, 0.0f};
     float accel_bias[3] = {0.0f, 0.0f, 0.0f};   /* ax_bias, ay_bias (az handled separately) */
     float cal_sum_gx = 0, cal_sum_gy = 0, cal_sum_gz = 0;
@@ -672,7 +718,13 @@ int main(void)
          *     az average should be +1g. We subtract the offset
          *     from the expected value.
          */
-        if (!armed) {
+        /* Drain the receiver every tick, also during calibration, so its
+         * ring buffer never overflows and the link state is current. */
+        if (rc_input_poll(&crsf) > 0) rc_link_age = 0;
+        else if (rc_link_age < RC_LINK_TIMEOUT_TICKS) rc_link_age++;
+        int link_ok = rc_link_age < RC_LINK_TIMEOUT_TICKS;
+
+        if (!calibrated) {
             /* Accumulate during ticks 50–199 (skip first 0.5s for IMU warmup) */
             if (tick_count >= 50 && tick_count < SETTLE_TICKS) {
                 cal_sum_gx += gx;
@@ -696,11 +748,52 @@ int main(void)
                     accel_bias[2] = cal_sum_az * inv_n - 1.0f;  /* expect +1g, subtract offset from 1g */
                 }
 
-                armed = 1;
-                ramp_counter = 0;
+                calibrated = 1;
             }
+            motor_all_stop();
             continue;
         }
+
+		/* ── E: RC link, arming, kill switch, setpoints ───────
+		 *
+		 * Decode everything the receiver sent since the last tick.
+		 * No valid RC frame for RC_LINK_TIMEOUT_TICKS (250 ms) = link lost.
+		 * rc_update() disarms on ARM switch OFF (kill) or link loss
+		 * (failsafe) on THIS tick, before any motor command is computed. */
+		{
+			rc_inputs_t in;
+			in.link_ok    = link_ok;
+			in.roll       = crsf_to_unit(crsf.ch[RC_CH_ROLL]);
+			in.pitch      = crsf_to_unit(crsf.ch[RC_CH_PITCH]);
+			in.throttle   = crsf_to_unit(crsf.ch[RC_CH_THROTTLE]);
+			in.yaw        = crsf_to_unit(crsf.ch[RC_CH_YAW]);
+			in.arm_sw     = crsf_to_unit(crsf.ch[RC_CH_ARM]);
+			in.mode_sw    = crsf_to_unit(crsf.ch[RC_CH_MODE]);
+			in.calibrated = calibrated;
+			in.roll_deg   = roll_deg;
+			in.pitch_deg  = pitch_deg;
+			rc_update(&rc, &in, LOOP_DT);
+		}
+
+		/* Ground reference follows the baro while disarmed, frozen once armed */
+		if (baro_ok && !rc.armed) {
+			float a = baro_get_altitude();
+			if (!alt_zero_init) { alt_zero = a; alt_zero_init = 1; }
+			alt_zero += ALT_ZERO_ALPHA * (a - alt_zero);
+		}
+
+		print_rc_status(&crsf, &rc, link_ok,
+		                baro_ok ? baro_get_altitude() - alt_zero : 0.0f,
+		                roll_deg, pitch_deg);
+
+		if (!rc.armed) {
+			/* DISARMED: motors at 1000 µs, controller state reset so the
+			 * next arm starts exactly like a training ground start. */
+			motor_all_stop();
+			ramp_counter = 0;
+			for (int k = 0; k < 4; k++) nn_smoothed[k] = 0.0f;
+			continue;
+		}
 
 		/* A fault must bypass this tick's computation AND all future outputs. */
 		if (!ahrs_is_valid()) flight_safety_latch();
@@ -722,16 +815,19 @@ int main(void)
 		obs[5] = clampf(az / 2.0f, -1.0f, 1.0f);
 
 		/* Attitude error (roll/pitch in degrees, scaled by 45°) */
-		obs[6] = clampf(roll_deg  * ANGLE_OBS_SCALE, -1.0f, 1.0f);
-		obs[7] = clampf(pitch_deg * ANGLE_OBS_SCALE, -1.0f, 1.0f);
+		/* Attitude ERROR vs the pilot setpoint (0 in HOVER mode) — the same
+		 * roll − cmd_roll the training env uses (drone_env.py _get_obs). */
+		obs[6] = clampf((roll_deg  - rc.cmd_roll_deg)  * ANGLE_OBS_SCALE, -1.0f, 1.0f);
+		obs[7] = clampf((pitch_deg - rc.cmd_pitch_deg) * ANGLE_OBS_SCALE, -1.0f, 1.0f);
 
 		/* Altitude error and vertical velocity from barometer */
 		float alt_throttle_adj = 0.0f;
 		float alt  = 0.0f;
 		float vvel = 0.0f;
 		if (baro_ok) {
-			alt            = baro_get_altitude();
-			float alt_err  = alt - TARGET_ALT;         /* positive = above target */
+			alt            = baro_get_altitude() - alt_zero;   /* above arm point */
+			float target   = rc.target_alt;            /* TARGET_ALT in HOVER mode */
+			float alt_err  = alt - target;             /* positive = above target */
 			vvel           = baro_get_vvel();           /* positive = going up */
 
 			/* Feed the NN a tightly clamped altitude signal so it stays
@@ -741,7 +837,7 @@ int main(void)
 
 			/* Simple P+D altitude hold — adjusts base throttle */
 			alt_throttle_adj = clampf(
-				ALT_KP * (TARGET_ALT - alt) + ALT_KD * (-vvel),
+				ALT_KP * (target - alt) + ALT_KD * (-vvel),
 				-ALT_ADJ_MAX, ALT_ADJ_MAX
 			);
 		} else {
@@ -793,33 +889,12 @@ int main(void)
 
 		uint32_t t6 = dwt_cycle_now();  /* after NN inference */
 
-		/* Action smoothing — adaptive non-linear IIR filter.
-			*
-			* Two alphas:
-			*   ALPHA_SLOW: used when the change is small (noise regime)
-			*               → heavy smoothing, kills high-freq chatter
-			*   ALPHA_FAST: used when the change is large (genuine control input)
-			*               → fast tracking, no lag on real attitude corrections
-			*
-			* The threshold SNAP_THRESH separates the two regimes.
-			* If |raw - smoothed| < SNAP_THRESH → use ALPHA_SLOW
-			* If |raw - smoothed| >= SNAP_THRESH → use ALPHA_FAST
-			*
-			* Noise from vibration/sim-to-real gap is typically small (<0.15).
-			* Real NN corrections during a tilt event are larger (>0.15).
-			*/
-		#define ACTION_ALPHA_SLOW   0.08f   /* heavy smoothing for noise */
-		#define ACTION_ALPHA_FAST   0.60f   /* fast tracking for real inputs */
-		#define ACTION_SNAP_THRESH  0.15f   /* boundary between regimes */
-
-		static float nn_smoothed[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-		for (int k = 0; k < 4; k++) {
-			float diff  = nn_out[k] - nn_smoothed[k];
-			float alpha = (diff < 0.0f ? -diff : diff) >= ACTION_SNAP_THRESH
-							? ACTION_ALPHA_FAST
-							: ACTION_ALPHA_SLOW;
-			nn_smoothed[k] += alpha * diff;
-		}
+		/* Action smoothing — fixed-alpha EMA, identical to training
+		 * (drone_env.py: smooth = 0.3*action + 0.7*smooth).
+		 * See fc_config.h for why the old adaptive 0.08/0.60 filter
+		 * was removed (it was ~4x slower than training for small
+		 * corrections). */
+		action_filter_step(nn_smoothed, nn_out);
 		for (int k = 0; k < 4; k++)
 			nn_out[k] = nn_smoothed[k];
 
@@ -864,17 +939,36 @@ int main(void)
 		/* ── I: Write to motors (NN→Betaflight mapping) ─── */
 		flight_safety_write_motors(NN_TO_MOTOR, motor_cmd);
 
-		/* ── Full telemetry log (10 Hz) ──────────────────────
+		/* ── Full telemetry log (5 Hz) ───────────────────────
 		 * Format: TEL,gx,gy,gz,ax,ay,az,roll,pitch,
 		 *         obs[0..11],nn[0..3],mot[0..3]
-		 * Total: 28 float values, comma-separated
-		 * At 10 Hz, ~230 bytes/line × 10 = ~2.3 kB/s (fits 115200 baud)
+		 * Total: 28 float values, comma-separated, ≤ ~260 bytes.
+		 * 100 Hz / 20 = 5 Hz → ~1.3 kB/s (115200 baud carries ~11.5 kB/s).
+		 *
+		 * Non-blocking: uart_write_* only copies into the 1 KB background
+		 * transmit buffer (see uart.c). We only start a line if the whole
+		 * line fits, so the control loop never waits on the serial port.
+		 * If a line is skipped, a "TELDROP,<count>" line is sent once
+		 * there is room again (log_imu.py ignores non-TEL lines).
 		 */
 		#if RAW_LOG_MODE
 		{
+			#define TEL_MAX_BYTES 320U
 			static uint32_t tel_div = 0;
-			if (++tel_div >= 20) {   /* 100 Hz / 10 = 10 Hz */
+			static uint32_t tel_dropped = 0;
+			static uint32_t tel_dropped_reported = 0;
+			if (++tel_div >= 20) {   /* 100 Hz / 20 = 5 Hz */
 				tel_div = 0;
+				if (uart_tx_free() < TEL_MAX_BYTES + 24U) {
+					tel_dropped++;
+					goto tel_done;
+				}
+				if (tel_dropped != tel_dropped_reported) {
+					uart_write_string("TELDROP,");
+					uart_write_uint32(tel_dropped);
+					uart_write_string("\r\n");
+					tel_dropped_reported = tel_dropped;
+				}
 				uart_write_string("TEL,");
 				/* Raw IMU (6) */
 				print_float3(gx); uart_write_char(',');
@@ -903,6 +997,7 @@ int main(void)
 				print_float3(motor_cmd[3]);
 				uart_write_string("\r\n");
 			}
+		tel_done: ;
 		}
 		#endif
 
@@ -953,7 +1048,7 @@ int main(void)
  * 2. DMA SPI reads + IMU data-ready interrupt
  * 3. DShot motor protocol
  * 4. UART DMA for non-blocking debug output
- * 5. Proper arm/disarm via UART command or RC receiver
+ * 5. (done 2026-11-21: RC arming/kill/failsafe via ExpressLRS, rc.c)
  * 6. In-flight tuning of NN_HOVER_THROTTLE
  * 7. Complementary filter for vvel (fuse baro + accel Z)
  */

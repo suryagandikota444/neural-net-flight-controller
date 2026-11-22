@@ -16,6 +16,7 @@ import argparse
 import datetime
 import numpy as np
 from stable_baselines3 import PPO
+from drone_env import HOVER_THROTTLE   # firmware base throttle — single source
 
 
 def extract_weights(model_path: str):
@@ -112,7 +113,7 @@ def write_header(W1, B1, W2, B2, W3, B3, out_path: str):
         f"#define {guard}",
         "",
         "/* Residual action mapping constants */",
-        "#define NN_HOVER_THROTTLE  0.3226f",
+        f"#define NN_HOVER_THROTTLE  {HOVER_THROTTLE:.6f}f   /* drone_env.HOVER_THROTTLE (measured thrust curve) */",
         "#define NN_ACTION_SCALE    0.4f",
         "",
         array_to_c("W1", W1), "",

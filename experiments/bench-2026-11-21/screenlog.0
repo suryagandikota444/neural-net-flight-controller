@@ -1499,4 +1499,1686 @@ Procedure: note scale reading at idle, then at each step.
   hover PWM = step where thrust = takeoff weight
 
 Starting in 15 seconds (power off NOW to skip)...
-15... 14... 13... 12... 11... 10... 9... 8... 
+15... 14... 13... 12... 11... 10... 9... 8... �
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 3,7,8
+Motor tests 10 and 14 are NOT selected — no motor output.
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 3: Dynamic Axis Alignment
+========================================
+Checks that tilts produce the SAME signs the NN was
+trained with (drone_env.py, X fwd / Y left / Z up).
+
+You will tilt the board 3 ways, ~30 deg each.
+Follow the prompts.
+
+Step 0: Place board FLAT. AHRS settling (2 sec)...
+  AHRS settled. Roll=-0.717 Pitch=-1.903
+  (Should be near 0,0 if board is flat)
+
+----------------------------------------
+TILT 1: NOSE DOWN (~30 degrees)
+  Lift the REAR of the board so the nose dips.
+  Expected: ax < 0, AHRS pitch > 0
+----------------------------------------
+
+  >> Tilt NOSE DOWN and hold steady <<
+  (Move during the countdown, then hold for ~4 seconds)
+
+  Preparing in 3...2...1...SAMPLING
+
+  ax=+0.033 ay=-0.010 az=+1.005 gz=+0.000 | R=-0.685 P=-1.849 Y=+0.033
+  ax=+0.036 ay=-0.016 az=+1.003 gz=+0.000 | R=-0.806 P=-1.891 Y=+0.038
+  ax=+0.032 ay=-0.015 az=+1.004 gz=+0.000 | R=-0.822 P=-1.862 Y=+0.038
+  ax=+0.035 ay=-0.014 az=+1.006 gz=+0.000 | R=-0.785 P=-1.963 Y=+0.035
+  ax=+0.031 ay=-0.011 az=+1.006 gz=+0.001 | R=-0.633 P=-1.796 Y=+0.032
+  ax=+0.034 ay=-0.012 az=+1.006 gz=+0.000 | R=-0.713 P=-1.890 Y=+0.036
+  ax=+0.030 ay=-0.013 az=+1.005 gz=+0.000 | R=-0.764 P=-1.770 Y=+0.036
+  ax=+0.031 ay=-0.011 az=+1.007 gz=+0.000 | R=-0.743 P=-1.875 Y=+0.035
+  ax=+0.032 ay=-0.012 az=+1.007 gz=+0.000 | R=-0.713 P=-1.844 Y=+0.034
+  ax=+0.032 ay=-0.013 az=+1.007 gz=+0.000 | R=-0.746 P=-1.862 Y=+0.036
+  ax=+0.033 ay=-0.013 az=+1.006 gz=+0.000 | R=-0.773 P=-1.906 Y=+0.036
+  ax=+0.034 ay=-0.013 az=+1.006 gz=+0.000 | R=-0.747 P=-1.950 Y=+0.035
+  ax=+0.032 ay=-0.011 az=+1.006 gz=+0.000 | R=-0.696 P=-1.867 Y=+0.032
+  ax=+0.033 ay=-0.013 az=+1.008 gz=+0.000 | R=-0.773 P=-1.912 Y=+0.035
+  ax=+0.033 ay=-0.012 az=+1.006 gz=+0.000 | R=-0.712 P=-1.908 Y=+0.034
+  ax=+0.032 ay=-0.012 az=+1.004 gz=+0.000 | R=-0.734 P=-1.915 Y=+0.035
+  ax=+0.031 ay=-0.014 az=+1.007 gz=+0.000 | R=-0.750 P=-1.837 Y=+0.036
+  ax=+0.031 ay=-0.012 az=+1.006 gz=+0.000 | R=-0.717 P=-1.824 Y=+0.036
+  ax=+0.030 ay=-0.012 az=+1.007 gz=+0.000 | R=-0.737 P=-1.835 Y=+0.038
+  ax=+0.032 ay=-0.013 az=+1.003 gz=+0.001 | R=-0.770 P=-1.884 Y=+0.040
+
+  ---- NOSE-DOWN AVERAGES ----
+    ax=+0.032  ay=-0.013  az=+1.005
+    gx=-0.002  gy=+0.005  gz=+0.000
+    AHRS roll=-0.749  pitch=-1.872  yaw=+0.036
+
+  Return to FLAT (3 seconds, AHRS tracking)...
+----------------------------------------
+TILT 2: RIGHT SIDE DOWN (~30 degrees)
+  Lift the LEFT side so the RIGHT side dips.
+  Expected: ay > 0, AHRS roll > 0
+----------------------------------------
+
+  >> Tilt RIGHT SIDE DOWN and hold steady <<
+  (Move during the countdown, then hold for ~4 seconds)
+
+  Preparing in 3...2...��
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 3,7,8
+Motor tests 10 and 14 are NOT selected — no motor output.
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 3: Dynamic Axis Alignment
+========================================
+Checks that tilts produce the SAME signs the NN was
+trained with (drone_env.py, X fwd / Y left / Z up).
+
+You will tilt the board 3 ways, ~30 deg each.
+Follow the prompts.
+
+Step 0: Place board FLAT. AHRS settling (2 sec)...
+  AHRS settled. Roll=-0.672 Pitch=-1.839
+  (Should be near 0,0 if board is flat)
+
+----------------------------------------
+TILT 1: NOSE DOWN (~30 degrees)
+  Lift the REAR of the board so the nose dips.
+  Expected: ax < 0, AHRS pitch > 0
+----------------------------------------
+
+  >> Tilt NOSE DOWN and hold steady <<
+  (Move during the countdown, then hold for ~4 seconds)
+
+  Preparing in 3...2...1...SAMPLING
+
+  ax=-0.431 ay=+0.010 az=+0.912 gz=-0.007 | R=+0.487 P=+26.620 Y=+0.753
+  ax=-0.447 ay=+0.003 az=+0.891 gz=-0.003 | R=+0.484 P=+27.374 Y=+0.752
+  ax=-0.426 ay=+0.016 az=+0.925 gz=-0.010 | R=+0.406 P=+26.259 Y=+0.641
+  ax=-0.443 ay=+0.004 az=+0.927 gz=-0.007 | R=+0.443 P=+26.011 Y=+0.614
+  ax=-0.435 ay=-0.002 az=+0.920 gz=-0.002 | R=+0.494 P=+24.988 Y=+0.669
+  ax=-0.432 ay=+0.006 az=+0.911 gz=-0.007 | R=+0.594 P=+25.099 Y=+0.709
+  ax=-0.425 ay=+0.011 az=+0.904 gz=-0.007 | R=+0.679 P=+25.021 Y=+0.759
+  ax=-0.429 ay=+0.004 az=+0.907 gz=+0.000 | R=+0.494 P=+24.777 Y=+0.676
+  ax=-0.422 ay=+0.009 az=+0.915 gz=+0.002 | R=+0.397 P=+24.952 Y=+0.674
+  ax=-0.427 ay=+0.007 az=+0.904 gz=+0.002 | R=+0.453 P=+25.186 Y=+0.703
+  ax=-0.418 ay=+0.005 az=+0.911 gz=-0.004 | R=+0.408 P=+24.647 Y=+0.683
+  ax=-0.424 ay=+0.011 az=+0.915 gz=+0.000 | R=+0.463 P=+24.676 Y=+0.734
+  ax=-0.422 ay=+0.006 az=+0.910 gz=+0.000 | R=+0.327 P=+24.908 Y=+0.687
+  ax=-0.426 ay=+0.004 az=+0.908 gz=+0.000 | R=+0.309 P=+24.919 Y=+0.695
+  ax=-0.426 ay=+0.003 az=+0.908 gz=-0.002 | R=+0.376 P=+24.745 Y=+0.739
+  ax=-0.424 ay=+0.009 az=+0.908 gz=+0.003 | R=+0.385 P=+24.892 Y=+0.752
+  ax=-0.424 ay=+0.004 az=+0.909 gz=-0.006 | R=+0.352 P=+24.945 Y=+0.739
+  ax=-0.425 ay=+0.006 az=+0.912 gz=+0.000 | R=+0.404 P=+24.913 Y=+0.779
+  ax=-0.426 ay=+0.006 az=+0.909 gz=+0.002 | R=+0.379 P=+25.038 Y=+0.779
+  ax=-0.424 ay=+0.004 az=+0.904 gz=+0.000 | R=+0.302 P=+24.993 Y=+0.775
+
+  ---- NOSE-DOWN AVERAGES ----
+    ax=-0.427  ay=+0.007  az=+0.908
+    gx=-0.002  gy=+0.002  gz=-0.001
+    AHRS roll=+0.413  pitch=+25.210  yaw=+0.712
+
+  Return to FLAT (3 seconds, AHRS tracking)...
+----------------------------------------
+TILT 2: RIGHT SIDE DOWN (~30 degrees)
+  Lift the LEFT side so the RIGHT side dips.
+  Expected: ay > 0, AHRS roll > 0
+----------------------------------------
+
+  >> Tilt RIGHT SIDE DOWN and hold steady <<
+  (Move during the countdown, then hold for ~4 seconds)
+
+  Preparing in 3...2...1...SAMPLING
+
+  ax=+0.030 ay=+0.392 az=+0.918 gz=+0.004 | R=+23.106 P=-1.471 Y=-0.415
+  ax=+0.027 ay=+0.388 az=+0.928 gz=-0.003 | R=+22.738 P=-1.546 Y=-0.390
+  ax=+0.027 ay=+0.382 az=+0.932 gz=+0.001 | R=+22.430 P=-1.429 Y=-0.367
+  ax=+0.026 ay=+0.386 az=+0.929 gz=+0.000 | R=+22.416 P=-1.502 Y=-0.360
+  ax=+0.026 ay=+0.391 az=+0.925 gz=+0.002 | R=+22.600 P=-1.472 Y=-0.345
+  ax=+0.019 ay=+0.377 az=+0.938 gz=+0.001 | R=+22.006 P=-1.340 Y=-0.308
+  ax=+0.024 ay=+0.387 az=+0.924 gz=+0.002 | R=+22.568 P=-1.444 Y=-0.311
+  ax=+0.025 ay=+0.381 az=+0.936 gz=+0.000 | R=+22.048 P=-1.433 Y=-0.269
+  ax=+0.021 ay=+0.386 az=+0.934 gz=-0.001 | R=+22.336 P=-1.392 Y=-0.269
+  ax=+0.025 ay=+0.382 az=+0.932 gz=+0.000 | R=+22.176 P=-1.480 Y=-0.226
+  ax=+0.022 ay=+0.385 az=+0.929 gz=+0.001 | R=+22.077 P=-1.383 Y=-0.214
+  ax=+0.023 ay=+0.382 az=+0.936 gz=+0.001 | R=+22.401 P=-1.354 Y=-0.190
+  ax=+0.023 ay=+0.385 az=+0.931 gz=-0.001 | R=+22.250 P=-1.428 Y=-0.159
+  ax=+0.023 ay=+0.384 az=+0.926 gz=+0.001 | R=+22.366 P=-1.328 Y=-0.139
+  ax=+0.021 ay=+0.376 az=+0.940 gz=-0.003 | R=+21.761 P=-1.328 Y=-0.098
+  ax=+0.022 ay=+0.382 az=+0.933 gz=-0.002 | R=+22.037 P=-1.376 Y=-0.078
+  ax=+0.025 ay=+0.382 az=+0.932 gz=-0.002 | R=+22.110 P=-1.445 Y=-0.051
+  ax=+0.024 ay=+0.376 az=+0.933 gz=-0.001 | R=+21.940 P=-1.359 Y=-0.025
+  ax=+0.025 ay=+0.378 az=+0.928 gz=-0.002 | R=+22.104 P=-1.462 Y=+0.005
+  ax=+0.023 ay=+0.382 az=+0.931 gz=+0.000 | R=+22.200 P=-1.336 Y=+0.024
+
+  ---- RIGHT-DOWN AVERAGES ----
+    ax=+0.025  ay=+0.383  az=+0.931
+    gx=-0.005  gy=+0.006  gz=-0.000
+    AHRS roll=+22.268  pitch=-1.420  yaw=-0.198
+
+  Return to FLAT (3 seconds, AHRS tracking)...
+----------------------------------------
+TILT 3: ROTATE CW (viewed from above)
+  Keep board flat, rotate clockwise slowly while sampling.
+  Expected: gz < 0 (CW about +Z = negative), yaw decreasing
+----------------------------------------
+
+  >> Rotate CLOCKWISE (keep flat) <<
+  (Move during the countdown, then hold for ~4 seconds)
+
+  Preparing in 3...2...1...SAMPLING
+
+  ax=+0.026 ay=-0.007 az=+1.007 gz=-0.001 | R=-0.519 P=-1.703 Y=+0.672
+  ax=-0.005 ay=+0.151 az=+1.037 gz=-0.015 | R=-0.566 P=-1.764 Y=+0.653
+  ax=+0.055 ay=+0.033 az=+1.051 gz=+0.000 | R=-0.592 P=-1.789 Y=+0.667
+  ax=+0.030 ay=-0.013 az=+1.008 gz=+0.001 | R=-0.737 P=-1.729 Y=+0.665
+  ax=+0.058 ay=-0.044 az=+0.992 gz=-0.296 | R=-1.707 P=-0.679 Y=-0.347
+  ax=-0.070 ay=-0.081 az=+1.021 gz=-0.153 | R=-3.727 P=+2.706 Y=-2.378
+  ax=-0.066 ay=-0.122 az=+0.990 gz=-0.561 | R=-7.051 P=+4.894 Y=-7.401
+  ax=-0.090 ay=-0.150 az=+0.999 gz=-0.532 | R=-9.304 P=+6.549 Y=-13.989
+  ax=-0.036 ay=-0.148 az=+0.956 gz=-0.630 | R=-9.152 P=+3.129 Y=-19.797
+  ax=-0.033 ay=-0.182 az=+0.982 gz=-0.402 | R=-10.453 P=+2.716 Y=-24.164
+  ax=-0.068 ay=-0.219 az=+0.989 gz=-0.536 | R=-12.896 P=+2.504 Y=-29.904
+  ax=-0.064 ay=-0.213 az=+0.952 gz=-0.676 | R=-12.146 P=+1.790 Y=-37.322
+  ax=+0.038 ay=-0.185 az=+0.970 gz=-0.742 | R=-11.720 P=-0.539 Y=-45.820
+  ax=+0.020 ay=-0.187 az=+0.976 gz=-0.675 | R=-11.820 P=-1.133 Y=-53.738
+  ax=-0.005 ay=-0.211 az=+0.991 gz=-0.663 | R=-12.008 P=-0.160 Y=-61.947
+  ax=-0.004 ay=-0.186 az=+0.992 gz=-0.643 | R=-12.093 P=+0.075 Y=-69.924
+  ax=+0.071 ay=-0.192 az=+1.000 gz=-0.455 | R=-10.366 P=-2.860 Y=-75.469
+  ax=+0.063 ay=-0.210 az=+0.976 gz=-0.578 | R=-11.040 P=-3.573 Y=-81.766
+  ax=+0.182 ay=-0.157 az=+0.966 gz=-0.659 | R=-10.303 P=-5.566 Y=-88.444
+  ax=+0.116 ay=-0.169 az=+0.972 gz=-0.150 | R=-8.561 P=-6.013 Y=-92.029
+
+  ---- YAW-CW AVERAGES ----
+    ax=+0.007  ay=-0.134  az=+0.992
+    gx=-0.031  gy=+0.068  gz=-0.407
+    AHRS roll=-7.977  pitch=-0.208  yaw=-37.322
+
+========================================
+TEST 3 RESULTS
+========================================
+  [PASS] NOSE DOWN: ax < 0 and pitch > 0 — matches training
+  [PASS] RIGHT DOWN: ay > 0 and roll > 0 — matches training
+  [PASS] ROTATE CW: gz < 0 — matches training
+
+Reference (training convention):
+  Nose down:     ax<0, pitch>0
+  Right down:    ay>0, roll>0
+  CW rotation:   gz<0, yaw decreasing
+
+========================================
+TEST 7: Hardware-in-the-Loop Closed Loop
+========================================
+Runs the FULL control loop with real sensors,
+but motors OFF. Shows what PWM would be sent.
+
+Board must be FLAT and STILL for 10 seconds.
+
+  Setting baro ground reference...
+  AHRS settling + IMU bias calibration (2 sec)...
+  Bias calibration results:
+    gyro_bias:  gx=-0.003  gy=+0.005  gz=+0.000 rad/s
+    accel_bias: ax=+0.029  ay=-0.013  az=+0.005 g
+    Predicted AHRS error without cal: R=-0.748 deg  P=-1.658 deg
+  AHRS re-initialized. Re-settling with corrected data (1 sec)...
+  Post-cal AHRS: R=-0.031 P=-0.040 (should be ~0,0)
+  Armed. Running NN control loop for 8 seconds...
+
+  [+0.000s] FL:1007 FR:1006 RR:1007 RL:1008 | R=+0.026 P=-0.021 [RAMP]
+  [+0.200s] FL:1202 FR:1113 RR:1159 RL:1272 | R=-0.052 P=-0.064 [RAMP]
+  [+0.400s] FL:1395 FR:1222 RR:1312 RL:1531 | R=+0.003 P=-0.029 [RAMP]
+  [+0.600s] FL:1521 FR:1314 RR:1420 RL:1685 | R=+0.075 P=-0.022
+  [+0.800s] FL:1519 FR:1314 RR:1417 RL:1682 | R=-0.018 P=-0.049
+  [+1.000s] FL:1516 FR:1312 RR:1415 RL:1680 | R=-0.013 P=-0.029
+  [+1.200s] FL:1511 FR:1310 RR:1408 RL:1670 | R=-0.023 P=+0.055
+  [+1.400s] FL:1522 FR:1314 RR:1420 RL:1688 | R=-0.094 P=-0.054
+  [+1.600s] FL:1522 FR:1315 RR:1421 RL:1687 | R=+0.037 P=-0.014
+  [+1.800s] FL:1511 FR:1309 RR:1408 RL:1672 | R=-0.041 P=+0.009
+  [+2.000s] FL:1510 FR:1309 RR:1406 RL:1669 | R=-0.006 P=+0.006
+  [+2.200s] FL:1521 FR:1315 RR:1422 RL:1686 | R=+0.110 P=-0.086
+  [+2.400s] FL:1523 FR:1315 RR:1420 RL:1686 | R=-0.036 P=-0.022
+  [+2.600s] FL:1515 FR:1311 RR:1412 RL:1675 | R=+0.011 P=-0.038
+  [+2.800s] FL:1514 FR:1311 RR:1412 RL:1675 | R=+0.000 P=-0.032
+  [+3.000s] FL:1523 FR:1316 RR:1420 RL:1685 | R=+0.029 P=+0.070
+  [+3.200s] FL:1491 FR:1302 RR:1387 RL:1642 | R=+0.035 P=+0.002
+  [+3.400s] FL:1507 FR:1307 RR:1403 RL:1665 | R=-0.008 P=+0.047
+  [+3.600s] FL:1523 FR:1317 RR:1421 RL:1686 | R=-0.019 P=-0.018
+  [+3.800s] FL:1517 FR:1312 RR:1413 RL:1676 | R=-0.012 P=+0.061
+  [+4.000s] FL:1517 FR:1312 RR:1415 RL:1679 | R=+0.069 P=-0.015
+  [+4.200s] FL:1504 FR:1306 RR:1401 RL:1663 | R=-0.012 P=+0.011
+  [+4.400s] FL:1512 FR:1309 RR:1409 RL:1672 | R=+0.003 P=-0.003
+  [+4.600s] FL:1519 FR:1313 RR:1416 RL:1681 | R=-0.022 P=+0.046
+  [+4.800s] FL:1512 FR:1310 RR:1409 RL:1671 | R=+0.049 P=+0.080
+  [+5.000s] FL:1512 FR:1310 RR:1410 RL:1674 | R=+0.074 P=+0.001
+  [+5.200s] FL:1533 FR:1321 RR:1432 RL:1699 | R=+0.012 P=-0.042
+  [+5.400s] FL:1522 FR:1315 RR:1421 RL:1686 | R=+0.058 P=+0.011
+  [+5.600s] FL:1545 FR:1334 RR:1446 RL:1712 | R=+0.089 P=+0.030
+  [+5.800s] FL:1533 FR:1323 RR:1432 RL:1699 | R=+0.040 P=-0.031
+  [+6.000s] FL:1539 FR:1328 RR:1439 RL:1706 | R=-0.014 P=-0.029
+  [+6.200s] FL:1516 FR:1313 RR:1412 RL:1676 | R=-0.089 P=+0.061
+  [+6.400s] FL:1514 FR:1313 RR:1412 RL:1674 | R=+0.089 P=-0.003
+  [+6.600s] FL:1519 FR:1314 RR:1416 RL:1682 | R=-0.058 P=+0.001
+  [+6.800s] FL:1528 FR:1319 RR:1427 RL:1692 | R=+0.110 P=-0.043
+  [+7.000s] FL:1511 FR:1310 RR:1409 RL:1672 | R=+0.015 P=-0.019
+  [+7.200s] FL:1512 FR:1311 RR:1410 RL:1672 | R=+0.068 P=-0.008
+  [+7.400s] FL:1503 FR:1305 RR:1400 RL:1660 | R=+0.009 P=+0.020
+  [+7.600s] FL:1506 FR:1307 RR:1402 RL:1663 | R=+0.018 P=-0.003
+  [+7.800s] FL:1523 FR:1316 RR:1420 RL:1685 | R=-0.025 P=+0.059
+
+---- STEADY-STATE ANALYSIS (last 2 sec) ----
+
+  FL(CCW)  avg=1520 us  stddev=+9.670 us  range=[1495-1540]
+  FR(CW)   avg=1315 us  stddev=+5.477 us  range=[1304-1328]
+  RR(CCW)  avg=1418 us  stddev=+10.216 us  range=[1392-1439]
+  RL(CW)   avg=1682 us  stddev=+12.470 us  range=[1650-1708]
+
+  Overall avg = 1484 us  (expect ~1323 us)
+  Motor spread = 367 us  (max - min across 4 motors)
+
+  [FAIL] Motor spread > 120 us — large asymmetry, NN is compensating for something
+  [INFO] Average PWM is not graded: real hover PWM is unmeasured.
+         On a table it includes ~+45 us of altitude P term
+         (board is 0.3 m below TARGET_ALT).
+  [PASS] All motors stable (stddev < 20 us) — no oscillation
+
+  Balance (|x| < 30 us is balanced):
+    Roll : left - right = +234.614 us  → would roll RIGHT (right side down)
+    Pitch: front - rear = -132.348 us  → would pitch NOSE DOWN
+    Yaw  : CW - CCW     = +29.783 us  (balanced)
+
+========================================
+TEST 8: Live Tilt → Motor Response
+========================================
+Tilt the board; checks the NN speeds up the LOW side.
+Graded on the CHANGE from a level baseline.
+NO MOTORS WILL SPIN.
+
+  Calibrating (2 sec, keep board FLAT and STILL)...
+  Calibrated. R=+0.006 P=-0.037
+  Measuring LEVEL baseline (1 sec, keep FLAT)...
+  Baseline PWM:  FL 1401  FR 1237  RR 1377  RL 1605 us
+
+========================================
+TILT A: RIGHT SIDE DOWN (~20 deg)
+  Correct response: RIGHT motors (FR, RR) speed up
+  Preparing in 3...2...1...TILT AND HOLD
+
+  R=+24.629 P=+0.001 FL:1354 FR:1619 RR:1706 RL:1458
+  R=+25.702 P=-0.048 FL:1372 FR:1590 RR:1688 RL:1483
+  R=+25.213 P=-0.154 FL:1373 FR:1582 RR:1684 RL:1483
+  R=+24.695 P=-0.126 FL:1371 FR:1579 RR:1682 RL:1482
+  R=+24.940 P=-0.088 FL:1373 FR:1580 RR:1682 RL:1483
+  R=+25.039 P=-0.152 FL:1371 FR:1583 RR:1685 RL:1482
+  R=+24.969 P=-0.111 FL:1371 FR:1583 RR:1684 RL:1482
+  R=+24.614 P=-0.113 FL:1370 FR:1581 RR:1683 RL:1481
+  R=+24.818 P=-0.083 FL:1371 FR:1581 RR:1683 RL:1481
+  R=+24.409 P=-0.067 FL:1370 FR:1578 RR:1681 RL:1480
+
+  Change vs level baseline (300 tilted samples):  FL -30.063  FR +346.317  RR +307.558  RL -123.219 us
+  Correct pair - opposite pair = +403.578 us
+  [PASS] RIGHT DOWN: right motors speed up → corrects
+
+  Return to FLAT (2 sec)...
+
+========================================
+TILT B: NOSE DOWN (~20 deg)  — lift the REAR
+  Correct response: FRONT motors (FL, FR) speed up
+  Preparing in 3...2...1...TILT AND HOLD
+
+  R=+1.613 P=+22.272 FL:1623 FR:1533 RR:1465 RL:1589
+  R=+1.203 P=+21.866 FL:1631 FR:1536 RR:1458 RL:1581
+  R=+1.202 P=+22.515 FL:1629 FR:1537 RR:1462 RL:1587
+  R=+1.216 P=+22.427 FL:1627 FR:1534 RR:1463 RL:1587
+  R=+1.177 P=+22.229 FL:1627 FR:1536 RR:1462 RL:1586
+  R=+1.278 P=+22.150 FL:1625 FR:1535 RR:1463 RL:1586
+  R=+1.218 P=+22.313 FL:1625 FR:1533 RR:1464 RL:1588
+  R=+1.221 P=+22.123 FL:1626 FR:1535 RR:1463 RL:1586
+  R=+1.275 P=+22.119 FL:1625 FR:1535 RR:1463 RL:1586
+  R=+1.249 P=+22.183 FL:1625 FR:1535 RR:1463 RL:1586
+
+  Change vs level baseline (300 tilted samples):  FL +224.034  FR +298.150  RR +85.921  RL -18.778 us
+  Correct pair - opposite pair = +227.521 us
+  [PASS] NOSE DOWN: front motors speed up → lifts nose → corrects
+
+  Return to FLAT (2 sec)...
+
+========================================
+TILT C: NOSE UP (~20 deg)  — lift the FRONT
+  Correct response: REAR motors (RR, RL) speed up
+  Preparing in 3...2...1...TILT AND HOLD
+
+  R=+0.148 P=-27.246 FL:1391 FR:1287 RR:1723 RL:1697
+  R=+0.262 P=-35.914 FL:1415 FR:1327 RR:1723 RL:1702
+  R=+0.220 P=-33.154 FL:1405 FR:1317 RR:1723 RL:1705
+  R=+0.294 P=-33.463 FL:1409 FR:1321 RR:1723 RL:1701
+  R=+0.194 P=-33.652 FL:1412 FR:1323 RR:1723 RL:1700
+  R=+0.268 P=-34.099 FL:1411 FR:1325 RR:1723 RL:1701
+  R=+0.247 P=-33.882 FL:1409 FR:1323 RR:1723 RL:1703
+  R=+0.206 P=-33.784 FL:1410 FR:1322 RR:1723 RL:1702
+  R=+0.258 P=-34.001 FL:1411 FR:1325 RR:1723 RL:1701
+  R=+0.109 P=-33.792 FL:1411 FR:1322 RR:1723 RL:1703
+
+  Change vs level baseline (300 tilted samples):  FL +7.550  FR +84.150  RR +345.797  RL +96.410 us
+  Correct pair - opposite pair = +175.253 us
+  [PASS] NOSE UP: rear motors speed up → lifts tail → corrects
+
+========================================
+TEST 8 COMPLETE
+========================================
+A FAIL on one axis only (roll OR pitch) means that axis's
+sign is inverted (ALIGN_xx in fc_config.h). If test 3 passes
+but this fails, suspect NN_TO_MOTOR[] / motor wiring.
+
+========================================
+ALL SELECTED TESTS COMPLETE
+========================================
+Review output above for PASS/FAIL.
+LED solid = done.
+^[[B^M
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 16
+** MOTOR TESTS SELECTED (10/14/16) — motors WILL spin. **
+** Props off for 10; secured rig for 14; scale + radio for 16. Unplug battery to skip. **
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 16: Thrust Ramp on a Scale (free-standing, ARM = dead-man)
+========================================
+** PROPS ON. Drone free on the scale, slack safety string. STAND BACK. **
+  1. Battery in, radio ON. Radio checks run first (motors disabled).
+  2. Step 5 asks you to flip ARM ON then OFF — that tests the kill.
+  3. At READY: start filming, flip ARM ON -> ramp (+25 us every 4 s).
+  4. When the scale reads ~30 % of its starting value: ARM OFF.
+     ARM OFF / radio lost / tilt / liftoff = motors off instantly.
+  Ceiling this build: 1400 us
+
+---- RADIO CHECKS (motors disabled — no signal to the ESCs) ----
+  Radio transmitter ON. Battery in (some boards only power the
+  receiver from the battery, not from USB).
+
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+  listening on RX2 (PA3)... bytes 14  RC frames 0
+  listening on RX2 (PA3)... bytes 28  RC frames 0
+  listening on RX2 (PA3)... bytes 98  RC frames 0
+  listening on RX2 (PA3)... bytes 196  RC frames 0
+  listening on RX2 (PA3)... bytes 252  RC frames 0
+  listening on RX2 (PA3)... bytes 280  RC frames 0
+  listening on RX2 (PA3)... bytes 280  RC frames 0
+  listening on RX2 (PA3)... bytes 308  RC frames 0
+
+  Step 1  bytes from receiver: 638
+  [PASS] Step 1: receiver is sending bytes
+  Step 2  valid RC frames 10, other frames 27, CRC errors 0, junk bytes 0, overruns 0
+  [PASS] Step 2: CRSF RC frames decode
+  Step 3  RC frames/s 47, CRC errors in 2 s 0, LQ 100 %, link dropouts 0 ticks
+  [PASS] Step 3: link healthy
+  Step 4  CH1-8 (us): 1500 1507 997 1508 1000 1000 1000 1000
+  [PASS] Step 4: channel values in range
+
+  Step 5  ARM switch is expected on CH5 (ON = above 1756 us).
+          Flip ARM ON, then OFF. (60 s; don't move other switches)
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 2000 1000 1000 1000   -> flip ON
+  [FAIL] Step 5: radio link lost during the switch check
+
+  ==> RADIO CHECK FAILED — test 16 stopped. Motors were never enabled.
+      Fix the step marked [FAIL] above and rerun.
+
+========================================
+ALL SELECTED TESTS COMPLETE
+========================================
+Review output above for PASS/FAIL.
+LED solid = done.
+
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 16
+** MOTOR TESTS SELECTED (10/14/16) — motors WILL spin. **
+** Props off for 10; secured rig for 14; scale + radio for 16. Unplug battery to skip. **
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 16: Thrust Ramp on a Scale (free-standing, ARM = dead-man)
+========================================
+** PROPS ON. Drone free on the scale, slack safety string. STAND BACK. **
+  1. Battery in, radio ON. Radio checks run first (motors disabled).
+  2. Step 5 asks you to flip ARM ON then OFF — that tests the kill.
+  3. At READY: start filming, flip ARM ON -> ramp (+25 us every 4 s).
+  4. When the scale reads ~30 % of its starting value: ARM OFF.
+     ARM OFF / radio lost / tilt / liftoff = motors off instantly.
+  Ceiling this build: 1400 us
+
+---- RADIO CHECKS (motors disabled — no signal to the ESCs) ----
+  Radio transmitter ON. Battery in (some boards only power the
+  receiver from the battery, not from USB).
+
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+
+  Step 1  bytes from receiver: 400
+  [PASS] Step 1: receiver is sending bytes
+  Step 2  valid RC frames 10, other frames 10, CRC errors 0, junk bytes 0, overruns 0
+  [PASS] Step 2: CRSF RC frames decode
+  Step 3  RC frames/s 46, CRC errors in 2 s 0, LQ 100 %, link dropouts 0 ticks
+  [PASS] Step 3: link healthy
+  Step 4  CH1-8 (us): 1500 1500 997 1507 1000 1000 1000 1000
+  [PASS] Step 4: channel values in range
+
+  Step 5  ARM switch is expected on CH5 (ON = above 1756 us).
+          Flip ARM ON, then OFF. (60 s; don't move other switches)
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1503 1000 1000 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1503 1000 1000 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1503 1000 1000 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1503 1000 1503 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1503 1000 1503 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1503 1000 2000 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1503 1000 2000 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1503 1000 2000 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1503 1000 2000 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 1000 2000 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 1000 2000 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 1000 2000 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 1000 2000 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 1000 2000 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 1000 2000 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 1000 2000 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 1000 2000 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 2000 1000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 2000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 2000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 2000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+  [FAIL] Step 5: radio link lost during the switch check
+
+  ==> RADIO CHECK FAILED — test 16 stopped. Motors were never enabled.
+      Fix the step marked [FAIL] above and rerun.
+
+========================================
+ALL SELECTED TESTS COMPLETE
+========================================
+Review output above for PASS/FAIL.
+LED solid = done.
+
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 16
+** MOTOR TESTS SELECTED (10/14/16) — motors WILL spin. **
+** Props off for 10; secured rig for 14; scale + radio for 16. Unplug battery to skip. **
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 16: Thrust Ramp on a Scale (free-standing, ARM = dead-man)
+========================================
+** PROPS ON. Drone free on the scale, slack safety string. STAND BACK. **
+  1. Battery in, radio ON. Radio checks run first (motors disabled).
+  2. Step 5 asks you to flip ARM ON then OFF — that tests the kill.
+  3. At READY: start filming, flip ARM ON -> ramp (+25 us every 4 s).
+  4. When the scale reads ~30 % of its starting value: ARM OFF.
+     ARM OFF / radio lost / tilt / liftoff = motors off instantly.
+  Ceiling this build: 1400 us
+
+---- RADIO CHECKS (motors disabled — no signal to the ESCs) ----
+  Radio transmitter ON. Battery in (some boards only power the
+  receiver from the battery, not from USB).
+
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+
+  Step 1  bytes from receiver: 302
+  [PASS] Step 1: receiver is sending bytes
+  Step 2  valid RC frames 10, other frames 3, CRC errors 0, junk bytes 0, overruns 0
+  [PASS] Step 2: CRSF RC frames decode
+  Step 3  RC frames/s 47, CRC errors in 2 s 0, LQ 100 %, link dropouts 0 ticks
+  [PASS] Step 3: link healthy
+  Step 4  CH1-8 (us): 1500 1500 997 1500 1000 2000 2000 2000
+  [PASS] Step 4: channel values in range
+
+  Step 5  ARM switch is expected on CH5 (ON = above 1756 us).
+          Flip ARM ON, then OFF. (60 s; don't move other switches)
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 1000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 1503 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 1503 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 1503 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 1503 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 1503 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 1503 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 1503 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 1503 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 1503 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 1503 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 1503 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 1503 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 2000 1503 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 2000 1503 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1503 2000 1503 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1503 2000 1503 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1503 2000 1503 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1503 2000 1503 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1503 2000 1503 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1503 2000 1503 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1503 2000 1503 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 1503 2000 1503 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 1503 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+    CH5 = 1000 us  ARM off   | AUX CH5-12: 1000 2000 2000 2000 1000 2000 1000 1000   -> flip ON
+
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 17
+Motor tests 10 and 14 are NOT selected — no motor output.
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 17: RC Channel Finder (motors OFF)
+========================================
+Flip ONE switch / press ONE button at a time and watch for '>>> CHn'.
+Currently configured: ARM = CH5, MODE = CH6  (fc_config.h, RC_CH_ARM = channel - 1)
+
+  no RC frames yet... bytes received 0, frames 0  (nothing: receiver powered? wired to RX2/PA3? bound?)
+>>> RADIO LINK UP — starting positions recorded
+  LQ 100 | sticks CH1-4: 1500 1500 997 1507 | CH5-12: 1000 1000 2000 1000 2000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1500 997 1507 | CH5-12: 1000 1000 2000 1000 2000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1500 997 1507 | CH5-12: 1000 1000 2000 1000 2000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1500 997 1507 | CH5-12: 1000 1000 2000 1000 2000 1000 1000 1000
+>>> CH9 changed 2000 -> 1000 us
+  LQ 100 | sticks CH1-4: 1500 1500 997 1507 | CH5-12: 1000 1000 2000 1000 1000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1500 997 1507 | CH5-12: 1000 1000 2000 1000 1000 1000 1000 1000
+>>> CH9 changed 1000 -> 2000 us
+  LQ 100 | sticks CH1-4: 1500 1500 997 1507 | CH5-12: 1000 1000 2000 1000 2000 1000 1000 1000
+>>> CH8 changed 1000 -> 1503 us
+  LQ 100 | sticks CH1-4: 1500 1500 997 1507 | CH5-12: 1000 1000 2000 1503 2000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1500 997 1507 | CH5-12: 1000 1000 2000 1503 2000 1000 1000 1000
+>>> CH6 changed 1000 -> 1503 us
+  LQ 100 | sticks CH1-4: 1500 1500 997 1507 | CH5-12: 1000 1503 2000 1503 2000 1000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1500 997 1507 | CH5-12: 1000 1503 2000 1503 2000 1000 1000 1000
+>>> CH10 changed 1000 -> 2000 us
+  LQ 100 | sticks CH1-4: 1500 1507 997 1500 | CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1500 997 1490 | CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000
+>>> CH3 (stick) changed 997 -> 1369 us
+>>> CH3 (stick) changed 1369 -> 1843 us
+  LQ 100 | sticks CH1-4: 1500 1507 2011 1500 | CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000
+>>> CH3 (stick) changed 1843 -> 1422 us
+  LQ 100 | sticks CH1-4: 1500 1507 1365 1500 | CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000
+>>> CH3 (stick) changed 1422 -> 1026 us
+  LQ 100 | sticks CH1-4: 1500 1507 999 1500 | CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1507 998 1500 | CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000
+>>> CH1 (stick) changed 1500 -> 1833 us
+  LQ 100 | sticks CH1-4: 2011 1437 998 1500 | CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 2011 1432 999 1500 | CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000
+>>> CH1 (stick) changed 1833 -> 1510 us
+  LQ 100 | sticks CH1-4: 1507 1500 999 1500 | CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000
+>>> CH1 (stick) changed 1510 -> 1090 us
+>>> CH1 (stick) changed 1090 -> 1500 us
+  LQ 100 | sticks CH1-4: 1500 1507 999 1500 | CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1507 998 1500 | CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1508 998 1500 | CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1507 998 1500 | CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1507 998 1500 | CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1507 997 1500 | CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1508 998 1500 | CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1507 997 1500 | CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000
+>>> CH6 changed 1503 -> 2000 us
+  LQ 100 | sticks CH1-4: 1500 1507 999 1500 | CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1507 999 1500 | CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1507 998 1500 | CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1507 999 1500 | CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1507 998 1500 | CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1507 998 1500 | CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1507 999 1500 | CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1507 997 1500 | CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1508 998 1500 | CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1508 998 1500 | CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1507 999 1500 | CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1507 998 1500 | CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1507 998 1500 | CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1507 998 1500 | CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1507 999 1500 | CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1507 997 1500 | CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1507 999 1500 | CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1507 998 1500 | CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1507 999 1500 | CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000
+  LQ 100 | sticks CH1-4: 1500 1507 999 1500 | CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000
+
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 16
+** MOTOR TESTS SELECTED (10/14/16) — motors WILL spin. **
+** Props off for 10; secured rig for 14; scale + radio for 16. Unplug battery to skip. **
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 16: Thrust Ramp on a Scale (free-standing, ARM = dead-man)
+========================================
+** PROPS ON. Drone free on the scale, slack safety string. STAND BACK. **
+  1. Battery in, radio ON. Radio checks run first (motors disabled).
+  2. Step 5 asks you to flip ARM ON then OFF — that tests the kill.
+  3. At READY: start filming, flip ARM ON -> ramp (+25 us every 4 s).
+  4. When the scale reads ~30 % of its starting value: ARM OFF.
+     ARM OFF / radio lost / tilt / liftoff = motors off instantly.
+  Ceiling this build: 1400 us
+
+---- RADIO CHECKS (motors disabled — no signal to the ESCs) ----
+  Radio transmitter ON. Battery in (some boards only power the
+  receiver from the battery, not from USB).
+
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+
+  Step 1  bytes from receiver: 288
+  [PASS] Step 1: receiver is sending bytes
+  Step 2  valid RC frames 10, other frames 2, CRC errors 0, junk bytes 0, overruns 0
+  [PASS] Step 2: CRSF RC frames decode
+  Step 3  RC frames/s 47, CRC errors in 2 s 0, LQ 100 %, link dropouts 0 ticks
+  [PASS] Step 3: link healthy
+  Step 4  CH1-8 (us): 1500 1500 998 1500 1000 1000 2000 1503
+  [PASS] Step 4: channel values in range
+
+  Step 5  ARM switch is expected on CH6 (ON = above 1756 us).
+          Flip ARM ON, then OFF. (60 s; don't move other switches)
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 1503 us  ARM off   | AUX CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 1503 us  ARM off   | AUX CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 1503 us  ARM off   | AUX CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 1503 us  ARM off   | AUX CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 1503 us  ARM off   | AUX CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 1503 us  ARM off   | AUX CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000   -> now flip OFF
+  [PASS] Step 5: ARM switch turns ON and OFF
+
+  Enabling motor outputs at 1000 us (ESCs beep = armed). 3 s...
+  READY. Start filming. Flip ARM ON to start the ramp (flip it OFF first if it is already ON).
+  waiting: ARM OFF — flip ON to start
+  waiting: ARM OFF — flip ON to start
+  waiting: ARM OFF — flip ON to start
+  ARM ON -> ramp starting.
+
+  PWM(us) | step | az_std(g) | gyr_std(rad/s)   <- read the scale while the line is fresh
+  --------+------+-----------+---------------
+    1000  | 1   | +0.004     | +0.003
+    1025  | 2   | +0.004     | +0.003   (cut short)
+
+---- TEST 16 RESULTS ----
+  Motors OFF. Stopped by: ARM switch OFF at 1025 us
+  thrust(g) = reading@1000us - reading@step;  hover = where reading -> 0.
+  Firmware can sustain at most 1423 us (1323 base + 100 alt loop).
+  az_std at the top steps vs 0.22 g trained noise = vibration check.
+
+========================================
+ALL SELECTED TESTS COMPLETE
+========================================
+Review output above for PASS/FAIL.
+LED solid = done.
+
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 16
+** MOTOR TESTS SELECTED (10/14/16) — motors WILL spin. **
+** Props off for 10; secured rig for 14; scale + radio for 16. Unplug battery to skip. **
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 16: Thrust Ramp on a Scale (free-standing, ARM = dead-man)
+========================================
+** PROPS ON. Drone free on the scale, slack safety string. STAND BACK. **
+  1. Battery in, radio ON. Radio checks run first (motors disabled).
+  2. Step 5 asks you to flip ARM ON then OFF — that tests the kill.
+  3. At READY: start filming, flip ARM ON -> ramp (+25 us every 4 s).
+  4. When the scale reads ~30 % of its starting value: ARM OFF.
+     ARM OFF / radio lost / tilt / liftoff = motors off instantly.
+  Ceiling this build: 1400 us
+
+---- RADIO CHECKS (motors disabled — no signal to the ESCs) ----
+  Radio transmitter ON. Battery in (some boards only power the
+  receiver from the battery, not from USB).
+
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+
+  Step 1  bytes from receiver: 302
+  [PASS] Step 1: receiver is sending bytes
+  Step 2  valid RC frames 10, other frames 3, CRC errors 0, junk bytes 0, overruns 0
+  [PASS] Step 2: CRSF RC frames decode
+
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 16
+** MOTOR TESTS SELECTED (10/14/16) — motors WILL spin. **
+** Props off for 10; secured rig for 14; scale + radio for 16. Unplug battery to skip. **
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 16: Thrust Ramp on a Scale (free-standing, ARM = dead-man)
+========================================
+** PROPS ON. Drone free on the scale, slack safety string. STAND BACK. **
+  1. Battery in, radio ON. Radio checks run first (motors disabled).
+  2. Step 5 asks you to flip ARM ON then OFF — that tests the kill.
+  3. At READY: start filming, flip ARM ON -> ramp (+25 us every 4 s).
+  4. When the scale reads ~30 % of its starting value: ARM OFF.
+     ARM OFF / radio lost / tilt / liftoff = motors off instantly.
+  Ceiling this build: 1400 us
+
+---- RADIO CHECKS (motors disabled — no signal to the ESCs) ----
+  Radio transmitter ON. Battery in (some boards only power the
+  receiver from the battery, not from USB).
+
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+  listening on RX2 (PA3)... bytes 14  RC frames 0
+
+  Step 1  bytes from receiver: 414
+  [PASS] Step 1: receiver is sending bytes
+  Step 2  valid RC frames 10, other frames 11, CRC errors 0, junk bytes 0, overruns 0
+  [PASS] Step 2: CRSF RC frames decode
+  Step 3  RC frames/s 47, CRC errors in 2 s 0, LQ 100 %, link dropouts 0 ticks
+  [PASS] Step 3: link healthy
+  Step 4  CH1-8 (us): 1500 1500 999 1500 1000 1000 2000 1503
+  [PASS] Step 4: channel values in range
+
+  Step 5  ARM switch is expected on CH6 (ON = above 1756 us).
+          Flip ARM ON, then OFF. (60 s; don't move other switches)
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 1503 us  ARM off   | AUX CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 1503 us  ARM off   | AUX CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 1503 us  ARM off   | AUX CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 1503 us  ARM off   | AUX CH5-12: 1000 1503 2000 1503 2000 2000 1000 1000   -> flip ON
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 2000 1503 2000 2000 1000 1000   -> now flip OFF
+  [PASS] Step 5: ARM switch turns ON and OFF
+
+  Enabling motor outputs at 1000 us (ESCs beep = armed). 3 s...
+  READY. Start filming. Flip ARM ON to start the ramp (flip it OFF first if it is already ON).
+  waiting: ARM OFF — flip ON to start
+  waiting: ARM OFF — flip ON to start
+  waiting: ARM OFF — flip ON to start
+  waiting: ARM OFF — flip ON to start
+  waiting: ARM OFF — flip ON to start
+  waiting: ARM OFF — flip ON to start
+  ARM ON -> ramp starting.
+
+  PWM(us) | step | az_std(g) | gyr_std(rad/s)   <- read the scale while the line is fresh
+  --------+------+-----------+---------------
+    1000  | 1   | +0.002     | +0.004
+    1025  | 2   | +0.017     | +0.004
+    1050  | 3   | +0.062     | +0.006
+    1075  | 4   | +0.107     | +0.007
+    1100  | 5   | +0.075     | +0.007
+    1125  | 6   | +0.104     | +0.008   (cut short)
+
+---- TEST 16 RESULTS ----
+  Motors OFF. Stopped by: ARM switch OFF at 1125 us
+  thrust(g) = reading@1000us - reading@step;  hover = where reading -> 0.
+  Firmware can sustain at most 1423 us (1323 base + 100 alt loop).
+  az_std at the top steps vs 0.22 g trained noise = vibration check.
+
+========================================
+ALL SELECTED TESTS COMPLETE
+========================================
+Review output above for PASS/FAIL.
+LED solid = done.
+
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 16
+** MOTOR TESTS SELECTED (10/14/16) — motors WILL spin. **
+** Props off for 10; secured rig for 14; scale + radio for 16. Unplug battery to skip. **
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 16: Thrust Ramp on a Scale (free-standing, ARM = dead-man)
+========================================
+** PROPS ON. Drone free on the scale, slack safety string. STAND BACK. **
+  1. Battery in, radio ON. Radio checks run first (motors disabled).
+  2. Step 5 asks you to flip ARM ON then OFF — that tests the kill.
+  3. At READY: start filming, flip ARM ON -> ramp (+25 us every 4 s).
+  4. When the scale reads ~30 % of its starting value: ARM OFF.
+     ARM OFF / radio lost / tilt / liftoff = motors off instantly.
+  Ceiling this build: 1400 us
+
+---- RADIO CHECKS (motors disabled — no signal to the ESCs) ----
+  Radio transmitter ON. Battery in (some boards only power the
+  receiver from the battery, not from USB).
+
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+
+  Step 1  bytes from receiver: 0
+  [FAIL] Step 1: NOTHING received on RX2 in 20 s
+    Likely: receiver not powered (LED off? plug the battery in),
+    receiver TX wire not on the FC's RX2 pad (PA3) — TX goes to RX,
+    or receiver not bound / transmitter off (ELRS sends nothing
+    until it is connected: receiver LED should be SOLID).
+
+  ==> RADIO CHECK FAILED — test 16 stopped. Motors were never enabled.
+      Fix the step marked [FAIL] above and rerun.
+
+========================================
+ALL SELECTED TESTS COMPLETE
+========================================
+Review output above for PASS/FAIL.
+LED solid = done.
+
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 16
+** MOTOR TESTS SELECTED (10/14/16) — motors WILL spin. **
+** Props off for 10; secured rig for 14; scale + radio for 16. Unplug battery to skip. **
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 16: Thrust Ramp on a Scale (free-standing, ARM = dead-man)
+========================================
+** PROPS ON. Drone free on the scale, slack safety string. STAND BACK. **
+  1. Battery in, radio ON. Radio checks run first (motors disabled).
+  2. Step 5 asks you to flip ARM ON then OFF — that tests the kill.
+  3. At READY: start filming, flip ARM ON -> ramp (+25 us every 4 s).
+  4. When the scale reads ~30 % of its starting value: ARM OFF.
+     ARM OFF / radio lost / tilt / liftoff = motors off instantly.
+  Ceiling this build: 1400 us
+
+---- RADIO CHECKS (motors disabled — no signal to the ESCs) ----
+  Radio transmitter ON. Battery in (some boards only power the
+  receiver from the battery, not from USB).
+
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+
+  Step 1  bytes from receiver: 302
+  [PASS] Step 1: receiver is sending bytes
+  Step 2  valid RC frames 10, other frames 3, CRC errors 0, junk bytes 0, overruns 0
+  [PASS] Step 2: CRSF RC frames decode
+  Step 3  RC frames/s 46, CRC errors in 2 s 0, LQ 100 %, link dropouts 0 ticks
+  [PASS] Step 3: link healthy
+  Step 4  CH1-8 (us): 1500 1500 998 1500 1000 1000 1000 1000
+  [PASS] Step 4: channel values in range
+
+  Step 5  ARM switch is expected on CH6 (ON = above 1756 us).
+          Flip ARM ON, then OFF. (60 s; don't move other switches)
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1503 us  ARM off   | AUX CH5-12: 1000 1503 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1503 us  ARM off   | AUX CH5-12: 1000 1503 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1503 us  ARM off   | AUX CH5-12: 1000 1503 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+  [PASS] Step 5: ARM switch turns ON and OFF
+
+  Enabling motor outputs at 1000 us (ESCs beep = armed). 3 s...
+  READY. Start filming. Flip ARM ON to start the ramp (flip it OFF first if it is already ON).
+  waiting: ARM OFF — flip ON to start
+  ARM ON -> ramp starting.
+
+  PWM(us) | step | az_std(g) | gyr_std(rad/s)   <- read the scale while the line is fresh
+  --------+------+-----------+---------------
+    1000  | 1   | +0.001     | +0.003
+    1025  | 2   | +0.015     | +0.004
+    1050  | 3   | +0.062     | +0.006
+    1075  | 4   | +0.094     | +0.007
+    1100  | 5   | +0.081     | +0.006   (cut short)
+
+---- TEST 16 RESULTS ----
+  Motors OFF. Stopped by: ARM switch OFF at 1100 us
+  thrust(g) = reading@1000us - reading@step;  hover = where reading -> 0.
+  Firmware can sustain at most 1423 us (1323 base + 100 alt loop).
+  az_std at the top steps vs 0.22 g trained noise = vibration check.
+
+========================================
+ALL SELECTED TESTS COMPLETE
+========================================
+Review output above for PASS/FAIL.
+LED solid = done.
+
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 16
+** MOTOR TESTS SELECTED (10/14/16) — motors WILL spin. **
+** Props off for 10; secured rig for 14; scale + radio for 16. Unplug battery to skip. **
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 16: Thrust Ramp on a Scale (free-standing, ARM = dead-man)
+========================================
+** PROPS ON. Drone free on the scale, slack safety string. STAND BACK. **
+  1. Battery in, radio ON. Radio checks run first (motors disabled).
+  2. Step 5 asks you to flip ARM ON then OFF — that tests the kill.
+  3. At READY: start filming, flip ARM ON -> ramp (+25 us every 4 s).
+  4. When the scale reads ~30 % of its starting value: ARM OFF.
+     ARM OFF / radio lost / tilt / liftoff = motors off instantly.
+  Ceiling this build: 1400 us
+
+---- RADIO CHECKS (motors disabled — no signal to the ESCs) ----
+  Radio transmitter ON. Battery in (some boards only power the
+  receiver from the battery, not from USB).
+
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+
+  Step 1  bytes from receiver: 302
+  [PASS] Step 1: receiver is sending bytes
+  Step 2  valid RC frames 10, other frames 3, CRC errors 0, junk bytes 0, overruns 0
+  [PASS] Step 2: CRSF RC frames decode
+  Step 3  RC frames/s 46, CRC errors in 2 s 0, LQ 100 %, link dropouts 0 ticks
+  [PASS] Step 3: link healthy
+  Step 4  CH1-8 (us): 1500 1500 998 1500 1000 1000 1000 1000
+  [PASS] Step 4: channel values in range
+
+  Step 5  ARM switch is expected on CH6 (ON = above 1756 us).
+          Flip ARM ON, then OFF. (60 s; don't move other switches)
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1503 us  ARM off   | AUX CH5-12: 1000 1503 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+  [PASS] Step 5: ARM switch turns ON and OFF
+
+  Enabling motor outputs at 1000 us (ESCs beep = armed). 3 s...
+  READY. Start filming. Flip ARM ON to start the ramp (flip it OFF first if it is already ON).
+  waiting: ARM OFF — flip ON to start
+  ARM ON -> ramp starting.
+
+  PWM(us) | step | az_std(g) | gyr_std(rad/s)   <- read the scale while the line is fresh
+  --------+------+-----------+---------------
+    1000  | 1   | +0.002     | +0.003
+    1025  | 2   | +0.015     | +0.004
+    1050  | 3   | +0.053     | +0.006
+    1075  | 4   | +0.089     | +0.006
+    1100  | 5   | +0.075     | +0.007
+    1125  | 6   | +0.101     | +0.008
+    1150  | 7   | +0.133     | +0.009
+    1175  | 8   | +0.172     | +0.011
+    1200  | 9   | +0.195     | +0.017   (cut short)
+
+---- TEST 16 RESULTS ----
+  Motors OFF. Stopped by: LIFTOFF (accel z rising) at 1200 us
+  thrust(g) = reading@1000us - reading@step;  hover = where reading -> 0.
+  Firmware can sustain at most 1423 us (1323 base + 100 alt loop).
+  az_std at the top steps vs 0.22 g trained noise = vibration check.
+
+========================================
+ALL SELECTED TESTS COMPLETE
+========================================
+Review output above for PASS/FAIL.
+LED solid = done.
+
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 16
+** MOTOR TESTS SELECTED (10/14/16) — motors WILL spin. **
+** Props off for 10; secured rig for 14; scale + radio for 16. Unplug battery to skip. **
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 16: Thrust Ramp on a Scale (free-standing, ARM = dead-man)
+========================================
+** PROPS ON. Drone free on the scale, slack safety string. STAND BACK. **
+  1. Battery in, radio ON. Radio checks run first (motors disabled).
+  2. Step 5 asks you to flip ARM ON then OFF — that tests the kill.
+  3. At READY: start filming, flip ARM ON -> ramp (+25 us every 4 s).
+  4. When the scale reads ~30 % of its starting value: ARM OFF.
+     ARM OFF / radio lost / tilt / liftoff = motors off instantly.
+  Ceiling this build: 1500 us
+
+---- RADIO CHECKS (motors disabled — no signal to the ESCs) ----
+  Radio transmitter ON. Battery in (some boards only power the
+  receiver from the battery, not from USB).
+
+  listening on RX2 (PA3)... bytes 4  RC frames 0
+
+  Step 1  bytes from receiver: 295
+  [PASS] Step 1: receiver is sending bytes
+  Step 2  valid RC frames 10, other frames 2, CRC errors 0, junk bytes 7, overruns 0
+  [PASS] Step 2: CRSF RC frames decode
+  Step 3  RC frames/s 46, CRC errors in 2 s 0, LQ 100 %, link dropouts 0 ticks
+  [PASS] Step 3: link healthy
+  Step 4  CH1-8 (us): 1500 1500 998 1500 1000 2000 1000 1000
+  [PASS] Step 4: channel values in range
+
+  Step 5  ARM switch is expected on CH6 (ON = above 1756 us).
+          Flip ARM ON, then OFF. (60 s; don't move other switches)
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+  [FAIL] Step 5: ARM switch not seen going ON then OFF
+    CH6 ranged 2000 - 2000 us
+    No AUX channel moved at all. The switch is not assigned to any
+    channel in the radio model's mixer (or the wrong model is selected).
+
+  ==> RADIO CHECK FAILED — test 16 stopped. Motors were never enabled.
+      Fix the step marked [FAIL] above and rerun.
+
+========================================
+ALL SELECTED TESTS COMPLETE
+========================================
+Review output above for PASS/FAIL.
+LED solid = done.
+
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 16
+** MOTOR TESTS SELECTED (10/14/16) — motors WILL spin. **
+** Props off for 10; secured rig for 14; scale + radio for 16. Unplug battery to skip. **
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 16: Thrust Ramp on a Scale (free-standing, ARM = dead-man)
+========================================
+** PROPS ON. Drone free on the scale, slack safety string. STAND BACK. **
+  1. Battery in, radio ON. Radio checks run first (motors disabled).
+  2. Step 5 asks you to flip ARM ON then OFF — that tests the kill.
+  3. At READY: start filming, flip ARM ON -> ramp (+25 us every 4 s).
+  4. When the scale reads ~30 % of its starting value: ARM OFF.
+     ARM OFF / radio lost / tilt / liftoff = motors off instantly.
+  Ceiling this build: 1600 us
+
+---- RADIO CHECKS (motors disabled — no signal to the ESCs) ----
+  Radio transmitter ON. Battery in (some boards only power the
+  receiver from the battery, not from USB).
+
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+
+  Step 1  bytes from receiver: 288
+  [PASS] Step 1: receiver is sending bytes
+  Step 2  valid RC frames 10, other frames 2, CRC errors 0, junk bytes 0, overruns 0
+  [PASS] Step 2: CRSF RC frames decode
+  Step 3  RC frames/s 46, CRC errors in 2 s 0, LQ 100 %, link dropouts 0 ticks
+  [PASS] Step 3: link healthy
+  Step 4  CH1-8 (us): 1500 1500 998 1500 1000 2000 1000 1000
+  [PASS] Step 4: channel values in range
+
+  Step 5  ARM switch is expected on CH6 (ON = above 1756 us).
+          Flip ARM ON, then OFF. (60 s; don't move other switches)
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 16
+** MOTOR TESTS SELECTED (10/14/16) — motors WILL spin. **
+** Props off for 10; secured rig for 14; scale + radio for 16. Unplug battery to skip. **
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 16: Thrust Ramp on a Scale (free-standing, ARM = dead-man)
+========================================
+** PROPS ON. Drone free on the scale, slack safety string. STAND BACK. **
+  1. Battery in, radio ON. Radio checks run first (motors disabled).
+  2. Step 5 asks you to flip ARM ON then OFF — that tests the kill.
+  3. At READY: start filming, flip ARM ON -> ramp (+25 us every 4 s).
+  4. When the scale reads ~30 % of its starting value: ARM OFF.
+     ARM OFF / radio lost / tilt / liftoff = motors off instantly.
+  Ceiling this build: 1600 us
+
+---- RADIO CHECKS (motors disabled — no signal to the ESCs) ----
+  Radio transmitter ON. Battery in (some boards only power the
+  receiver from the battery, not from USB).
+
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+
+  Step 1  bytes from receiver: 358
+  [PASS] Step 1: receiver is sending bytes
+  Step 2  valid RC frames 10, other frames 7, CRC errors 0, junk bytes 0, overruns 0
+  [PASS] Step 2: CRSF RC frames decode
+  Step 3  RC frames/s 47, CRC errors in 2 s 0, LQ 100 %, link dropouts 0 ticks
+  [PASS] Step 3: link healthy
+  Step 4  CH1-8 (us): 1500 1500 998 1500 1000 2000 1000 1000
+  [PASS] Step 4: channel values in range
+
+  Step 5  ARM switch is expected on CH6 (ON = above 1756 us).
+          Flip ARM ON, then OFF. (60 s; don't move other switches)
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+  [PASS] Step 5: ARM switch turns ON and OFF
+
+  Enabling motor outputs at 1000 us (ESCs beep = armed). 3 s...
+  READY. Start filming. Flip ARM ON to start the ramp (flip it OFF first if it is already ON).
+  waiting: ARM OFF — flip ON to start
+  waiting: ARM OFF — flip ON to start
+  ARM ON -> ramp starting.
+
+  PWM(us) | step | az_std(g) | gyr_std(rad/s) | max az shift(g) | max tilt(deg)   <- read the scale now
+  --------+------+-----------+----------------+-----------------+--------------
+  (auto-stop limits: az shift > 0.35 g, tilt > 10 deg, rate > 0.5 rad/s)
+    1000  | 1   | +0.001     | +0.003          | +0.001          | +0.172
+    1025  | 2   | +0.016     | +0.004          | +0.004          | +0.408
+    1050  | 3   | +0.062     | +0.006          | +0.017          | +0.539
+    1075  | 4   | +0.094     | +0.007          | +0.017          | +0.606
+    1100  | 5   | +0.083     | +0.006          | +0.026          | +0.780
+    1125  | 6   | +0.115     | +0.009          | +0.025          | +2.489
+    1150  | 7   | +0.139     | +0.009          | +0.050          | +1.456
+    1175  | 8   | +0.181     | +0.010          | +0.038          | +1.029
+    1200  | 9   | +0.227     | +0.017          | +0.129          | +1.519
+    1225  | 10   | +0.314     | +0.022          | +0.105          | +1.368
+    1250  | 11   | +0.561     | +0.025          | +0.034          | +1.603
+    1275  | 12   | +0.690     | +0.032          | +0.351          | +2.368   (cut short)
+
+---- TEST 16 RESULTS ----
+  Motors OFF. Stopped by: LIFTOFF (0.5 s avg accel z jumped) at 1275 us  (value +0.351)
+  thrust(g) = reading@1000us - reading@step;  hover = where reading -> 0.
+  Firmware can sustain at most 1423 us (1323 base + 100 alt loop).
+  az_std at the top steps vs 0.22 g trained noise = vibration check.
+
+========================================
+ALL SELECTED TESTS COMPLETE
+========================================
+Review output above for PASS/FAIL.
+LED solid = done.
+
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 16
+** MOTOR TESTS SELECTED (10/14/16) — motors WILL spin. **
+** Props off for 10; secured rig for 14; scale + radio for 16. Unplug battery to skip. **
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 16: Thrust Ramp on a Scale (free-standing, ARM = dead-man)
+========================================
+** PROPS ON. Drone free on the scale, slack safety string. STAND BACK. **
+  1. Battery in, radio ON. Radio checks run first (motors disabled).
+  2. Step 5 asks you to flip ARM ON then OFF — that tests the kill.
+  3. At READY: start filming, flip ARM ON -> ramp (+25 us every 4 s).
+  4. When the scale reads ~30 % of its starting value: ARM OFF.
+     ARM OFF / radio lost / tilt / liftoff = motors off instantly.
+  Ceiling this build: 1600 us
+
+---- RADIO CHECKS (motors disabled — no signal to the ESCs) ----
+  Radio transmitter ON. Battery in (some boards only power the
+  receiver from the battery, not from USB).
+
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+
+  Step 1  bytes from receiver: 358
+  [PASS] Step 1: receiver is sending bytes
+  Step 2  valid RC frames 10, other frames 7, CRC errors 0, junk bytes 0, overruns 0
+  [PASS] Step 2: CRSF RC frames decode
+  Step 3  RC frames/s 47, CRC errors in 2 s 0, LQ 100 %, link dropouts 0 ticks
+  [PASS] Step 3: link healthy
+  Step 4  CH1-8 (us): 1500 1500 997 1500 1000 2000 1000 1000
+  [PASS] Step 4: channel values in range
+
+  Step 5  ARM switch is expected on CH6 (ON = above 1756 us).
+          Flip ARM ON, then OFF. (60 s; don't move other switches)
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 16
+** MOTOR TESTS SELECTED (10/14/16) — motors WILL spin. **
+** Props off for 10; secured rig for 14; scale + radio for 16. Unplug battery to skip. **
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 16: Thrust Ramp on a Scale (free-standing, ARM = dead-man)
+========================================
+** PROPS ON. Drone free on the scale, slack safety string. STAND BACK. **
+  1. Battery in, radio ON. Radio checks run first (motors disabled).
+  2. Step 5 asks you to flip ARM ON then OFF — that tests the kill.
+  3. At READY: start filming, flip ARM ON -> ramp (+25 us every 4 s).
+  4. When the scale reads ~30 % of its starting value: ARM OFF.
+     ARM OFF / radio lost / tilt / liftoff = motors off instantly.
+  Ceiling this build: 1600 us
+
+---- RADIO CHECKS (motors disabled — no signal to the ESCs) ----
+  Radio transmitter ON. Battery in (some boards only power the
+  receiver from the battery, not from USB).
+
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+
+  Step 1  bytes from receiver: 288
+  [PASS] Step 1: receiver is sending bytes
+  Step 2  valid RC frames 10, other frames 2, CRC errors 0, junk bytes 0, overruns 0
+  [PASS] Step 2: CRSF RC frames decode
+
+
+########################################
+#   DRONE FC HARDWARE TEST HARNESS     #
+########################################
+Selected tests (TESTS=): 16
+** MOTOR TESTS SELECTED (10/14/16) — motors WILL spin. **
+** Props off for 10; secured rig for 14; scale + radio for 16. Unplug battery to skip. **
+
+IMU WHO_AM_I = 0x47
+Detected: ICM-42688-P
+Barometer detected (id=0x11)
+
+========================================
+TEST 16: Thrust Ramp on a Scale (free-standing, ARM = dead-man)
+========================================
+** PROPS ON. Drone free on the scale, slack safety string. STAND BACK. **
+  1. Battery in, radio ON. Radio checks run first (motors disabled).
+  2. Step 5 asks you to flip ARM ON then OFF — that tests the kill.
+  3. At READY: start filming, flip ARM ON -> ramp (+25 us every 4 s).
+  4. When the scale reads ~30 % of its starting value: ARM OFF.
+     ARM OFF / radio lost / tilt / liftoff = motors off instantly.
+  Ceiling this build: 1600 us
+
+---- RADIO CHECKS (motors disabled — no signal to the ESCs) ----
+  Radio transmitter ON. Battery in (some boards only power the
+  receiver from the battery, not from USB).
+
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+  listening on RX2 (PA3)... bytes 0  RC frames 0
+
+  Step 1  bytes from receiver: 302
+  [PASS] Step 1: receiver is sending bytes
+  Step 2  valid RC frames 10, other frames 3, CRC errors 0, junk bytes 0, overruns 0
+  [PASS] Step 2: CRSF RC frames decode
+  Step 3  RC frames/s 46, CRC errors in 2 s 0, LQ 100 %, link dropouts 0 ticks
+  [PASS] Step 3: link healthy
+  Step 4  CH1-8 (us): 1500 1500 998 1500 1000 1000 1000 1000
+  [PASS] Step 4: channel values in range
+
+  Step 5  ARM switch is expected on CH6 (ON = above 1756 us).
+          Flip ARM ON, then OFF. (60 s; don't move other switches)
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1000 us  ARM off   | AUX CH5-12: 1000 1000 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1503 us  ARM off   | AUX CH5-12: 1000 1503 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1503 us  ARM off   | AUX CH5-12: 1000 1503 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1503 us  ARM off   | AUX CH5-12: 1000 1503 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1503 us  ARM off   | AUX CH5-12: 1000 1503 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1503 us  ARM off   | AUX CH5-12: 1000 1503 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 1503 us  ARM off   | AUX CH5-12: 1000 1503 1000 1000 1000 1000 1000 1000   -> flip ON
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+    CH6 = 2000 us  ARM ON    | AUX CH5-12: 1000 2000 1000 1000 1000 1000 1000 1000   -> now flip OFF
+  [PASS] Step 5: ARM switch turns ON and OFF
+
+  Enabling motor outputs at 1000 us (ESCs beep = armed). 3 s...
+  READY. Start filming. Flip ARM ON to start the ramp (flip it OFF first if it is already ON).
+  waiting: ARM OFF — flip ON to start
+  waiting: ARM OFF — flip ON to start
+  waiting: ARM OFF — flip ON to start
+  waiting: ARM OFF — flip ON to start
+  ARM ON -> ramp starting.
+
+  PWM(us) | step | az_std(g) | gyr_std(rad/s) | max az shift(g) | max tilt(deg)   <- read the scale now
+  --------+------+-----------+----------------+-----------------+--------------
+  (auto-stop limits: az shift > 0.35 g, tilt > 10 deg, rate > 0.5 rad/s)
+    1000  | 1   | +0.001     | +0.003          | +0.000          | +0.190
+    1025  | 2   | +0.018     | +0.005          | +0.009          | +0.537
+    1050  | 3   | +0.062     | +0.004          | +0.024          | +0.653
+    1075  | 4   | +0.103     | +0.005          | +0.027          | +0.814
+    1100  | 5   | +0.093     | +0.008          | +0.029          | +1.215
+    1125  | 6   | +0.118     | +0.008          | +0.049          | +0.892
+    1150  | 7   | +0.150     | +0.009          | +0.046          | +1.562
+    1175  | 8   | +0.182     | +0.012          | +0.056          | +1.021
+    1200  | 9   | +0.247     | +0.017          | +0.109          | +1.292
+    1225  | 10   | +0.360     | +0.018          | +0.058          | +0.999
+    1250  | 11   | +0.596     | +0.020          | +0.047          | +1.257
+    1275  | 12   | +0.591     | +0.025          | +0.254          | +3.612
+    1300  | 13   | +0.653     | +0.043          | +0.080          | +2.235   (cut short)
+
+---- TEST 16 RESULTS ----
+  Motors OFF. Stopped by: ARM switch OFF at 1300 us
+  thrust(g) = reading@1000us - reading@step;  hover = where reading -> 0.
+  Firmware can sustain at most 1423 us (1323 base + 100 alt loop).
+  az_std at the top steps vs 0.22 g trained noise = vibration check.
+
+========================================
+ALL SELECTED TESTS COMPLETE
+========================================
+Review output above for PASS/FAIL.
+LED solid = done.

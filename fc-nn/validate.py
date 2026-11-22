@@ -15,6 +15,11 @@ Usage:
     python validate.py runs/quad_hover/best_model.zip
     python validate.py runs/quad_hover/best_model.zip --render   # with 3D viewer
     python validate.py runs/quad_hover/best_model.zip --numpy-only
+    python validate.py runs/quad_hover/best_model.zip --legacy   # pre-contract checkpoints
+
+Phase 2 uses the firmware-contract env and CONTRACT_SCENARIOS by default;
+--legacy evaluates in the old env (target 1 m, true hvel) with the old suite.
+For the full hardware gate (bench vector, firmware replica) use eval_contract.py.
 """
 
 import argparse
@@ -130,14 +135,22 @@ def run_forward_pass_check(W1, B1, W2, B2, W3, B3, sb3_model=None):
 # Phase 2 – Simulation validation checkpoints  (MuJoCo)
 # -----------------------------------------------------------------------
 
-def run_simulation_checkpoints(sb3_model, render=False, seeds=range(100, 105), output=None):
-    from evaluation import evaluate
+def run_simulation_checkpoints(sb3_model, render=False, seeds=range(100, 105), output=None,
+                               legacy=False):
+    from evaluation import evaluate, SCENARIOS, CONTRACT_SCENARIOS
     from drone_env import QuadrotorEnv
     results = evaluate(lambda obs: sb3_model.predict(obs, deterministic=True)[0],
                        seeds=seeds, output=output,
-                       env_factory=lambda: QuadrotorEnv(render_mode="human" if render else None))
-    passed = sum(r["passed"] for r in results)
-    print(f"\nFixed-suite acceptance: {passed}/{len(results)} episodes passed")
+                       scenarios=SCENARIOS if legacy else CONTRACT_SCENARIOS,
+                       env_factory=lambda: QuadrotorEnv(render_mode="human" if render else None,
+                                                        firmware_contract=not legacy))
+    gated = [r for r in results if not r.get("advisory")]
+    passed = sum(r["passed"] for r in gated)
+    print(f"\nFixed-suite acceptance ({'legacy' if legacy else 'firmware contract'}): "
+          f"{passed}/{len(gated)} gated episodes passed"
+          f" (+{sum(r['passed'] for r in results if r.get('advisory'))}/"
+          f"{len(results) - len(gated)} advisory)")
+    results = gated
     print("This evaluates the simulated policy; hardware/controller equivalence is a separate gate.")
     return passed == len(results)
 
@@ -157,6 +170,8 @@ def main():
     parser.add_argument("--seed-start", type=int, default=100)
     parser.add_argument("--runs", type=int, default=5)
     parser.add_argument("--out", help="Write criteria, per-episode results and summary JSON")
+    parser.add_argument("--legacy", action="store_true",
+                        help="Evaluate in the pre-contract env/suite (old checkpoints).")
     args = parser.parse_args()
     if args.runs < 1:
         parser.error("--runs must be positive")
@@ -166,7 +181,8 @@ def main():
 
     if not args.numpy_only:
         ok = run_simulation_checkpoints(sb3_model, render=args.render,
-                seeds=range(args.seed_start, args.seed_start + args.runs), output=args.out)
+                seeds=range(args.seed_start, args.seed_start + args.runs), output=args.out,
+                legacy=args.legacy)
         sys.exit(0 if ok and parity_ok else 1)
     sys.exit(0 if parity_ok else 1)
 

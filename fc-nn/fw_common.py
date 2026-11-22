@@ -5,7 +5,8 @@ Provides:
   * parse_weights_h()   — read W1/B1/W2/B2/W3/B3 back out of a weights.h
   * nn_forward_np()     — float32 forward pass identical to nn.c
   * Madgwick            — Python port of ahrs.c (beta=0.05, NWU, az=+1 at rest)
-  * FirmwareController  — exact replica of main.c's obs → NN → IIR → mixer path
+  * BaroModel           — Python port of baro.c (25 Hz read, raw alt, EMA vvel)
+  * FirmwareController  — exact replica of main.c's obs → NN → EMA → mixer → ramp path
   * Firmware constants  — single source of truth for the test files
 
 Every constant here mirrors a #define in main.c / baro.c / weights.h.
@@ -33,12 +34,19 @@ FW = dict(
     ALT_KP          = 0.15,       # main.c
     ALT_KD          = 0.02,       # main.c  (current working tree)
     ALT_ADJ_MAX     = 0.10,       # main.c
-    HOVER_THROTTLE  = 0.3226,     # weights.h NN_HOVER_THROTTLE
+    HOVER_THROTTLE  = 0.372638,     # weights.h NN_HOVER_THROTTLE (measured thrust curve,
+                                  # 2026-11-21; was 0.3226 from the old linear model)
     ACTION_SCALE    = 0.4,        # weights.h NN_ACTION_SCALE
-    # Adaptive IIR (main.c step G)
+    # Action filter: fixed EMA, fc_config.h ACTION_FILTER_ALPHA (since 2026-11-21)
+    ACTION_FILTER_ALPHA = 0.3,
+    # Old adaptive IIR (removed from main.c 2026-11-21) — kept only so the
+    # historical behaviour can still be simulated with use_adaptive_iir=True.
     ALPHA_SLOW      = 0.08,
     ALPHA_FAST      = 0.60,
     SNAP_THRESH     = 0.15,
+    # main.c H2 throttle ramp after arming
+    RAMP_TICKS      = 50,
+    RAMP_FLOOR      = 0.06,
     # baro.c
     VVEL_ALPHA      = 0.1,
     BARO_DECIMATION = 4,
@@ -163,7 +171,40 @@ class Madgwick:
 
 
 # ---------------------------------------------------------------------------
-# FirmwareController — replicates main.c steps F..H exactly
+# BaroModel — replica of baro.c baro_update() (called once per 100 Hz tick)
+# ---------------------------------------------------------------------------
+class BaroModel:
+    """Altitude relative to the power-on ground reference.
+
+    baro.c: every BARO_DECIMATION-th call, altitude = raw (no smoothing),
+    v_raw = (alt - prev_alt) / (4 * 10 ms), vvel = EMA(VVEL_ALPHA).
+    The only modelled sensor error is white Gaussian altitude noise.
+    drone_env.QuadrotorEnv(firmware_contract=True) implements the same
+    model inline; test_contract.py checks the two agree.
+    """
+
+    def __init__(self, rng, noise_std: float = 0.015, init_alt: float = 0.0,
+                 init_vvel: float = 0.0, phase: int = 0):
+        self.rng = rng
+        self.noise = noise_std
+        self.alt = init_alt
+        self.vvel = init_vvel
+        self._tick = phase
+
+    def update(self, true_alt_agl: float) -> None:
+        self._tick += 1
+        if self._tick < FW["BARO_DECIMATION"]:
+            return
+        self._tick = 0
+        prev = self.alt
+        self.alt = true_alt_agl + (self.rng.normal(0, self.noise) if self.noise else 0.0)
+        v_raw = (self.alt - prev) / (FW["BARO_DECIMATION"] * FW["LOOP_DT"])
+        self.vvel = (FW["VVEL_ALPHA"] * v_raw
+                     + (1 - FW["VVEL_ALPHA"]) * self.vvel)
+
+
+# ---------------------------------------------------------------------------
+# FirmwareController — replicates main.c steps F..H2 exactly
 # ---------------------------------------------------------------------------
 class FirmwareController:
     """One instance = the state main.c keeps between 100 Hz ticks.
@@ -173,25 +214,34 @@ class FirmwareController:
     """
 
     def __init__(self, weights: dict,
-                 use_adaptive_iir: bool = True,
+                 use_adaptive_iir: bool = False,   # main.c now uses the fixed EMA
                  clamp_alt_obs: bool = True,
                  use_alt_pid: bool = True,
-                 train_alpha: float = 0.3):
+                 train_alpha: float = FW["ACTION_FILTER_ALPHA"],
+                 ramp_ticks: int = 0):
+        """ramp_ticks: main.c arms on the ground and ramps over RAMP_TICKS
+        (=50). Use 0 (default) for an episode that starts in the air."""
         self.w = weights
+        self.ramp_ticks = int(ramp_ticks)
+        self.ramp_counter = 0
         self.nn_smoothed = np.zeros(4, dtype=np.float32)
         self.use_adaptive_iir = use_adaptive_iir
         self.clamp_alt_obs = clamp_alt_obs
         self.use_alt_pid = use_alt_pid
         self.train_alpha = train_alpha
 
-    def build_obs(self, gyro, accel, roll_deg, pitch_deg, alt_m, vvel):
+    def build_obs(self, gyro, accel, roll_deg, pitch_deg, alt_m, vvel,
+                  cmd_roll_deg=0.0, cmd_pitch_deg=0.0, target_alt=None):
+        """cmd_*/target_alt: pilot setpoints from rc.c (main.c step E).
+        Defaults = HOVER mode (level, TARGET_ALT)."""
         c = FW
+        target = c["TARGET_ALT"] if target_alt is None else target_alt
         obs = np.zeros(12, dtype=np.float32)
         obs[0:3] = np.clip(np.asarray(gyro) / c["MAX_GYRO_RADS"], -1, 1)
         obs[3:6] = np.clip(np.asarray(accel) / 2.0, -1, 1)
-        obs[6] = np.clip(roll_deg  * c["ANGLE_OBS_SCALE"], -1, 1)
-        obs[7] = np.clip(pitch_deg * c["ANGLE_OBS_SCALE"], -1, 1)
-        alt_err = alt_m - c["TARGET_ALT"]
+        obs[6] = np.clip((roll_deg - cmd_roll_deg) * c["ANGLE_OBS_SCALE"], -1, 1)
+        obs[7] = np.clip((pitch_deg - cmd_pitch_deg) * c["ANGLE_OBS_SCALE"], -1, 1)
+        alt_err = alt_m - target
         if self.clamp_alt_obs:
             obs[8] = np.clip(alt_err / c["ALT_SCALE"],
                              -c["ALT_OBS_CLAMP"], c["ALT_OBS_CLAMP"])
@@ -202,21 +252,24 @@ class FirmwareController:
         obs[11] = 0.0
         return obs
 
-    def step(self, gyro, accel, roll_deg, pitch_deg, alt_m, vvel):
+    def step(self, gyro, accel, roll_deg, pitch_deg, alt_m, vvel,
+             cmd_roll_deg=0.0, cmd_pitch_deg=0.0, target_alt=None):
         c = FW
-        obs = self.build_obs(gyro, accel, roll_deg, pitch_deg, alt_m, vvel)
+        target = c["TARGET_ALT"] if target_alt is None else target_alt
+        obs = self.build_obs(gyro, accel, roll_deg, pitch_deg, alt_m, vvel,
+                             cmd_roll_deg, cmd_pitch_deg, target)
 
         nn_out = np.clip(nn_forward_np(self.w, obs), -1.0, 1.0)
         raw = nn_out.copy()
 
         if self.use_adaptive_iir:
-            # main.c: adaptive two-alpha IIR
+            # OLD main.c (before 2026-11-21): adaptive two-alpha IIR
             diff = nn_out - self.nn_smoothed
             alpha = np.where(np.abs(diff) >= c["SNAP_THRESH"],
                              c["ALPHA_FAST"], c["ALPHA_SLOW"])
             self.nn_smoothed = self.nn_smoothed + alpha * diff
         else:
-            # training filter: fixed EMA
+            # main.c / training filter: fixed EMA (fc_config.h action_filter_step)
             self.nn_smoothed = (self.train_alpha * nn_out
                                 + (1 - self.train_alpha) * self.nn_smoothed)
         nn_out = self.nn_smoothed
@@ -224,11 +277,18 @@ class FirmwareController:
         alt_adj = 0.0
         if self.use_alt_pid:
             alt_adj = float(np.clip(
-                c["ALT_KP"] * (c["TARGET_ALT"] - alt_m) + c["ALT_KD"] * (-vvel),
+                c["ALT_KP"] * (target - alt_m) + c["ALT_KD"] * (-vvel),
                 -c["ALT_ADJ_MAX"], c["ALT_ADJ_MAX"]))
 
         base = c["HOVER_THROTTLE"] + alt_adj
         motor = np.clip(base + nn_out * c["ACTION_SCALE"], 0.0, 1.0)
+        if self.ramp_counter < self.ramp_ticks:
+            # main.c H2: scale base + residual, min-spin floor, no alt P+D
+            self.ramp_counter += 1
+            frac = self.ramp_counter / self.ramp_ticks
+            motor = np.clip(frac * (c["HOVER_THROTTLE"] + nn_out * c["ACTION_SCALE"]),
+                            frac * c["RAMP_FLOOR"], 1.0)
+            alt_adj = 0.0
         return motor, dict(obs=obs, nn_raw=raw, nn_smoothed=nn_out.copy(),
                            alt_adj=alt_adj)
 

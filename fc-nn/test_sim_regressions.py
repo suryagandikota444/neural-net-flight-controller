@@ -3,6 +3,7 @@ import unittest
 import numpy as np
 import mujoco
 from drone_env import QuadrotorEnv, BASE_MASS, GRAVITY, HOVER_THROTTLE, _quat_to_euler
+from drone_env import LEGACY_HOVER_THROTTLE   # legacy env (linear 8.5 N map) for raw-ctrl physics checks
 from test_env_physics import raw_step
 from evaluation import Scenario, score_trajectory, first_sustained_time
 from validate import pwm_from_output
@@ -13,7 +14,9 @@ FIXED = dict(domain_randomization=False, randomize_setpoints=False,
 
 class PhysicsAndResetTests(unittest.TestCase):
     def setUp(self):
-        self.e = QuadrotorEnv()
+        # These tests pin the legacy reset/setpoint semantics (1 m target via
+        # setpoint alt_m). Contract-mode equivalents live in test_contract.py.
+        self.e = QuadrotorEnv(firmware_contract=False)
         self.e.reset(seed=42, options=FIXED)
 
     def tearDown(self):
@@ -23,7 +26,7 @@ class PhysicsAndResetTests(unittest.TestCase):
         e = self.e
         self.assertAlmostEqual(e._model.body_subtreemass[e._drone_body_id], BASE_MASS, places=12)
         np.testing.assert_allclose(e._model.body_inertia[e._drone_body_id], [.018,.018,.035])
-        raw_step(e, np.full(4, HOVER_THROTTLE), 200)
+        raw_step(e, np.full(4, LEGACY_HOVER_THROTTLE), 200)
         self.assertAlmostEqual(e._data.qpos[2], 1, places=8)
         self.assertAlmostEqual(e._get_obs()[5], .5, places=6)
 
@@ -38,7 +41,7 @@ class PhysicsAndResetTests(unittest.TestCase):
             offset = sign*np.array([.002,.001,0])
             e.reset(seed=42, options={**FIXED, "cog_offset": offset})
             np.testing.assert_allclose(e._data.xipos[e._drone_body_id]-e._data.xpos[e._drone_body_id], offset, atol=1e-12)
-            e._data.ctrl[e._act_ids] = HOVER_THROTTLE
+            e._data.ctrl[e._act_ids] = LEGACY_HOVER_THROTTLE
             mujoco.mj_forward(e._model,e._data)
             expected = np.cross(-offset,[0,0,BASE_MASS*GRAVITY]) / e._model.body_inertia[e._drone_body_id]
             np.testing.assert_allclose(e._data.qacc[3:6], expected, atol=1e-9)

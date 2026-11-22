@@ -1,4 +1,12 @@
-"""Seeded, failure-aware attitude/altitude benchmarks (no Torch dependency)."""
+"""Seeded, failure-aware attitude/altitude benchmarks (no Torch dependency).
+
+SCENARIOS          — legacy suite (target 1.0 m, true hvel); evaluate old
+                     checkpoints with env_factory=lambda: QuadrotorEnv(firmware_contract=False).
+CONTRACT_SCENARIOS — firmware-contract suite (target 0.3 m above the baro
+                     ground reference, obs[10:12] = 0, baro + P+D loop).
+The altitude target is read from the env (env.target_z), so one scorer
+serves both.
+"""
 from dataclasses import dataclass, asdict
 from pathlib import Path
 import json
@@ -24,14 +32,29 @@ class Scenario:
     recovery_deadline_s: float = 2.0
     recovery_dwell_s: float = 1.0
     max_altitude_loss_m: float = 0.5
+    # --- firmware-contract additions (defaults keep the legacy behaviour) ---
+    ground_start: bool = False          # arm on the floor, main.c throttle ramp
+    initial_alt_agl: float = None       # start height above ground ref (contract env)
+    thrust_scale: float = None          # collective thrust-map error (contract env)
+    score_after_s: float = 0.0          # ignore the take-off transient
+    max_mean_lean_deg: float = None     # |time-mean roll| and |mean pitch| limit
+    max_mean_yaw_rate_deg_s: float = None  # |time-mean yaw rate| limit (steady spin)
+    advisory: bool = False              # reported, not part of the pass verdict
 
     def reset_options(self):
         options = dict(domain_randomization=self.randomized,
                        randomize_setpoints=False, setpoint={"alt_m": 1.0},
-                       initial_rpy_deg=self.tilt,
                        max_steps=round(self.seconds / POLICY_DT))
+        if not self.ground_start:
+            options["initial_rpy_deg"] = self.tilt
         if not self.randomized:
             options["wind_force"] = self.wind
+        # Contract-only options (the legacy env ignores unknown keys)
+        options["ground_start"] = self.ground_start
+        if self.initial_alt_agl is not None:
+            options["initial_alt_agl"] = self.initial_alt_agl
+        if self.thrust_scale is not None:
+            options["thrust_scale"] = self.thrust_scale
         return options
 
 
@@ -44,6 +67,33 @@ SCENARIOS = (
     Scenario("wind10", 10, wind=(0.5, 0, 0), altitude_band_m=0.1,
              altitude_rmse_limit_m=0.1, time_in_band_min=0.8, attitude_rms_limit_deg=5),
     Scenario("randomized_hover30", 30, randomized=True),
+)
+
+# Firmware-contract acceptance suite.  No position/velocity sensing, so
+# horizontal drift is reported but not gated (envelope 1 km); a steady lean is
+# what causes drift, and that IS gated.  Tilt recoveries start 0.5 m above the
+# ground reference because ground contact ends the episode.
+_C = dict(max_mean_yaw_rate_deg_s=5.0,
+          altitude_band_m=0.10, altitude_rmse_limit_m=0.10, time_in_band_min=0.8,
+          attitude_rms_limit_deg=3.0, max_mean_lean_deg=1.0, max_drift_m=1000.0)
+_TILT = dict(initial_alt_agl=0.5, max_altitude_loss_m=0.4, max_drift_m=1000.0,
+             recovery_deadline_s=2.0)
+CONTRACT_SCENARIOS = (
+    Scenario("hover30", 30, **_C),
+    Scenario("takeoff20", 20, ground_start=True, score_after_s=5.0, **_C),
+    Scenario("roll_plus20", 5, tilt=(20, 0, 0), **_TILT),
+    Scenario("roll_minus20", 5, tilt=(-20, 0, 0), **_TILT),
+    Scenario("pitch_plus20", 5, tilt=(0, 20, 0), **_TILT),
+    Scenario("pitch_minus20", 5, tilt=(0, -20, 0), **_TILT),
+    Scenario("randomized_hover30", 30, randomized=True, initial_alt_agl=0.3,
+             **{**_C, "attitude_rms_limit_deg": 4.0, "max_mean_lean_deg": 2.0,
+                "altitude_rmse_limit_m": 0.15, "altitude_band_m": 0.15}),
+    Scenario("wind10", 10, wind=(0.5, 0, 0),
+             **{**_C, "attitude_rms_limit_deg": 5.0, "max_mean_lean_deg": None}),
+    Scenario("thrust_weak25", 20, thrust_scale=0.75, advisory=True,
+             **{**_C, "altitude_rmse_limit_m": 0.15, "altitude_band_m": 0.15}),
+    Scenario("thrust_strong25", 20, thrust_scale=1.25, advisory=True,
+             **{**_C, "altitude_rmse_limit_m": 0.15, "altitude_band_m": 0.15}),
 )
 
 
@@ -59,8 +109,12 @@ def first_sustained_time(times, in_band, dwell_s, dt=POLICY_DT):
 
 
 def score_trajectory(scenario, times, positions, attitudes_deg, angular_rates_deg,
-                     motor_commands, *, terminated=False, reason=None):
-    """Pure metric function; failures are reported separately from short-run RMSE."""
+                     motor_commands, *, terminated=False, reason=None, target_z=1.0):
+    """Pure metric function; failures are reported separately from short-run RMSE.
+
+    target_z: world z of the altitude target (legacy env 1.0; contract env
+    GROUND_REST_Z + 0.3).  Samples before scenario.score_after_s are excluded
+    from the hover metrics (not from completion/termination)."""
     times = np.asarray(times)
     positions = np.asarray(positions)
     attitudes_deg = np.asarray(attitudes_deg)
@@ -80,7 +134,15 @@ def score_trajectory(scenario, times, positions, attitudes_deg, angular_rates_de
         result.update(passed=False, failures=failures)
         return result
     intervals = np.diff(np.r_[0.0, times])
-    error = positions[:, 2] - 1.0
+    if scenario.score_after_s > 0:
+        keep = times >= scenario.score_after_s
+        if not np.any(keep):
+            result.update(passed=False, failures=failures + ["no_scored_samples"])
+            return result
+        times, positions, attitudes_deg = times[keep], positions[keep], attitudes_deg[keep]
+        angular_rates_deg, motor_commands = angular_rates_deg[keep], motor_commands[keep]
+        intervals = intervals[keep]
+    error = positions[:, 2] - target_z
     weighted = lambda a: float(np.average(a, weights=intervals))
     alt_rmse = math.sqrt(weighted(error**2))
     att_rms = math.sqrt(weighted(np.sum(attitudes_deg[:, :2]**2, axis=1)))
@@ -97,7 +159,16 @@ def score_trajectory(scenario, times, positions, attitudes_deg, angular_rates_de
     for saturated, dt in zip(saturation, intervals):
         current = current + dt if saturated else 0.0
         longest = max(current, longest)
+    mean_roll = weighted(attitudes_deg[:, 0])
+    mean_pitch = weighted(attitudes_deg[:, 1])
+    mean_yaw_rate = weighted(angular_rates_deg[:, 2])
     if drift > scenario.max_drift_m: failures.append("horizontal_envelope")
+    if (scenario.max_mean_lean_deg is not None and
+            max(abs(mean_roll), abs(mean_pitch)) > scenario.max_mean_lean_deg):
+        failures.append("steady_lean")
+    if (scenario.max_mean_yaw_rate_deg_s is not None and
+            abs(mean_yaw_rate) > scenario.max_mean_yaw_rate_deg_s):
+        failures.append("yaw_spin")
     if recovering:
         if recovery is None or recovery > scenario.recovery_deadline_s:
             failures.append("sustained_recovery")
@@ -109,7 +180,9 @@ def score_trajectory(scenario, times, positions, attitudes_deg, angular_rates_de
     result.update(altitude_rmse_m=alt_rmse, altitude_bias_m=weighted(error),
                   max_altitude_error_m=float(np.max(np.abs(error))),
                   altitude_loss_m=altitude_loss, time_in_altitude_band=in_band,
-                  attitude_rms_deg=att_rms, max_drift_m=drift,
+                  attitude_rms_deg=att_rms, mean_roll_deg=mean_roll,
+                  mean_pitch_deg=mean_pitch, mean_yaw_rate_deg_s=mean_yaw_rate,
+                  max_drift_m=drift,
                   recovery_s=recovery, saturation_fraction=weighted(saturation),
                   longest_saturation_s=longest, passed=not failures, failures=failures)
     return result
@@ -123,6 +196,7 @@ def run_episode(policy, scenario, seed, *, env_factory=QuadrotorEnv, trajectory_
     reason = None
     try:
         obs, reset_info = env.reset(seed=seed, options=scenario.reset_options())
+        target_z = float(getattr(env, "target_z", 1.0))
         start = float(env._data.time)
         for _ in range(round(scenario.seconds / POLICY_DT)):
             action = np.asarray(policy(obs), dtype=np.float32).reshape(-1)
@@ -134,7 +208,7 @@ def run_episode(policy, scenario, seed, *, env_factory=QuadrotorEnv, trajectory_
             q = env._data.qpos.copy()
             angles = np.degrees(_quat_to_euler(q[3:7]))
             row = (env._data.time-start, q[:3], angles, np.degrees(env._data.qvel[3:6]),
-                   env._data.ctrl[env._act_ids].copy(), previous_obs, action)
+                   env.last_motor_cmd.copy(), previous_obs, action)
             for key, value in zip(data, row): data[key].append(value)
             if not np.all(np.isfinite(obs)) or not np.all(np.isfinite(q)):
                 terminated, reason = True, "nonfinite_state"
@@ -145,8 +219,11 @@ def run_episode(policy, scenario, seed, *, env_factory=QuadrotorEnv, trajectory_
             env.render()
         result = score_trajectory(scenario, data["time_s"], data["position_m"],
                                   data["attitude_deg"], data["angular_rate_deg_s"],
-                                  data["motor_commands"], terminated=terminated, reason=reason)
-        result.update(seed=seed, scenario=scenario.name)
+                                  data["motor_commands"], terminated=terminated, reason=reason,
+                                  target_z=target_z)
+        result.update(seed=seed, scenario=scenario.name, advisory=scenario.advisory,
+                      target_z=target_z,
+                      firmware_contract=bool(getattr(env, "firmware_contract", False)))
         result["plant"] = {"mass_kg": float(reset_info.get("mass_kg", 0)),
                            "cog_offset_m": np.asarray(reset_info.get("cog_offset_m", [0,0,0])).tolist()}
         if trajectory_path:
@@ -166,9 +243,11 @@ def summarize(results):
         complete = [r for r in rows if r["completed"]]
         summary[name] = dict(episodes=len(rows), completed=len(complete),
                              passed=sum(r["passed"] for r in rows))
-        for metric in ("altitude_rmse_m", "attitude_rms_deg", "max_drift_m"):
-            summary[name]["completed_mean_"+metric] = (
-                float(np.mean([r[metric] for r in complete])) if complete else None)
+        summary[name]["advisory"] = bool(rows[0].get("advisory", False))
+        for metric in ("altitude_rmse_m", "attitude_rms_deg", "mean_roll_deg",
+                       "mean_pitch_deg", "mean_yaw_rate_deg_s", "max_drift_m"):
+            vals = [r[metric] for r in complete if r.get(metric) is not None]
+            summary[name]["completed_mean_"+metric] = float(np.mean(vals)) if vals else None
         summary[name]["failure_counts"] = {reason: sum(reason in r["failures"] for r in rows)
             for reason in sorted({f for r in rows for f in r["failures"]})}
     return summary

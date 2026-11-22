@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# Firmware build outputs (rebuild with make)
+/*.bin
+/*.elf
+/*.build-config
+host_test/test_nn
+host_test/test_rc
+
+# Training run outputs
+fc-nn/runs/

@@ -92,7 +92,71 @@
 #define USART_SR_TC     (1U << 6)
 #define USART_CR1_RE    (1U << 2)
 #define USART_CR1_TE    (1U << 3)
+#define USART_CR1_TXEIE (1U << 7)   /* interrupt when TX data register empties */
 #define USART_CR1_UE    (1U << 13)
+
+/* --- NVIC: interrupt numbers from the STM32F405 vector table --- */
+#if UART_PERIPH == 2
+#define UART_IRQN            38
+#define UART_IRQ_HANDLER     USART2_IRQHandler
+#else
+#define UART_IRQN            39
+#define UART_IRQ_HANDLER     USART3_IRQHandler
+#endif
+#define NVIC_ISER(n)  (*(volatile uint32_t *)(0xE000E100U + 4U * (n)))
+
+
+/* ============================================================
+ * Background transmit buffer (ring buffer + TXE interrupt)
+ *
+ * uart_write_char() no longer waits for each byte to go out on the
+ * wire. It copies the byte into tx_buf and returns in well under a
+ * microsecond; the USART interrupt then feeds bytes to the hardware
+ * one at a time while the main loop keeps running.
+ *
+ * Why: at 115200 baud one byte takes ~87 µs. The old blocking driver
+ * made a ~230-byte telemetry line freeze the control loop for ~20 ms
+ * (two whole 10 ms ticks). The IMU was not read during that time, so
+ * any rotation in that window was lost to the AHRS.
+ *
+ * Single producer (main code) / single consumer (ISR):
+ *   tx_head is only written by the producer, tx_tail only by the ISR.
+ *
+ * When the buffer is full, uart_write_char() waits for space, so boot
+ * messages and harness output are never lost. Code that must never
+ * wait (the flight loop) checks uart_tx_free() first and skips the
+ * message if it would not fit.
+ * ============================================================ */
+#define TX_BUF_SIZE  1024U                     /* must be a power of two */
+#define TX_BUF_MASK  (TX_BUF_SIZE - 1U)
+
+static volatile uint8_t  tx_buf[TX_BUF_SIZE];
+static volatile uint32_t tx_head = 0;         /* next slot to write  */
+static volatile uint32_t tx_tail = 0;         /* next byte to send   */
+
+static inline uint32_t irq_save(void)
+{
+    uint32_t primask;
+    __asm volatile ("mrs %0, primask\n\tcpsid i" : "=r"(primask) :: "memory");
+    return primask;
+}
+
+static inline void irq_restore(uint32_t primask)
+{
+    __asm volatile ("msr primask, %0" :: "r"(primask) : "memory");
+}
+
+void UART_IRQ_HANDLER(void)
+{
+    if ((USART_SR & USART_SR_TXE) && (USART_CR1 & USART_CR1_TXEIE)) {
+        if (tx_tail != tx_head) {
+            USART_DR = tx_buf[tx_tail];
+            tx_tail = (tx_tail + 1U) & TX_BUF_MASK;
+        } else {
+            USART_CR1 &= ~USART_CR1_TXEIE;    /* nothing left: stop interrupting */
+        }
+    }
+}
 
 
 /* ============================================================
@@ -140,18 +204,64 @@ void uart_init(uint32_t baud)
      *
      * Set UE (USART Enable), TE (TX enable), RE (RX enable). */
     USART_CR1 = USART_CR1_UE | USART_CR1_TE | USART_CR1_RE;
+
+    /* ── Step 5: Enable the USART interrupt in the NVIC ─────────
+     *
+     * TXEIE itself is only switched on while there is queued data. */
+    tx_head = 0;
+    tx_tail = 0;
+    NVIC_ISER(UART_IRQN / 32U) = 1U << (UART_IRQN % 32U);
 }
 
 
 /* ============================================================
- * uart_write_char — blocking single-byte TX
+ * uart_write_char — queue one byte for background transmission
  * ============================================================ */
 void uart_write_char(char c)
 {
-    /* Spin until the TX data register is empty (previous byte has
-     * been moved into the shift register and is clocking out). */
-    while (!(USART_SR & USART_SR_TXE));
-    USART_DR = (uint8_t)c;
+    uint32_t next = (tx_head + 1U) & TX_BUF_MASK;
+
+    /* Buffer full: wait for the ISR to make room. If interrupts are
+     * masked (PRIMASK set) the ISR cannot run, so push one byte out by
+     * polling instead of deadlocking. */
+    while (next == tx_tail) {
+        uint32_t primask;
+        __asm volatile ("mrs %0, primask" : "=r"(primask));
+        if (primask & 1U) {
+            while (!(USART_SR & USART_SR_TXE)) {}
+            USART_DR = tx_buf[tx_tail];
+            tx_tail = (tx_tail + 1U) & TX_BUF_MASK;
+        }
+    }
+
+    tx_buf[tx_head] = (uint8_t)c;
+    tx_head = next;
+
+    /* Make sure the TX interrupt is on (read-modify-write of CR1 must
+     * not interleave with the ISR clearing TXEIE). */
+    uint32_t primask = irq_save();
+    USART_CR1 |= USART_CR1_TXEIE;
+    irq_restore(primask);
+}
+
+
+/* ============================================================
+ * uart_tx_free — bytes that can be queued without waiting
+ * ============================================================ */
+uint32_t uart_tx_free(void)
+{
+    uint32_t used = (tx_head - tx_tail) & TX_BUF_MASK;
+    return (TX_BUF_SIZE - 1U) - used;
+}
+
+
+/* ============================================================
+ * uart_tx_flush — wait until every queued byte has left the pin
+ * ============================================================ */
+void uart_tx_flush(void)
+{
+    while (tx_head != tx_tail) {}
+    while (!(USART_SR & USART_SR_TC)) {}
 }
 
 

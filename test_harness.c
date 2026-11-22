@@ -1,36 +1,57 @@
 /*
  * test_harness.c — Systematic hardware validation for drone FC
  *
- * ── BUILD ──────────────────────────────────────────────────────
+ * ── BUILD / FLASH ──────────────────────────────────────────────
  *
- *   Compile this INSTEAD of main.c:
- *     Replace main.c with test_harness.c in your Makefile, or:
- *     arm-none-eabi-gcc ... test_harness.c startup.c clock.c spi.c
- *                           imu.c uart.c ahrs.c nn.c i2c.c baro.c
- *                           memset.c -o test.elf
+ *   make flash-test                 passive tests only (default)
+ *   make flash-test TESTS=3,8       just tests 3 and 8
+ *   make flash-test TESTS=all       everything, INCLUDING motor tests
  *
- *   Motors are never initialized = completely safe on bench with props on.
+ *   "passive" = 1-9 and 11-13. Tests 10 and 14 drive the motors and
+ *   only run when you name them explicitly (TESTS=10, TESTS=14 or
+ *   TESTS=all). TEST 15 (RC link, interactive, needs the radio on) is
+ *   also opt-in: make flash-test TESTS=15. Even so: bench-test with the battery unplugged unless
+ *   you are deliberately running a motor test on a secured rig.
  *
  * ── USAGE ──────────────────────────────────────────────────────
  *
- *   1. Flash test.elf
- *   2. Open serial: screen /dev/cu.SLAB_USBtoUART 115200
- *   3. The three tests run automatically in sequence:
+ *   1. Open serial first: screen -L /dev/cu.SLAB_USBtoUART 115200
+ *   2. Flash (BOOT + USB, then make flash-test ...). Tests start at once.
+ *   3. Follow the prompts. Tilt during the "Preparing in 3...2...1"
+ *      countdown — the AHRS keeps tracking throughout.
  *
- *      TEST 1: SPI register readback  (immediate, ~1 second)
- *      TEST 2: Static IMU readings    (5 seconds, board FLAT and STILL)
- *      TEST 3: Dynamic axis alignment (30 seconds, follow prompts to tilt)
- *      TEST 4: AHRS convergence       (20 seconds, follow prompts to tilt/return)
- *      TEST 5: Observation vector     (5 seconds, board FLAT and STILL)
- *      TEST 6: NN inference           (immediate, pure computation)
+ *      TEST 1:  SPI register readback      (immediate)
+ *      TEST 2:  Static IMU readings        (5 s, FLAT and STILL)
+ *      TEST 3:  Axis signs                 (nose down, right down, CW)
+ *      TEST 4:  AHRS convergence           (right down, then flat)
+ *      TEST 5:  Observation vector         (FLAT and STILL)
+ *      TEST 6:  NN inference vs golden     (immediate)
+ *      TEST 7:  Full control loop, motors off (10 s, FLAT and STILL)
+ *      TEST 8:  Tilt → motor response      (right down, nose down, nose up)
+ *      TEST 9:  Action filter lag          (right down)
+ *      TEST 10: Motor wiring  ** SPINS MOTORS ** (opt-in)
+ *      TEST 11: Action filter maths        (immediate)
+ *      TEST 12: Loop timing                (5 s, FLAT)
+ *      TEST 13: Baro → throttle noise      (8 s, FLAT)
+ *      TEST 14: Throttle staircase ** SPINS MOTORS, PROPS ON ** (opt-in)
+ *      TEST 15: RC link + arming logic, motors OFF  (opt-in, 60 s, radio ON)
+ *      TEST 16: Thrust ramp on a scale ** PROPS ON, ARM switch = dead-man ** (opt-in)
+ *      TEST 17: RC channel finder — which switch is which channel, motors OFF (opt-in, 90 s)
  *
- * ── EXPECTED OUTPUT ────────────────────────────────────────────
+ * ── CONVENTIONS ────────────────────────────────────────────────
  *
- *   See detailed PASS/FAIL criteria printed inline and in the
- *   comments below each test section.
+ *   Body frame = training (drone_env.py) NWU: X forward, Y left, Z up.
+ *     nose DOWN  → pitch > 0, ax < 0     right DOWN → roll > 0, ay > 0
+ *     CW from above → gz < 0
+ *   Correcting a tilt means raising the LOW side:
+ *     nose down → FRONT motors up; right down → RIGHT motors up.
+ *
+ *   Axis alignment, observation scaling, altitude gains and the action
+ *   filter come from fc_config.h — the same header main.c uses.
  */
 
 #include <stdint.h>
+#include <stddef.h>    /* NULL */
 #include "clock.h"
 #include "spi.h"
 #include "imu.h"
@@ -39,7 +60,43 @@
 #include "nn.h"        /* NN_HOVER_THROTTLE, NN_ACTION_SCALE, nn_forward() */
 #include "i2c.h"
 #include "baro.h"
-#include "motor.h"     /* motor_init, motor_set, motor_all_stop for test 10 */
+#include "motor.h"     /* motor_init, motor_set, motor_all_stop for tests 10/14 */
+#include "fc_config.h" /* shared with main.c: ALIGN_xx, obs scales, altitude gains, filter */
+#include "host_test/golden_vectors.h"  /* test 6 reference outputs, generated from weights.h */
+#include "crsf.h"      /* test 15 */
+#include "rc.h"
+#include "rc_input.h"
+
+/* ============================================================
+ * Test selection — set at build time by the Makefile:
+ *   make flash-test TESTS=3,8     → HARNESS_TESTS="3,8"
+ * "passive" (default) = every test except the motor tests 10 and 14.
+ * "all" = every test. Motor tests never run unless explicitly listed.
+ * ============================================================ */
+#ifndef HARNESS_TESTS
+#define HARNESS_TESTS "passive"
+#endif
+
+static int str_eq(const char *a, const char *b)
+{
+    while (*a && *a == *b) { a++; b++; }
+    return *a == *b;
+}
+
+static int test_selected(int n)
+{
+    const char *s = HARNESS_TESTS;
+    if (str_eq(s, "all"))     return 1;
+    if (str_eq(s, "passive")) return n != 10 && n != 14 && n != 15 && n != 16 && n != 17;
+    /* comma-separated list of numbers, e.g. "3,7,8" */
+    while (*s) {
+        int v = 0, digits = 0;
+        while (*s >= '0' && *s <= '9') { v = v * 10 + (*s - '0'); s++; digits++; }
+        if (digits && v == n) return 1;
+        while (*s && (*s < '0' || *s > '9')) s++;
+    }
+    return 0;
+}
 
 
 /* ============================================================
@@ -133,20 +190,9 @@ static void print_float3(float val)
 
 
 /* ============================================================
- * Axis alignment macros — MUST match main.c exactly
- * If you change them in main.c, change them here too.
+ * Axis alignment (ALIGN_xx), GYRO_RAW_TO_RADS and MAX_GYRO_RADS come
+ * from fc_config.h — the same definitions main.c compiles with.
  * ============================================================ */
-#define ALIGN_AX(raw)  ( (raw))
-#define ALIGN_AY(raw)  ( -(raw))
-#define ALIGN_AZ(raw)  ( (raw))
-#define ALIGN_GX(raw)  ( -(raw))
-#define ALIGN_GY(raw)  ( (raw))
-#define ALIGN_GZ(raw)  ( (raw))
-
-
-/* Gyro scale: same as main.c */
-#define GYRO_RAW_TO_RADS   (1.0f / 939.65f)
-#define MAX_GYRO_RADS      34.907f
 
 /* Accel scale: set at runtime based on detected IMU */
 static float accel_raw_to_g;
@@ -191,11 +237,11 @@ static void print_regcheck(const char *name, uint8_t addr,
 {
     uart_write_string("  ");
     uart_write_string(name);
-    uart_write_string(" (0x");
+    uart_write_string(" (");            /* uart_write_hex8 prints its own "0x" */
     uart_write_hex8(addr);
-    uart_write_string(") = 0x");
+    uart_write_string(") = ");
     uart_write_hex8(got);
-    uart_write_string("  expected 0x");
+    uart_write_string("  expected ");
     uart_write_hex8(expected);
     if (got == expected) {
         uart_write_string("  OK\r\n");
@@ -473,6 +519,73 @@ static void test2_static_imu(imu_type_t imu)
 
 
 /* ============================================================
+ * Shared helpers for the interactive tests
+ *
+ * Previously every "Preparing in 3...2...1" countdown and every
+ * "Return to FLAT" pause used delay_ms(), which stops calling
+ * ahrs_update(). Any rotation made during those pauses was never seen
+ * by the gyro, so the AHRS had to crawl to the new angle using the
+ * accelerometer alone — at most 2*beta = 0.1 rad/s ≈ 5.7 °/s. That
+ * produced the slow linear "creep" and the leftover angles that leaked
+ * from one tilt into the next. These helpers keep the AHRS running at
+ * 100 Hz through every pause.
+ * ============================================================ */
+
+/* AHRS helpers: get degrees */
+extern float ahrs_get_roll(void);
+extern float ahrs_get_pitch(void);
+extern float ahrs_get_yaw(void);
+
+/* Wait for the next 100 Hz SysTick period (SysTick is started in main). */
+static void wait_tick(void)
+{
+    while (!(SYST_CSR & SYST_CSR_COUNTFLAG)) {}
+}
+
+/* Read one IMU sample in the body frame (fc_config.h alignment), with
+ * optional bias correction (pass NULL to skip). */
+static void read_body(imu_type_t imu, const float *gb, const float *ab,
+                      float g[3], float a[3])
+{
+    imu_raw_t s;
+    imu_read_raw(imu, &s);
+    g[0] = (float)ALIGN_GX(s.gx) * GYRO_RAW_TO_RADS;
+    g[1] = (float)ALIGN_GY(s.gy) * GYRO_RAW_TO_RADS;
+    g[2] = (float)ALIGN_GZ(s.gz) * GYRO_RAW_TO_RADS;
+    a[0] = (float)ALIGN_AX(s.ax) * accel_raw_to_g;
+    a[1] = (float)ALIGN_AY(s.ay) * accel_raw_to_g;
+    a[2] = (float)ALIGN_AZ(s.az) * accel_raw_to_g;
+    for (int k = 0; k < 3; k++) {
+        if (gb) g[k] -= gb[k];
+        if (ab) a[k] -= ab[k];
+    }
+}
+
+/* Keep the AHRS updating for `ticks` × 10 ms. */
+static void track_ticks(imu_type_t imu, const float *gb, const float *ab, int ticks)
+{
+    for (int i = 0; i < ticks; i++) {
+        float g[3], a[3];
+        wait_tick();
+        read_body(imu, gb, ab, g, a);
+        ahrs_update(g[0], g[1], g[2], a[0], a[1], a[2], 0.01f);
+    }
+}
+
+/* "Preparing in 3...2...1..." with the AHRS tracking the whole time.
+ * Move the board during the countdown; the caller prints the GO word. */
+static void countdown_tracking(imu_type_t imu, const float *gb, const float *ab)
+{
+    uart_write_string("  Preparing in 3...");
+    track_ticks(imu, gb, ab, 100);
+    uart_write_string("2...");
+    track_ticks(imu, gb, ab, 100);
+    uart_write_string("1...");
+    track_ticks(imu, gb, ab, 100);
+}
+
+
+/* ============================================================
  *
  *  ████████ ███████ ███████ ████████ ██████
  *     ██    ██      ██         ██         ██
@@ -482,67 +595,44 @@ static void test2_static_imu(imu_type_t imu)
  *
  *  DYNAMIC AXIS ALIGNMENT
  *
- *  Purpose: Verify that physical tilts produce the correct
- *           sign in both raw sensor data AND AHRS output.
- *           This is the #1 sim-to-real failure mode.
+ *  Purpose: Verify that physical tilts produce the sign convention
+ *           the NN was TRAINED with (fc-nn/drone_env.py, MuJoCo NWU:
+ *           X forward, Y left, Z up). This is the #1 sim-to-real
+ *           failure mode — it is how the pitch inversion was found.
  *
- *  Convention we need to match (MuJoCo NWU):
- *    X = forward (nose), Y = left, Z = up
+ *  Procedure: 3 tilts. Tilt during the countdown, hold while it samples.
  *
- *  Procedure: The test prompts you to do 3 tilts, 8 seconds each.
- *    You hold the tilt for the middle 4 seconds while it samples.
+ *  Expected (training convention):
+ *    TILT 1 nose DOWN   → ax < 0  (gravity shows up on -X)
+ *                         AHRS pitch > 0
+ *    TILT 2 right DOWN  → ay > 0, AHRS roll > 0
+ *    TILT 3 rotate CW   → gz < 0 (right-hand rule about +Z up)
  *
- *  Expected results:
- *
- *    TILT 1: Nose down (pitch forward)
- *      → ax should go POSITIVE  (gravity projects onto +X)
- *      → AHRS pitch should go NEGATIVE (nose below horizon)
- *      → gy (pitch rate) should briefly go NEGATIVE when tilting
- *
- *    TILT 2: Right side down (roll right)
- *      → ay should go POSITIVE  (gravity projects onto +Y left axis
- *                                 when right side drops? NO — this
- *                                 depends on the convention.)
- *        ACTUALLY: In NWU, Y = left. When you tilt RIGHT side down,
- *        gravity projects onto -Y. So ay should go NEGATIVE.
- *        BUT: the AHRS roll should go POSITIVE for a right tilt
- *        (right wing down = positive roll in aerospace convention).
- *
- *        *** This is exactly the kind of thing you need to verify
- *            empirically rather than reason about. That's the
- *            whole point of this test. ***
- *
- *    TILT 3: Rotate CW (viewed from above)
- *      → gz should go NEGATIVE (right-hand rule: CW about +Z = neg)
- *      → AHRS yaw should decrease
- *
- *  The test prints live values so you can see what actually happens.
- *  Compare against the expected signs and note any discrepancies.
+ *  Auto-verdicts (averaged over the sampling window):
+ *    nose down:  PASS if ax < -0.10 g and pitch > +5°
+ *                FAIL "pitch inverted" if ax > +0.10 g and pitch < -5°
+ *    right down: PASS if ay > +0.10 g and roll > +5°
+ *    rotate CW:  PASS if gz < -0.05 rad/s
  *
  * ============================================================ */
 
-/* AHRS helpers: get degrees */
-extern float ahrs_get_roll(void);
-extern float ahrs_get_pitch(void);
-extern float ahrs_get_yaw(void);
+typedef struct {
+    float ax, ay, az, gx, gy, gz, roll, pitch, yaw;
+} tilt_avg_t;
 
 static void run_tilt_phase(imu_type_t imu, const char *label,
-                           const char *instruction, int samples)
+                           const char *instruction, int samples,
+                           tilt_avg_t *out)
 {
     uart_write_string("\r\n  >> ");
     uart_write_string(instruction);
     uart_write_string(" <<\r\n");
-    uart_write_string("  (Hold for ~");
+    uart_write_string("  (Move during the countdown, then hold for ~");
     uart_write_uint32(samples / 100);
     uart_write_string(" seconds)\r\n\r\n");
 
-    /* Let user get into position */
-    uart_write_string("  Preparing in 3...");
-    delay_ms(1000);
-    uart_write_string("2...");
-    delay_ms(1000);
-    uart_write_string("1...");
-    delay_ms(1000);
+    /* Let user get into position — AHRS keeps tracking the motion */
+    countdown_tracking(imu, NULL, NULL);
     uart_write_string("SAMPLING\r\n\r\n");
 
     float sum_ax = 0, sum_ay = 0, sum_az = 0;
@@ -550,62 +640,51 @@ static void run_tilt_phase(imu_type_t imu, const char *label,
     float sum_roll = 0, sum_pitch = 0, sum_yaw = 0;
 
     for (int i = 0; i < samples; i++) {
-        while (!(SYST_CSR & SYST_CSR_COUNTFLAG)) {}
-
-        imu_raw_t sample;
-        imu_read_raw(imu, &sample);
-
-        float gx = (float)ALIGN_GX(sample.gx) * GYRO_RAW_TO_RADS;
-        float gy = (float)ALIGN_GY(sample.gy) * GYRO_RAW_TO_RADS;
-        float gz = (float)ALIGN_GZ(sample.gz) * GYRO_RAW_TO_RADS;
-        float ax = (float)ALIGN_AX(sample.ax) * accel_raw_to_g;
-        float ay = (float)ALIGN_AY(sample.ay) * accel_raw_to_g;
-        float az = (float)ALIGN_AZ(sample.az) * accel_raw_to_g;
-
-        /* Feed AHRS so roll/pitch/yaw update */
-        ahrs_update(gx, gy, gz, ax, ay, az, 0.01f);
+        float g[3], a[3];
+        wait_tick();
+        read_body(imu, NULL, NULL, g, a);
+        ahrs_update(g[0], g[1], g[2], a[0], a[1], a[2], 0.01f);
 
         float roll  = ahrs_get_roll();
         float pitch = ahrs_get_pitch();
         float yaw   = ahrs_get_yaw();
 
-        sum_ax += ax;  sum_ay += ay;  sum_az += az;
-        sum_gx += gx;  sum_gy += gy;  sum_gz += gz;
+        sum_ax += a[0];  sum_ay += a[1];  sum_az += a[2];
+        sum_gx += g[0];  sum_gy += g[1];  sum_gz += g[2];
         sum_roll += roll;  sum_pitch += pitch;  sum_yaw += yaw;
 
         /* Print at 5 Hz (every 20 ticks) */
         if (i % 20 == 0) {
-            uart_write_string("  ax=");
-            print_float3(ax);
-            uart_write_string(" ay=");
-            print_float3(ay);
-            uart_write_string(" az=");
-            print_float3(az);
-            uart_write_string(" | R=");
-            print_float3(roll);
-            uart_write_string(" P=");
-            print_float3(pitch);
-            uart_write_string(" Y=");
-            print_float3(yaw);
+            uart_write_string("  ax=");  print_float3(a[0]);
+            uart_write_string(" ay=");   print_float3(a[1]);
+            uart_write_string(" az=");   print_float3(a[2]);
+            uart_write_string(" gz=");   print_float3(g[2]);
+            uart_write_string(" | R=");  print_float3(roll);
+            uart_write_string(" P=");    print_float3(pitch);
+            uart_write_string(" Y=");    print_float3(yaw);
             uart_write_string("\r\n");
         }
     }
 
     float n = (float)samples;
+    out->ax = sum_ax / n;  out->ay = sum_ay / n;  out->az = sum_az / n;
+    out->gx = sum_gx / n;  out->gy = sum_gy / n;  out->gz = sum_gz / n;
+    out->roll = sum_roll / n;  out->pitch = sum_pitch / n;  out->yaw = sum_yaw / n;
+
     uart_write_string("\r\n  ---- ");
     uart_write_string(label);
     uart_write_string(" AVERAGES ----\r\n");
-    uart_write_string("    ax="); print_float3(sum_ax / n);
-    uart_write_string("  ay="); print_float3(sum_ay / n);
-    uart_write_string("  az="); print_float3(sum_az / n);
+    uart_write_string("    ax="); print_float3(out->ax);
+    uart_write_string("  ay="); print_float3(out->ay);
+    uart_write_string("  az="); print_float3(out->az);
     uart_write_string("\r\n");
-    uart_write_string("    gx="); print_float3(sum_gx / n);
-    uart_write_string("  gy="); print_float3(sum_gy / n);
-    uart_write_string("  gz="); print_float3(sum_gz / n);
+    uart_write_string("    gx="); print_float3(out->gx);
+    uart_write_string("  gy="); print_float3(out->gy);
+    uart_write_string("  gz="); print_float3(out->gz);
     uart_write_string("\r\n");
-    uart_write_string("    AHRS roll="); print_float3(sum_roll / n);
-    uart_write_string("  pitch="); print_float3(sum_pitch / n);
-    uart_write_string("  yaw="); print_float3(sum_yaw / n);
+    uart_write_string("    AHRS roll="); print_float3(out->roll);
+    uart_write_string("  pitch="); print_float3(out->pitch);
+    uart_write_string("  yaw="); print_float3(out->yaw);
     uart_write_string("\r\n");
 }
 
@@ -613,26 +692,15 @@ static void run_tilt_phase(imu_type_t imu, const char *label,
 static void test3_dynamic_axis(imu_type_t imu)
 {
     print_banner("TEST 3: Dynamic Axis Alignment");
-    uart_write_string("This test verifies that physical tilts produce\r\n");
-    uart_write_string("the correct signs in both raw accel and AHRS.\r\n\r\n");
+    uart_write_string("Checks that tilts produce the SAME signs the NN was\r\n");
+    uart_write_string("trained with (drone_env.py, X fwd / Y left / Z up).\r\n\r\n");
     uart_write_string("You will tilt the board 3 ways, ~30 deg each.\r\n");
     uart_write_string("Follow the prompts.\r\n");
 
     /* First, let AHRS settle for 2 seconds flat on table */
     uart_write_string("\r\nStep 0: Place board FLAT. AHRS settling (2 sec)...\r\n");
     ahrs_init();
-    for (int i = 0; i < 200; i++) {
-        while (!(SYST_CSR & SYST_CSR_COUNTFLAG)) {}
-        imu_raw_t sample;
-        imu_read_raw(imu, &sample);
-        float gx = (float)ALIGN_GX(sample.gx) * GYRO_RAW_TO_RADS;
-        float gy = (float)ALIGN_GY(sample.gy) * GYRO_RAW_TO_RADS;
-        float gz = (float)ALIGN_GZ(sample.gz) * GYRO_RAW_TO_RADS;
-        float ax = (float)ALIGN_AX(sample.ax) * accel_raw_to_g;
-        float ay = (float)ALIGN_AY(sample.ay) * accel_raw_to_g;
-        float az = (float)ALIGN_AZ(sample.az) * accel_raw_to_g;
-        ahrs_update(gx, gy, gz, ax, ay, az, 0.01f);
-    }
+    track_ticks(imu, NULL, NULL, 200);
 
     uart_write_string("  AHRS settled. Roll=");
     print_float3(ahrs_get_roll());
@@ -640,46 +708,66 @@ static void test3_dynamic_axis(imu_type_t imu)
     print_float3(ahrs_get_pitch());
     uart_write_string("\r\n  (Should be near 0,0 if board is flat)\r\n");
 
+    tilt_avg_t nd, rd, cw;
+
     /* ---- Tilt 1: Nose down ---- */
     uart_write_string("\r\n");
     uart_write_string("----------------------------------------\r\n");
     uart_write_string("TILT 1: NOSE DOWN (~30 degrees)\r\n");
     uart_write_string("  Lift the REAR of the board so the nose dips.\r\n");
-    uart_write_string("  Expected: ax > 0, AHRS pitch < 0\r\n");
+    uart_write_string("  Expected: ax < 0, AHRS pitch > 0\r\n");
     uart_write_string("----------------------------------------\r\n");
-    run_tilt_phase(imu, "NOSE-DOWN", "Tilt NOSE DOWN now and hold steady", 400);
+    run_tilt_phase(imu, "NOSE-DOWN", "Tilt NOSE DOWN and hold steady", 400, &nd);
 
     /* ---- Tilt 2: Right side down ---- */
     uart_write_string("\r\n");
-    uart_write_string("  Return to FLAT for 3 seconds...\r\n");
-    delay_ms(3000);
+    uart_write_string("  Return to FLAT (3 seconds, AHRS tracking)...\r\n");
+    track_ticks(imu, NULL, NULL, 300);
     uart_write_string("----------------------------------------\r\n");
     uart_write_string("TILT 2: RIGHT SIDE DOWN (~30 degrees)\r\n");
     uart_write_string("  Lift the LEFT side so the RIGHT side dips.\r\n");
-    uart_write_string("  Expected: AHRS roll > 0 (right-wing-down = positive)\r\n");
-    uart_write_string("  Watch the sign of ay — document what you see.\r\n");
+    uart_write_string("  Expected: ay > 0, AHRS roll > 0\r\n");
     uart_write_string("----------------------------------------\r\n");
-    run_tilt_phase(imu, "RIGHT-DOWN", "Tilt RIGHT SIDE DOWN now and hold steady", 400);
+    run_tilt_phase(imu, "RIGHT-DOWN", "Tilt RIGHT SIDE DOWN and hold steady", 400, &rd);
 
     /* ---- Tilt 3: Yaw CW ---- */
     uart_write_string("\r\n");
-    uart_write_string("  Return to FLAT for 3 seconds...\r\n");
-    delay_ms(3000);
+    uart_write_string("  Return to FLAT (3 seconds, AHRS tracking)...\r\n");
+    track_ticks(imu, NULL, NULL, 300);
     uart_write_string("----------------------------------------\r\n");
     uart_write_string("TILT 3: ROTATE CW (viewed from above)\r\n");
-    uart_write_string("  Keep board flat, rotate clockwise slowly.\r\n");
-    uart_write_string("  Expected: gz < 0 (CW about +Z = negative)\r\n");
-    uart_write_string("  AHRS yaw should decrease.\r\n");
+    uart_write_string("  Keep board flat, rotate clockwise slowly while sampling.\r\n");
+    uart_write_string("  Expected: gz < 0 (CW about +Z = negative), yaw decreasing\r\n");
     uart_write_string("----------------------------------------\r\n");
-    run_tilt_phase(imu, "YAW-CW", "Rotate CLOCKWISE now (keep flat)", 400);
+    run_tilt_phase(imu, "YAW-CW", "Rotate CLOCKWISE (keep flat)", 400, &cw);
 
-    /* ---- Summary ---- */
-    print_banner("TEST 3 COMPLETE — Review above");
-    uart_write_string("Compare the sign of each measurement against expected.\r\n");
-    uart_write_string("Any sign flip = axis alignment bug in ALIGN_xx macros.\r\n\r\n");
-    uart_write_string("Quick reference (MuJoCo NWU convention):\r\n");
-    uart_write_string("  Nose down:     ax>0, pitch<0\r\n");
-    uart_write_string("  Right down:    roll>0\r\n");
+    /* ---- Verdicts ---- */
+    print_banner("TEST 3 RESULTS");
+
+    if (nd.ax < -0.10f && nd.pitch > 5.0f)
+        print_pass("NOSE DOWN: ax < 0 and pitch > 0 — matches training");
+    else if (nd.ax > 0.10f && nd.pitch < -5.0f)
+        print_fail("NOSE DOWN: ax > 0 and pitch < 0 — PITCH INVERTED vs training (check ALIGN_AX/ALIGN_GY in fc_config.h)");
+    else
+        uart_write_string("  [WARN] NOSE DOWN: inconclusive — tilt further (>15 deg) and hold still\r\n");
+
+    if (rd.ay > 0.10f && rd.roll > 5.0f)
+        print_pass("RIGHT DOWN: ay > 0 and roll > 0 — matches training");
+    else if (rd.ay < -0.10f && rd.roll < -5.0f)
+        print_fail("RIGHT DOWN: ay < 0 and roll < 0 — ROLL INVERTED vs training (check ALIGN_AY/ALIGN_GX)");
+    else
+        uart_write_string("  [WARN] RIGHT DOWN: inconclusive — tilt further (>15 deg) and hold still\r\n");
+
+    if (cw.gz < -0.05f)
+        print_pass("ROTATE CW: gz < 0 — matches training");
+    else if (cw.gz > 0.05f)
+        print_fail("ROTATE CW: gz > 0 — YAW INVERTED vs training (check ALIGN_GZ)");
+    else
+        uart_write_string("  [WARN] ROTATE CW: inconclusive — rotate steadily during sampling\r\n");
+
+    uart_write_string("\r\nReference (training convention):\r\n");
+    uart_write_string("  Nose down:     ax<0, pitch>0\r\n");
+    uart_write_string("  Right down:    ay>0, roll>0\r\n");
     uart_write_string("  CW rotation:   gz<0, yaw decreasing\r\n");
 }
 
@@ -765,12 +853,7 @@ static void test4_ahrs_convergence(imu_type_t imu)
 
     /* ---- Phase B: Tilt to ~30° roll right and hold (5 seconds) ---- */
     uart_write_string("\r\nPhase B: Tilt RIGHT SIDE DOWN ~30 degrees.\r\n");
-    uart_write_string("  Preparing in 3...");
-    delay_ms(1000);
-    uart_write_string("2...");
-    delay_ms(1000);
-    uart_write_string("1...");
-    delay_ms(1000);
+    countdown_tracking(imu, NULL, NULL);   /* AHRS keeps tracking */
     uart_write_string("HOLD TILT NOW\r\n\r\n");
 
     float roll_b = 0.0f;
@@ -816,12 +899,7 @@ static void test4_ahrs_convergence(imu_type_t imu)
 
     /* ---- Phase C: Return flat and hold (4 seconds) ---- */
     uart_write_string("\r\nPhase C: Return board to FLAT.\r\n");
-    uart_write_string("  Preparing in 3...");
-    delay_ms(1000);
-    uart_write_string("2...");
-    delay_ms(1000);
-    uart_write_string("1...");
-    delay_ms(1000);
+    countdown_tracking(imu, NULL, NULL);   /* AHRS keeps tracking */
     uart_write_string("HOLD FLAT NOW\r\n\r\n");
 
     float roll_c = 0.0f;
@@ -886,7 +964,9 @@ static void test4_ahrs_convergence(imu_type_t imu)
  *    obs[5]  = +0.500   accel Z / 2g  ← THE BIG ONE (1g / 2 = 0.5)
  *    obs[6]  =  0.000   roll error / 45°
  *    obs[7]  =  0.000   pitch error / 45°
- *    obs[8]  =  0.000   altitude error (at ground ref)
+ *    obs[8]  = -0.050   altitude error: on the table alt≈0, target is
+ *                       0.3 m → (0-0.3)/2 = -0.15, clamped to -0.05
+ *                       (0.000 if no barometer)
  *    obs[9]  =  0.000   vertical velocity
  *    obs[10] =  0.000   hvel X (hardcoded 0)
  *    obs[11] =  0.000   hvel Y (hardcoded 0)
@@ -907,13 +987,14 @@ static inline float clampf(float x, float lo, float hi)
     return x;
 }
 
-/* Obs vector scaling constants — MUST match main.c exactly */
-#define OBS_MAX_GYRO_RADS   34.907f
-#define OBS_ANGLE_SCALE     (1.0f / 45.0f)
-#define OBS_ALT_SCALE       2.0f
-#define OBS_VVEL_SCALE      5.0f
-#define OBS_ALT_OBS_CLAMP   0.05f
-#define OBS_TARGET_ALT      0.3f
+/* Obs vector scaling — aliases for the shared fc_config.h values so the
+ * harness can never drift from main.c again. */
+#define OBS_MAX_GYRO_RADS   MAX_GYRO_RADS
+#define OBS_ANGLE_SCALE     ANGLE_OBS_SCALE
+#define OBS_ALT_SCALE       ALT_SCALE
+#define OBS_VVEL_SCALE      VVEL_SCALE
+#define OBS_ALT_OBS_CLAMP   ALT_OBS_CLAMP
+#define OBS_TARGET_ALT      TARGET_ALT
 
 static void test5_obs_vector(imu_type_t imu, int baro_ok)
 {
@@ -1016,20 +1097,27 @@ static void test5_obs_vector(imu_type_t imu, int baro_ok)
     float obs_avg[12];
     for (int k = 0; k < 12; k++) obs_avg[k] = obs_sum[k] / (float)OBS_SAMPLES;
 
-    /* Expected values */
-    static const float expected[12] = {
+    /* Expected values.
+     * obs[8]: on the table the baro reads alt≈0 m but the target is
+     * TARGET_ALT (0.3 m), so (0 - 0.3)/ALT_SCALE = -0.15, which main.c
+     * clamps to -ALT_OBS_CLAMP (-0.05). That clamped value IS the correct
+     * firmware output here — it used to be reported as a FAIL. */
+    float expected[12] = {
         0.0f, 0.0f, 0.0f,       /* gyro XYZ */
         0.0f, 0.0f, 0.5f,       /* accel XYZ / 2g */
         0.0f, 0.0f,             /* roll, pitch error */
-        0.0f, 0.0f,             /* alt error, vvel (baro at ground ref or absent) */
+        0.0f, 0.0f,             /* alt error (set below), vvel */
         0.0f, 0.0f              /* hvel XY */
     };
+    if (baro_ok)
+        expected[8] = clampf((0.0f - OBS_TARGET_ALT) / OBS_ALT_SCALE,
+                             -OBS_ALT_OBS_CLAMP, OBS_ALT_OBS_CLAMP);
     /* Tolerances per element */
     static const float tol[12] = {
         0.01f, 0.01f, 0.01f,    /* gyro: tight, should be near zero */
         0.05f, 0.05f, 0.08f,    /* accel: moderate (noise) */
         0.04f, 0.04f,           /* AHRS angles: should be near 0 if flat */
-        0.05f, 0.02f,           /* baro: near 0 at ground ref */
+        0.01f, 0.02f,           /* baro: clamped value is exact; vvel near 0 */
         0.001f, 0.001f          /* hvel: hardcoded 0 */
     };
     static const char *names[12] = {
@@ -1118,183 +1206,99 @@ static void test5_obs_vector(imu_type_t imu, int baro_ok)
  *
  *  NN INFERENCE VALIDATION
  *
- *  Purpose: Feed a KNOWN obs vector to nn_forward() on the STM32
- *           and compare the output against the Python reference.
- *           This catches: wrong weights.h flashed, stale build,
- *           byte ordering issues, float precision problems.
+ *  Purpose: Run nn_forward() ON THE STM32 for every reference vector in
+ *           host_test/golden_vectors.h and compare against the outputs
+ *           Python computed from the SAME weights.h. Catches: wrong or
+ *           stale weights flashed, float/compiler issues on the target.
  *
- *  Method: Two test vectors with pre-computed expected outputs.
+ *  The reference values are generated, never typed by hand:
+ *    fc-nn/generate_golden.py  (run with:  make golden)
+ *  The golden file records the SHA256 of the weights.h it came from, and
+ *  the Makefile refuses to build the harness if that hash does not match
+ *  the current weights.h — so this test can no longer go stale silently
+ *  (it previously compared against numbers from an older network and
+ *  reported 0/8 even though the maths was correct).
  *
- *  Test vector A: "flat on table"
- *    obs = [0, 0, 0, 0, 0, 0.5, 0, 0, 0, 0, 0, 0]
- *    Expected nn_out (computed from weights.h in Python):
- *      out[0] = +0.087682053
- *      out[1] = -0.052892834
- *      out[2] = +0.032626629
- *      out[3] = +0.263809144
- *
- *  Test vector B: "10 deg roll"
- *    obs = [0, 0, 0, 0, 0.086824, 0.492404, 0.222222, 0, 0, 0, 0, 0]
- *    Expected nn_out:
- *      out[0] = +0.024362043
- *      out[1] = +0.368108302
- *      out[2] = +0.501782894
- *      out[3] = +0.229994148
- *
- *  Tolerance: ±0.001 (should match to ~5-6 decimal places since
- *  both use IEEE 754 float32; any mismatch > 0.001 means different
- *  weights or a computation bug).
+ *  Tolerance: |err| <= 1e-3 * max(1, |expected|). Float32 on host and
+ *  target typically agree to ~1e-6.
  *
  * ============================================================ */
 static void test6_nn_inference(void)
 {
     print_banner("TEST 6: NN Inference Validation");
-    uart_write_string("Feeds known obs vectors to nn_forward() and compares\r\n");
-    uart_write_string("output against Python reference values.\r\n\r\n");
+    uart_write_string("Runs nn_forward() on the chip for every golden vector and\r\n");
+    uart_write_string("compares with Python's output from the same weights.h.\r\n\r\n");
 
-    int total_pass = 0;
-    int total_checks = 0;
+    static const char *motor_names[4] = { "FL", "FR", "RR", "RL" };
+    int pass = 0, total = 0;
+    float worst = 0.0f;
 
-    #define NN_TOL 0.001f
+    for (int v = 0; v < N_GOLDEN; v++) {
+        float obs[12], out[4];
+        for (int k = 0; k < 12; k++) obs[k] = golden_obs[v][k];
+        nn_forward(obs, out);
 
-    /* ---- Test Vector A: flat on table ---- */
-    {
-        uart_write_string("Vector A: flat on table\r\n");
-        uart_write_string("  obs = [0,0,0, 0,0,+0.5, 0,0,0,0,0,0]\r\n\r\n");
-
-        float obs_a[12] = {
-            0.0f, 0.0f, 0.0f,
-            0.0f, 0.0f, 0.5f,
-            0.0f, 0.0f,
-            0.0f, 0.0f,
-            0.0f, 0.0f
-        };
-
-        /* Expected output computed from weights.h by Python */
-        static const float expected_a[4] = {
-            8.768205345e-02f,
-           -5.289283395e-02f,
-            3.262662888e-02f,
-            2.638091445e-01f
-        };
-        static const char *motor_names[4] = {
-            "FL(CCW)", "FR(CW) ", "RR(CCW)", "RL(CW) "
-        };
-
-        float out_a[4];
-        nn_forward(obs_a, out_a);
-
+        int vec_ok = 1;
         for (int k = 0; k < 4; k++) {
-            float err = out_a[k] - expected_a[k];
-            if (err < 0) err = -err;
-
-            uart_write_string("  out[");
-            uart_write_uint32(k);
-            uart_write_string("] ");
-            uart_write_string(motor_names[k]);
-            uart_write_string(" = ");
-            print_float3(out_a[k]);
-            uart_write_string("  expect ");
-            print_float3(expected_a[k]);
-            uart_write_string("  err=");
-            print_float3(err);
-
-            total_checks++;
-            if (err <= NN_TOL) {
-                uart_write_string("  OK\r\n");
-                total_pass++;
-            } else {
-                uart_write_string("  ** FAIL **\r\n");
-            }
+            float ref = golden_out[v][k];
+            float err = FABSF(out[k] - ref);
+            float tol = 1e-3f * (FABSF(ref) > 1.0f ? FABSF(ref) : 1.0f);
+            if (err > worst) worst = err;
+            total++;
+            if (err <= tol) pass++; else vec_ok = 0;
         }
 
-        /* Also print motor commands for context */
-        uart_write_string("\r\n  Motor commands (hover_thr=");
+        uart_write_string(vec_ok ? "  OK   " : "  FAIL ");
+        uart_write_string(golden_names[v]);
+        uart_write_string(": ");
+        for (int k = 0; k < 4; k++) {
+            uart_write_string(motor_names[k]);
+            uart_write_char('=');
+            print_float3(out[k]);
+            uart_write_char(' ');
+        }
+        if (!vec_ok) {
+            uart_write_string(" expect ");
+            for (int k = 0; k < 4; k++) { print_float3(golden_out[v][k]); uart_write_char(' '); }
+        }
+        uart_write_string("\r\n");
+    }
+
+    /* Context: what the level "hover" vector would command (v = 0) */
+    {
+        float out[4], obs[12];
+        for (int k = 0; k < 12; k++) obs[k] = golden_obs[0][k];
+        nn_forward(obs, out);
+        uart_write_string("\r\n  Level-hover vector → motor PWM (hover_thr=");
         print_float3(NN_HOVER_THROTTLE);
-        uart_write_string(", act_scale=");
+        uart_write_string(", scale=");
         print_float3(NN_ACTION_SCALE);
-        uart_write_string("):\r\n");
+        uart_write_string("):\r\n   ");
         for (int k = 0; k < 4; k++) {
-            float cmd = NN_HOVER_THROTTLE + out_a[k] * NN_ACTION_SCALE;
-            if (cmd < 0.0f) cmd = 0.0f;
-            if (cmd > 1.0f) cmd = 1.0f;
-            uint32_t pwm_us = 1000 + (uint32_t)(cmd * 1000.0f);
-            uart_write_string("    ");
+            float cmd = clampf(NN_HOVER_THROTTLE + clampf(out[k], -1.0f, 1.0f) * NN_ACTION_SCALE, 0.0f, 1.0f);
+            uart_write_char(' ');
             uart_write_string(motor_names[k]);
-            uart_write_string(" cmd=");
-            print_float3(cmd);
-            uart_write_string("  pwm=");
-            uart_write_uint32(pwm_us);
-            uart_write_string(" us\r\n");
+            uart_write_char('=');
+            uart_write_uint32(1000U + (uint32_t)(cmd * 1000.0f + 0.5f));
         }
+        uart_write_string(" us\r\n");
     }
 
-    /* ---- Test Vector B: 10 deg roll ---- */
-    {
-        uart_write_string("\r\nVector B: 10 deg roll\r\n");
-        uart_write_string("  obs = [0,0,0, 0,+0.087,+0.492, +0.222,0, 0,0,0,0]\r\n\r\n");
-
-        float obs_b[12] = {
-            0.0f, 0.0f, 0.0f,
-            0.0f, 8.682408929e-02f, 4.924038768e-01f,
-            2.222222239e-01f, 0.0f,
-            0.0f, 0.0f,
-            0.0f, 0.0f
-        };
-
-        static const float expected_b[4] = {
-            2.436204255e-02f,
-            3.681083024e-01f,
-            5.017828941e-01f,
-            2.299941480e-01f
-        };
-        static const char *motor_names[4] = {
-            "FL(CCW)", "FR(CW) ", "RR(CCW)", "RL(CW) "
-        };
-
-        float out_b[4];
-        nn_forward(obs_b, out_b);
-
-        for (int k = 0; k < 4; k++) {
-            float err = out_b[k] - expected_b[k];
-            if (err < 0) err = -err;
-
-            uart_write_string("  out[");
-            uart_write_uint32(k);
-            uart_write_string("] ");
-            uart_write_string(motor_names[k]);
-            uart_write_string(" = ");
-            print_float3(out_b[k]);
-            uart_write_string("  expect ");
-            print_float3(expected_b[k]);
-            uart_write_string("  err=");
-            print_float3(err);
-
-            total_checks++;
-            if (err <= NN_TOL) {
-                uart_write_string("  OK\r\n");
-                total_pass++;
-            } else {
-                uart_write_string("  ** FAIL **\r\n");
-            }
-        }
-    }
-
-    /* ---- Summary ---- */
     uart_write_string("\r\n  Result: ");
-    uart_write_uint32(total_pass);
+    uart_write_uint32((uint32_t)pass);
     uart_write_string("/");
-    uart_write_uint32(total_checks);
-    uart_write_string(" outputs match Python reference.\r\n");
+    uart_write_uint32((uint32_t)total);
+    uart_write_string(" outputs match.  Worst |err| = ");
+    print_float3(worst * 1000.0f);
+    uart_write_string("e-3\r\n");
 
-    if (total_pass == total_checks)
-        print_pass("NN weights match — inference is correct");
+    if (pass == total)
+        print_pass("On-chip NN output matches Python for every golden vector");
     else {
-        print_fail("NN output mismatch — wrong weights.h or computation error");
+        print_fail("On-chip NN output differs from Python");
         uart_write_string("  Likely causes:\r\n");
-        uart_write_string("    1. Stale weights.h (rerun export_weights.py)\r\n");
-        uart_write_string("    2. Didn't rebuild after updating weights.h\r\n");
-        uart_write_string("    3. Float precision issue (unlikely with same IEEE 754)\r\n");
+        uart_write_string("    1. The board runs an old build (reflash)\r\n");
+        uart_write_string("    2. weights.h changed but golden vectors were not regenerated (make golden)\r\n");
     }
 }
 
@@ -1331,9 +1335,11 @@ static void test6_nn_inference(void)
  *       NN is trying to correct for something it shouldn't be —
  *       a sign error in the obs, a persistent AHRS bias, etc.
  *
- *    3. HOVER POINT: The average PWM should be near 1323 µs
- *       (= HOVER_THROTTLE * 1000 + 1000). If it's much higher,
- *       the drone will climb; much lower, it won't take off.
+ *    3. AVERAGE PWM (informational only): base 1323 µs (the hover
+ *       GUESS from the linear 8.5 N thrust model) + the altitude P+D
+ *       term (+45 µs on a table: 0.3 m below target) + the NN's mean
+ *       output. The real hover PWM is unknown until measured on a thrust
+ *       stand (test 14), so the average is no longer graded.
  *
  *    4. STABILITY: Commands should not oscillate. If you see
  *       motors alternating between high and low every few ticks,
@@ -1341,24 +1347,28 @@ static void test6_nn_inference(void)
  *
  *  Auto-validation:
  *    - PWM spread < 80 µs between motors  (PASS)
- *    - Average PWM within 1250-1400 µs    (PASS)
- *    - Steady-state variance < 20 µs      (PASS = stable)
+ *    - Steady-state stddev < 20 µs        (PASS = stable)
+ *  Balance report (what the imbalance would do to the airframe):
+ *    roll  = left pair − right pair   (>0 → rolls RIGHT, right side down)
+ *    pitch = front pair − rear pair   (>0 → nose UP, <0 → nose DOWN)
+ *    yaw   = CW pair − CCW pair       (>0 → yaws CCW seen from above)
  *
  * ============================================================ */
 
-/* IIR smoothing constants — MUST match main.c */
-#define ACTION_ALPHA_SLOW   0.08f
-#define ACTION_ALPHA_FAST   0.60f
-#define ACTION_SNAP_THRESH  0.15f
+/* Action filter: action_filter_step() / ACTION_FILTER_ALPHA from
+ * fc_config.h — identical to main.c and to training. */
 
 /* Altitude P+D constants — MUST match main.c */
-#define HIL_ALT_KP          0.15f
-#define HIL_ALT_KD          0.08f
-#define HIL_ALT_ADJ_MAX     0.10f
-#define HIL_ALT_OBS_CLAMP   0.05f
-#define HIL_TARGET_ALT      0.3f
-#define HIL_ALT_SCALE        2.0f
-#define HIL_VVEL_SCALE       5.0f
+/* Altitude P+D constants — aliases for fc_config.h. (The harness used to
+ * keep its own copy with ALT_KD = 0.08 while main.c used 0.02, so tests 7
+ * and 13 were not simulating the real firmware.) */
+#define HIL_ALT_KP          ALT_KP
+#define HIL_ALT_KD          ALT_KD
+#define HIL_ALT_ADJ_MAX     ALT_ADJ_MAX
+#define HIL_ALT_OBS_CLAMP   ALT_OBS_CLAMP
+#define HIL_TARGET_ALT      TARGET_ALT
+#define HIL_ALT_SCALE       ALT_SCALE
+#define HIL_VVEL_SCALE      VVEL_SCALE
 
 static void test7_hil_closed_loop(imu_type_t imu, int baro_ok)
 {
@@ -1553,15 +1563,8 @@ static void test7_hil_closed_loop(imu_type_t imu, int baro_ok)
         for (int k = 0; k < 4; k++)
             nn_out[k] = clampf(nn_out[k], -1.0f, 1.0f);
 
-        /* ── F: Adaptive IIR smoothing (same as main.c) ── */
-        for (int k = 0; k < 4; k++) {
-            float diff  = nn_out[k] - nn_smoothed[k];
-            float adiff = diff < 0.0f ? -diff : diff;
-            float alpha = adiff >= ACTION_SNAP_THRESH
-                            ? ACTION_ALPHA_FAST
-                            : ACTION_ALPHA_SLOW;
-            nn_smoothed[k] += alpha * diff;
-        }
+        /* ── F: Action filter (fc_config.h, same as main.c) ── */
+        action_filter_step(nn_smoothed, nn_out);
         for (int k = 0; k < 4; k++)
             nn_out[k] = nn_smoothed[k];
 
@@ -1694,16 +1697,11 @@ static void test7_hil_closed_loop(imu_type_t imu, int baro_ok)
     } else
         print_fail("Motor spread > 120 us — large asymmetry, NN is compensating for something");
 
-    /* Check 2: Average PWM in sane hover range */
-    if (overall_avg >= 1250.0f && overall_avg <= 1400.0f)
-        print_pass("Average PWM in hover range (1250-1400 us)");
-    else if (overall_avg < 1250.0f) {
-        print_fail("Average PWM too low — drone won't generate enough thrust");
-        uart_write_string("         Check NN_HOVER_THROTTLE or drone weight.\r\n");
-    } else {
-        print_fail("Average PWM too high — drone will climb uncontrollably on arm");
-        uart_write_string("         NN is commanding excess thrust at rest.\r\n");
-    }
+    /* Check 2 (informational): average PWM. Not graded — the real hover
+     * PWM has not been measured yet (thrust stand / test 14). */
+    uart_write_string("  [INFO] Average PWM is not graded: real hover PWM is unmeasured.\r\n");
+    uart_write_string("         On a table it includes ~+45 us of altitude P term\r\n");
+    uart_write_string("         (board is 0.3 m below TARGET_ALT).\r\n");
 
     /* Check 3: Stability — stddev of each motor */
     int stable = 1;
@@ -1717,34 +1715,117 @@ static void test7_hil_closed_loop(imu_type_t imu, int baro_ok)
     else
         print_fail("Motor commands oscillating — NN is fighting itself");
 
-    /* Check 4: Diagnostic — are the CW vs CCW motors balanced? */
-    float ccw_avg = (ss_avg[0] + ss_avg[2]) / 2.0f;   /* FL + RR */
-    float cw_avg  = (ss_avg[1] + ss_avg[3]) / 2.0f;   /* FR + RL */
-    float yaw_bias = cw_avg - ccw_avg;  /* positive = CW motors stronger = yaw CCW */
-    uart_write_string("\r\n  Yaw balance: CW_avg - CCW_avg = ");
-    print_float3(yaw_bias);
-    uart_write_string(" us\r\n");
-    if (FABSF(yaw_bias) < 30.0f)
-        uart_write_string("    (< 30 us — yaw should be balanced)\r\n");
-    else {
-        uart_write_string("    (> 30 us — NN is commanding a yaw trim. ");
-        if (yaw_bias > 0)
-            uart_write_string("CW motors hotter → yaw CCW)\r\n");
-        else
-            uart_write_string("CCW motors hotter → yaw CW)\r\n");
-    }
+    /* Check 4: Balance per axis — what the imbalance would do in the air.
+     * (The old code printed the CW/CCW pair twice — once as "yaw" and once,
+     * sign-flipped, as "diagonal roll/pitch" — and never reported roll or
+     * pitch at all.)  Indices: 0=FL(CCW) 1=FR(CW) 2=RR(CCW) 3=RL(CW). */
+    float roll_bal  = (ss_avg[0] + ss_avg[3]) / 2.0f - (ss_avg[1] + ss_avg[2]) / 2.0f;
+    float pitch_bal = (ss_avg[0] + ss_avg[1]) / 2.0f - (ss_avg[2] + ss_avg[3]) / 2.0f;
+    float yaw_bal   = (ss_avg[1] + ss_avg[3]) / 2.0f - (ss_avg[0] + ss_avg[2]) / 2.0f;
 
-    /* Diagonal balance (roll/pitch) */
-    float diag1 = (ss_avg[0] + ss_avg[2]) / 2.0f;  /* FL+RR diagonal */
-    float diag2 = (ss_avg[1] + ss_avg[3]) / 2.0f;  /* FR+RL diagonal */
-    float diag_diff = diag1 - diag2;
-    uart_write_string("  Diagonal balance: (FL+RR)/2 - (FR+RL)/2 = ");
-    print_float3(diag_diff);
-    uart_write_string(" us\r\n");
-    if (FABSF(diag_diff) < 30.0f)
-        uart_write_string("    (< 30 us — roll/pitch balanced)\r\n");
-    else
-        uart_write_string("    (> 30 us — NN is commanding a roll/pitch trim)\r\n");
+    uart_write_string("\r\n  Balance (|x| < 30 us is balanced):\r\n");
+    uart_write_string("    Roll : left - right = ");
+    print_float3(roll_bal);
+    if (FABSF(roll_bal) < 30.0f)      uart_write_string(" us  (balanced)\r\n");
+    else if (roll_bal > 0.0f)         uart_write_string(" us  → would roll RIGHT (right side down)\r\n");
+    else                              uart_write_string(" us  → would roll LEFT (left side down)\r\n");
+
+    uart_write_string("    Pitch: front - rear = ");
+    print_float3(pitch_bal);
+    if (FABSF(pitch_bal) < 30.0f)     uart_write_string(" us  (balanced)\r\n");
+    else if (pitch_bal > 0.0f)        uart_write_string(" us  → would pitch NOSE UP\r\n");
+    else                              uart_write_string(" us  → would pitch NOSE DOWN\r\n");
+
+    uart_write_string("    Yaw  : CW - CCW     = ");
+    print_float3(yaw_bal);
+    if (FABSF(yaw_bal) < 30.0f)       uart_write_string(" us  (balanced)\r\n");
+    else if (yaw_bal > 0.0f)          uart_write_string(" us  → would yaw CCW (seen from above)\r\n");
+    else                              uart_write_string(" us  → would yaw CW (seen from above)\r\n");
+}
+
+
+/* ============================================================
+ * Helpers shared by tests 8, 9 and 10
+ * ============================================================ */
+
+static const char *const MOTOR_NAMES[4] = { "FL", "FR", "RR", "RL" };
+
+/* Bias-calibrate on a level, still board (same method as main.c), then
+ * re-settle the AHRS with the corrected data. */
+static void calibrate_level(imu_type_t imu, float gb[3], float ab[3])
+{
+    float sg[3] = {0}, sa[3] = {0};
+    int n = 0;
+
+    ahrs_init();
+    uart_write_string("  Calibrating (2 sec, keep board FLAT and STILL)...\r\n");
+    for (int i = 0; i < 200; i++) {
+        float g[3], a[3];
+        wait_tick();
+        read_body(imu, NULL, NULL, g, a);
+        ahrs_update(g[0], g[1], g[2], a[0], a[1], a[2], 0.01f);
+        if (i >= 50) {
+            for (int k = 0; k < 3; k++) { sg[k] += g[k]; sa[k] += a[k]; }
+            n++;
+        }
+    }
+    for (int k = 0; k < 3; k++) { gb[k] = sg[k] / (float)n; ab[k] = sa[k] / (float)n; }
+    ab[2] -= 1.0f;                       /* level board should read +1 g on Z */
+
+    ahrs_init();
+    track_ticks(imu, gb, ab, 100);
+    uart_write_string("  Calibrated. R=");
+    print_float3(ahrs_get_roll());
+    uart_write_string(" P=");
+    print_float3(ahrs_get_pitch());
+    uart_write_string("\r\n");
+}
+
+/* Bench observation vector (no baro, hvel = 0), as in main.c. */
+static void build_obs_bench(const float g[3], const float a[3],
+                            float roll, float pitch, float obs[12])
+{
+    for (int k = 0; k < 3; k++) {
+        obs[k]     = clampf(g[k] / MAX_GYRO_RADS, -1.0f, 1.0f);
+        obs[3 + k] = clampf(a[k] / ACCEL_OBS_SCALE_G, -1.0f, 1.0f);
+    }
+    obs[6] = clampf(roll  * ANGLE_OBS_SCALE, -1.0f, 1.0f);
+    obs[7] = clampf(pitch * ANGLE_OBS_SCALE, -1.0f, 1.0f);
+    obs[8] = 0.0f; obs[9] = 0.0f; obs[10] = 0.0f; obs[11] = 0.0f;
+}
+
+/* One control tick: read IMU, update AHRS, run the NN.
+ * nn[] = clipped raw NN output (no filter). Returns roll/pitch in degrees. */
+static void nn_tick(imu_type_t imu, const float gb[3], const float ab[3],
+                    float nn[4], float *roll, float *pitch)
+{
+    float g[3], a[3], obs[12];
+    wait_tick();
+    read_body(imu, gb, ab, g, a);
+    ahrs_update(g[0], g[1], g[2], a[0], a[1], a[2], 0.01f);
+    *roll  = ahrs_get_roll();
+    *pitch = ahrs_get_pitch();
+    build_obs_bench(g, a, *roll, *pitch, obs);
+    nn_forward(obs, nn);
+    for (int k = 0; k < 4; k++) nn[k] = clampf(nn[k], -1.0f, 1.0f);
+}
+
+static float nn_to_pwm(float nn)
+{
+    return 1000.0f + 1000.0f * clampf(NN_HOVER_THROTTLE + nn * NN_ACTION_SCALE, 0.0f, 1.0f);
+}
+
+/* Average NN output over `ticks` with the board held level. */
+static void level_baseline(imu_type_t imu, const float gb[3], const float ab[3],
+                           int ticks, float base_nn[4])
+{
+    float sum[4] = {0};
+    for (int i = 0; i < ticks; i++) {
+        float nn[4], r, p;
+        nn_tick(imu, gb, ab, nn, &r, &p);
+        for (int k = 0; k < 4; k++) sum[k] += nn[k];
+    }
+    for (int k = 0; k < 4; k++) base_nn[k] = sum[k] / (float)ticks;
 }
 
 
@@ -1758,436 +1839,161 @@ static void test7_hil_closed_loop(imu_type_t imu, int baro_ok)
  *
  *  LIVE TILT → MOTOR RESPONSE VERIFICATION
  *
- *  Purpose: You tilt the board, and the test shows which motors
- *           the NN would spin harder. This catches the "errors
- *           compound" bug — if the NN sends thrust to the WRONG
- *           side when tilted, the drone will flip instead of correct.
+ *  Purpose: Tilt the board and check the NN pushes the LOW side up.
+ *           If it pushes the wrong side, the drone flips instead of
+ *           correcting. NO MOTORS ARE DRIVEN.
  *
- *  Procedure: 3 tilt tests, prompted interactively.
- *    For each: tilt and hold ~20 deg, test prints which side
- *    gets more thrust, and whether that's correct.
+ *  Physics (training convention, X fwd / Y left / Z up):
+ *    right side DOWN (roll > 0)  → RIGHT pair (FR, RR) must speed up
+ *    nose DOWN       (pitch > 0) → FRONT pair (FL, FR) must speed up
+ *    nose UP         (pitch < 0) → REAR  pair (RR, RL) must speed up
  *
- *  NO MOTORS ARE DRIVEN. This is sensor + NN computation only.
- *  But we DO init motors so we can optionally pulse the "winner"
- *  motor briefly so you can HEAR which one the NN picked.
+ *  Method: the NN has a built-in imbalance even when level (it was
+ *  trained with inputs the drone never supplies), so absolute PWMs are
+ *  misleading. The test first records a LEVEL BASELINE, then reports the
+ *  CHANGE per motor when tilted, and grades the change.
  *
- *  The key diagnostic: if you tilt RIGHT and the LEFT motors
- *  get more thrust, the NN is fighting the tilt (CORRECT).
- *  If the RIGHT motors get more thrust, something is inverted.
+ *  (The old version compared absolute averages and expected "nose down
+ *   → rear speeds up", which is physically backwards: it graded the
+ *   pitch-inverted firmware as PASS.)
  *
+ *  PASS if the correct pair rises ≥ 20 µs more than the opposite pair.
  * ============================================================ */
+
+/* axis: 0 = roll, 1 = pitch. sign: +1 selects angle > +10°, -1 < -10°.
+ * Returns number of tilted samples; d[4] = average PWM change vs base. */
+static int tilt_response_phase(imu_type_t imu, const float gb[3], const float ab[3],
+                               const float base_nn[4], int axis, int sign,
+                               float d[4])
+{
+    countdown_tracking(imu, gb, ab);
+    uart_write_string("TILT AND HOLD\r\n\r\n");
+
+    float sum[4] = {0};
+    int count = 0;
+
+    for (int i = 0; i < 300; i++) {
+        float nn[4], roll, pitch;
+        nn_tick(imu, gb, ab, nn, &roll, &pitch);
+        float angle = (axis == 0) ? roll : pitch;
+
+        if ((float)sign * angle > 10.0f) {
+            for (int k = 0; k < 4; k++) sum[k] += nn_to_pwm(nn[k]) - nn_to_pwm(base_nn[k]);
+            count++;
+        }
+
+        if (i % 30 == 0) {
+            uart_write_string("  R=");  print_float3(roll);
+            uart_write_string(" P=");   print_float3(pitch);
+            for (int k = 0; k < 4; k++) {
+                uart_write_char(' ');
+                uart_write_string(MOTOR_NAMES[k]);
+                uart_write_char(':');
+                uart_write_uint32((uint32_t)(nn_to_pwm(nn[k]) + 0.5f));
+            }
+            uart_write_string("\r\n");
+        }
+    }
+
+    for (int k = 0; k < 4; k++) d[k] = count ? sum[k] / (float)count : 0.0f;
+
+    if (count > 10) {
+        uart_write_string("\r\n  Change vs level baseline (");
+        uart_write_uint32((uint32_t)count);
+        uart_write_string(" tilted samples):");
+        for (int k = 0; k < 4; k++) {
+            uart_write_string("  ");
+            uart_write_string(MOTOR_NAMES[k]);
+            uart_write_char(' ');
+            print_float3(d[k]);
+        }
+        uart_write_string(" us\r\n");
+    }
+    return count;
+}
+
+/* Grade: `good` = average change of the pair that SHOULD rise minus the
+ * opposite pair. */
+static void grade_pair(int count, float good, const char *pass_msg,
+                       const char *fail_msg, const char *what)
+{
+    uart_write_string("  Correct pair - opposite pair = ");
+    print_float3(good);
+    uart_write_string(" us\r\n");
+    if (count <= 10) {
+        uart_write_string("  [WARN] Not enough tilted samples (need >10 deg): ");
+        uart_write_string(what);
+        uart_write_string("\r\n");
+    } else if (good > 20.0f) {
+        print_pass(pass_msg);
+    } else if (good < -20.0f) {
+        print_fail(fail_msg);
+    } else {
+        uart_write_string("  [WARN] No clear response. Tilt further (~20 deg) and hold still.\r\n");
+    }
+}
 
 static void test8_tilt_response(imu_type_t imu)
 {
     print_banner("TEST 8: Live Tilt → Motor Response");
-    uart_write_string("Tilt the board and see which motors the NN would\r\n");
-    uart_write_string("command harder. Catches inverted control loops.\r\n\r\n");
-    uart_write_string("NO MOTORS WILL SPIN. Safe for bench.\r\n\r\n");
+    uart_write_string("Tilt the board; checks the NN speeds up the LOW side.\r\n");
+    uart_write_string("Graded on the CHANGE from a level baseline.\r\n");
+    uart_write_string("NO MOTORS WILL SPIN.\r\n\r\n");
 
-    /* Bias calibrate fresh */
-    ahrs_init();
-    systick_init_100hz();
+    float gb[3], ab[3], base[4], d[4];
+    calibrate_level(imu, gb, ab);
 
-    float cal_sum_gx = 0, cal_sum_gy = 0, cal_sum_gz = 0;
-    float cal_sum_ax = 0, cal_sum_ay = 0, cal_sum_az = 0;
-    int cal_count = 0;
-
-    uart_write_string("  Calibrating (2 sec, keep board FLAT)...\r\n");
-    for (int i = 0; i < 200; i++) {
-        while (!(SYST_CSR & SYST_CSR_COUNTFLAG)) {}
-        imu_raw_t s;
-        imu_read_raw(imu, &s);
-        float gx = (float)ALIGN_GX(s.gx) * GYRO_RAW_TO_RADS;
-        float gy = (float)ALIGN_GY(s.gy) * GYRO_RAW_TO_RADS;
-        float gz = (float)ALIGN_GZ(s.gz) * GYRO_RAW_TO_RADS;
-        float ax = (float)ALIGN_AX(s.ax) * accel_raw_to_g;
-        float ay = (float)ALIGN_AY(s.ay) * accel_raw_to_g;
-        float az = (float)ALIGN_AZ(s.az) * accel_raw_to_g;
-        ahrs_update(gx, gy, gz, ax, ay, az, 0.01f);
-        if (i >= 50) {
-            cal_sum_gx += gx; cal_sum_gy += gy; cal_sum_gz += gz;
-            cal_sum_ax += ax; cal_sum_ay += ay; cal_sum_az += az;
-            cal_count++;
-        }
+    uart_write_string("  Measuring LEVEL baseline (1 sec, keep FLAT)...\r\n");
+    level_baseline(imu, gb, ab, 100, base);
+    uart_write_string("  Baseline PWM:");
+    for (int k = 0; k < 4; k++) {
+        uart_write_string("  ");
+        uart_write_string(MOTOR_NAMES[k]);
+        uart_write_char(' ');
+        uart_write_uint32((uint32_t)(nn_to_pwm(base[k]) + 0.5f));
     }
-    float gb[3] = {0}, ab[3] = {0};
-    if (cal_count > 0) {
-        float inv = 1.0f / (float)cal_count;
-        gb[0] = cal_sum_gx * inv; gb[1] = cal_sum_gy * inv; gb[2] = cal_sum_gz * inv;
-        ab[0] = cal_sum_ax * inv; ab[1] = cal_sum_ay * inv; ab[2] = cal_sum_az * inv - 1.0f;
-    }
+    uart_write_string(" us\r\n");
 
-    /* Re-settle with bias correction */
-    ahrs_init();
-    for (int i = 0; i < 100; i++) {
-        while (!(SYST_CSR & SYST_CSR_COUNTFLAG)) {}
-        imu_raw_t s;
-        imu_read_raw(imu, &s);
-        float gx = (float)ALIGN_GX(s.gx) * GYRO_RAW_TO_RADS - gb[0];
-        float gy = (float)ALIGN_GY(s.gy) * GYRO_RAW_TO_RADS - gb[1];
-        float gz = (float)ALIGN_GZ(s.gz) * GYRO_RAW_TO_RADS - gb[2];
-        float ax = (float)ALIGN_AX(s.ax) * accel_raw_to_g   - ab[0];
-        float ay = (float)ALIGN_AY(s.ay) * accel_raw_to_g   - ab[1];
-        float az = (float)ALIGN_AZ(s.az) * accel_raw_to_g   - ab[2];
-        ahrs_update(gx, gy, gz, ax, ay, az, 0.01f);
-    }
-    uart_write_string("  Calibrated. R=");
-    print_float3(ahrs_get_roll());
-    uart_write_string(" P=");
-    print_float3(ahrs_get_pitch());
-    uart_write_string("\r\n");
-
-    /* Helper: read sensors, run NN, return motor PWMs */
-    /* We'll do this inline in each test phase */
-
-    static const char *mnames[4] = {"FL", "FR", "RR", "RL"};
-
-    /* ============================================================
-     * TILT A: Roll RIGHT (right side down)
-     *
-     * Expected: NN increases RIGHT side motors (FR, RR) to push
-     * the right side back up. If LEFT side increases instead,
-     * the roll correction is INVERTED.
-     * ============================================================ */
+    /* ---- A: right side down → right pair (FR, RR) up ---- */
     uart_write_string("\r\n========================================\r\n");
-    uart_write_string("TILT A: Roll RIGHT (right side down, ~20 deg)\r\n");
-    uart_write_string("  Preparing in 3...");
-    delay_ms(1000);
-    uart_write_string("2...");
-    delay_ms(1000);
-    uart_write_string("1...");
-    delay_ms(1000);
-    uart_write_string("TILT AND HOLD\r\n\r\n");
+    uart_write_string("TILT A: RIGHT SIDE DOWN (~20 deg)\r\n");
+    uart_write_string("  Correct response: RIGHT motors (FR, RR) speed up\r\n");
+    int n = tilt_response_phase(imu, gb, ab, base, 0, +1, d);
+    grade_pair(n, (d[1] + d[2]) / 2.0f - (d[0] + d[3]) / 2.0f,
+               "RIGHT DOWN: right motors speed up → corrects",
+               "RIGHT DOWN: LEFT motors speed up → ROLL INVERTED, would flip",
+               "roll never exceeded +10 deg");
 
-    float sum_pwm_a[4] = {0};
-    int count_a = 0;
+    uart_write_string("\r\n  Return to FLAT (2 sec)...\r\n");
+    track_ticks(imu, gb, ab, 200);
 
-    for (int i = 0; i < 300; i++) {
-        while (!(SYST_CSR & SYST_CSR_COUNTFLAG)) {}
-        imu_raw_t s;
-        imu_read_raw(imu, &s);
-        float gx = (float)ALIGN_GX(s.gx) * GYRO_RAW_TO_RADS - gb[0];
-        float gy = (float)ALIGN_GY(s.gy) * GYRO_RAW_TO_RADS - gb[1];
-        float gz = (float)ALIGN_GZ(s.gz) * GYRO_RAW_TO_RADS - gb[2];
-        float ax = (float)ALIGN_AX(s.ax) * accel_raw_to_g   - ab[0];
-        float ay = (float)ALIGN_AY(s.ay) * accel_raw_to_g   - ab[1];
-        float az = (float)ALIGN_AZ(s.az) * accel_raw_to_g   - ab[2];
-        ahrs_update(gx, gy, gz, ax, ay, az, 0.01f);
-
-        float roll  = ahrs_get_roll();
-        float pitch = ahrs_get_pitch();
-
-        float obs[12];
-        obs[0] = clampf(gx / OBS_MAX_GYRO_RADS, -1.0f, 1.0f);
-        obs[1] = clampf(gy / OBS_MAX_GYRO_RADS, -1.0f, 1.0f);
-        obs[2] = clampf(gz / OBS_MAX_GYRO_RADS, -1.0f, 1.0f);
-        obs[3] = clampf(ax / 2.0f, -1.0f, 1.0f);
-        obs[4] = clampf(ay / 2.0f, -1.0f, 1.0f);
-        obs[5] = clampf(az / 2.0f, -1.0f, 1.0f);
-        obs[6] = clampf(roll  * OBS_ANGLE_SCALE, -1.0f, 1.0f);
-        obs[7] = clampf(pitch * OBS_ANGLE_SCALE, -1.0f, 1.0f);
-        obs[8] = 0.0f; obs[9] = 0.0f; obs[10] = 0.0f; obs[11] = 0.0f;
-
-        float nn_out[4];
-        nn_forward(obs, nn_out);
-        float pwm[4];
-        for (int k = 0; k < 4; k++) {
-            float cmd = clampf(NN_HOVER_THROTTLE + clampf(nn_out[k], -1.0f, 1.0f) * NN_ACTION_SCALE, 0.0f, 1.0f);
-            pwm[k] = 1000.0f + cmd * 1000.0f;
-        }
-
-        /* Only count samples where roll > 10 deg (actually tilted) */
-        if (roll > 10.0f) {
-            for (int k = 0; k < 4; k++) sum_pwm_a[k] += pwm[k];
-            count_a++;
-        }
-
-        if (i % 30 == 0) {
-            uart_write_string("  R=");
-            print_float3(roll);
-            uart_write_string(" P=");
-            print_float3(pitch);
-            uart_write_string("  FL:");
-            uart_write_uint32((uint32_t)(pwm[0]+0.5f));
-            uart_write_string(" FR:");
-            uart_write_uint32((uint32_t)(pwm[1]+0.5f));
-            uart_write_string(" RR:");
-            uart_write_uint32((uint32_t)(pwm[2]+0.5f));
-            uart_write_string(" RL:");
-            uart_write_uint32((uint32_t)(pwm[3]+0.5f));
-            uart_write_string("\r\n");
-        }
-    }
-
-    if (count_a > 10) {
-        float avg[4];
-        for (int k = 0; k < 4; k++) avg[k] = sum_pwm_a[k] / (float)count_a;
-        float right_avg = (avg[1] + avg[2]) / 2.0f;  /* FR + RR */
-        float left_avg  = (avg[0] + avg[3]) / 2.0f;  /* FL + RL */
-
-        uart_write_string("\r\n  Right tilt avg (");
-        uart_write_uint32(count_a);
-        uart_write_string(" samples with R>10):\r\n");
-        for (int k = 0; k < 4; k++) {
-            uart_write_string("    ");
-            uart_write_string(mnames[k]);
-            uart_write_string(": ");
-            uart_write_uint32((uint32_t)(avg[k]+0.5f));
-            uart_write_string(" us\r\n");
-        }
-        uart_write_string("  Right side (FR+RR) avg: ");
-        uart_write_uint32((uint32_t)(right_avg+0.5f));
-        uart_write_string("   Left side (FL+RL) avg: ");
-        uart_write_uint32((uint32_t)(left_avg+0.5f));
-        uart_write_string("\r\n");
-
-        if (right_avg > left_avg + 20.0f)
-            print_pass("ROLL RIGHT: Right side gets more thrust → corrects tilt");
-        else if (left_avg > right_avg + 20.0f)
-            print_fail("ROLL RIGHT: LEFT side gets more thrust → INVERTED! Will compound error!");
-        else
-            uart_write_string("  [WARN] No clear asymmetry. Did you tilt far enough?\r\n");
-    } else {
-        uart_write_string("  [WARN] Not enough tilted samples. Roll never exceeded 10 deg.\r\n");
-    }
-
-    /* ============================================================
-     * TILT B: Pitch NOSE DOWN
-     *
-     * Expected: NN increases FRONT motors (FL, FR) to push nose up.
-     * Actually: more front thrust -> nose pitches DOWN (negative
-     * pitch torque). Wait no — for correction, we need to push
-     * nose UP = increase REAR motors.
-     *
-     * NO. Tracing through carefully:
-     * - Nose down = negative pitch
-     * - Need positive pitch torque to correct
-     * - Rear motors at -X create positive pitch torque
-     * - So NN should increase REAR motors (RR, RL)
-     *
-     * If front increases instead, pitch is inverted.
-     * ============================================================ */
+    /* ---- B: nose down → front pair (FL, FR) up ---- */
     uart_write_string("\r\n========================================\r\n");
-    uart_write_string("TILT B: Pitch NOSE DOWN (~20 deg)\r\n");
-    uart_write_string("  Lift the REAR so the nose dips.\r\n");
-    uart_write_string("  Return to FLAT first, then...\r\n");
-    uart_write_string("  Preparing in 3...");
-    delay_ms(1000);
-    uart_write_string("2...");
-    delay_ms(1000);
-    uart_write_string("1...");
-    delay_ms(1000);
-    uart_write_string("TILT NOSE DOWN AND HOLD\r\n\r\n");
+    uart_write_string("TILT B: NOSE DOWN (~20 deg)  — lift the REAR\r\n");
+    uart_write_string("  Correct response: FRONT motors (FL, FR) speed up\r\n");
+    n = tilt_response_phase(imu, gb, ab, base, 1, +1, d);
+    grade_pair(n, (d[0] + d[1]) / 2.0f - (d[2] + d[3]) / 2.0f,
+               "NOSE DOWN: front motors speed up → lifts nose → corrects",
+               "NOSE DOWN: REAR motors speed up → pushes nose further down → PITCH INVERTED",
+               "pitch never exceeded +10 deg (nose down is POSITIVE pitch)");
 
-    float sum_pwm_b[4] = {0};
-    int count_b = 0;
+    uart_write_string("\r\n  Return to FLAT (2 sec)...\r\n");
+    track_ticks(imu, gb, ab, 200);
 
-    for (int i = 0; i < 300; i++) {
-        while (!(SYST_CSR & SYST_CSR_COUNTFLAG)) {}
-        imu_raw_t s;
-        imu_read_raw(imu, &s);
-        float gx = (float)ALIGN_GX(s.gx) * GYRO_RAW_TO_RADS - gb[0];
-        float gy = (float)ALIGN_GY(s.gy) * GYRO_RAW_TO_RADS - gb[1];
-        float gz = (float)ALIGN_GZ(s.gz) * GYRO_RAW_TO_RADS - gb[2];
-        float ax = (float)ALIGN_AX(s.ax) * accel_raw_to_g   - ab[0];
-        float ay = (float)ALIGN_AY(s.ay) * accel_raw_to_g   - ab[1];
-        float az = (float)ALIGN_AZ(s.az) * accel_raw_to_g   - ab[2];
-        ahrs_update(gx, gy, gz, ax, ay, az, 0.01f);
-
-        float roll  = ahrs_get_roll();
-        float pitch = ahrs_get_pitch();
-
-        float obs[12];
-        obs[0] = clampf(gx / OBS_MAX_GYRO_RADS, -1.0f, 1.0f);
-        obs[1] = clampf(gy / OBS_MAX_GYRO_RADS, -1.0f, 1.0f);
-        obs[2] = clampf(gz / OBS_MAX_GYRO_RADS, -1.0f, 1.0f);
-        obs[3] = clampf(ax / 2.0f, -1.0f, 1.0f);
-        obs[4] = clampf(ay / 2.0f, -1.0f, 1.0f);
-        obs[5] = clampf(az / 2.0f, -1.0f, 1.0f);
-        obs[6] = clampf(roll  * OBS_ANGLE_SCALE, -1.0f, 1.0f);
-        obs[7] = clampf(pitch * OBS_ANGLE_SCALE, -1.0f, 1.0f);
-        obs[8] = 0.0f; obs[9] = 0.0f; obs[10] = 0.0f; obs[11] = 0.0f;
-
-        float nn_out[4];
-        nn_forward(obs, nn_out);
-        float pwm[4];
-        for (int k = 0; k < 4; k++) {
-            float cmd = clampf(NN_HOVER_THROTTLE + clampf(nn_out[k], -1.0f, 1.0f) * NN_ACTION_SCALE, 0.0f, 1.0f);
-            pwm[k] = 1000.0f + cmd * 1000.0f;
-        }
-
-        /* Count when pitch < -10 deg (nose actually down) */
-        if (pitch < -10.0f) {
-            for (int k = 0; k < 4; k++) sum_pwm_b[k] += pwm[k];
-            count_b++;
-        }
-
-        if (i % 30 == 0) {
-            uart_write_string("  R=");
-            print_float3(roll);
-            uart_write_string(" P=");
-            print_float3(pitch);
-            uart_write_string("  FL:");
-            uart_write_uint32((uint32_t)(pwm[0]+0.5f));
-            uart_write_string(" FR:");
-            uart_write_uint32((uint32_t)(pwm[1]+0.5f));
-            uart_write_string(" RR:");
-            uart_write_uint32((uint32_t)(pwm[2]+0.5f));
-            uart_write_string(" RL:");
-            uart_write_uint32((uint32_t)(pwm[3]+0.5f));
-            uart_write_string("\r\n");
-        }
-    }
-
-    if (count_b > 10) {
-        float avg[4];
-        for (int k = 0; k < 4; k++) avg[k] = sum_pwm_b[k] / (float)count_b;
-        float front_avg = (avg[0] + avg[1]) / 2.0f;  /* FL + FR */
-        float rear_avg  = (avg[2] + avg[3]) / 2.0f;  /* RR + RL */
-
-        uart_write_string("\r\n  Nose-down avg (");
-        uart_write_uint32(count_b);
-        uart_write_string(" samples with P<-10):\r\n");
-        for (int k = 0; k < 4; k++) {
-            uart_write_string("    ");
-            uart_write_string(mnames[k]);
-            uart_write_string(": ");
-            uart_write_uint32((uint32_t)(avg[k]+0.5f));
-            uart_write_string(" us\r\n");
-        }
-        uart_write_string("  Front (FL+FR) avg: ");
-        uart_write_uint32((uint32_t)(front_avg+0.5f));
-        uart_write_string("   Rear (RR+RL) avg: ");
-        uart_write_uint32((uint32_t)(rear_avg+0.5f));
-        uart_write_string("\r\n");
-
-        if (rear_avg > front_avg + 20.0f)
-            print_pass("NOSE DOWN: Rear gets more thrust → pushes nose UP → corrects");
-        else if (front_avg > rear_avg + 20.0f)
-            print_fail("NOSE DOWN: FRONT gets more thrust → pushes nose FURTHER DOWN → INVERTED!");
-        else
-            uart_write_string("  [WARN] No clear front/rear asymmetry. Tilt more?\r\n");
-    } else {
-        uart_write_string("  [WARN] Not enough tilted samples. Pitch never went below -10 deg.\r\n");
-    }
-
-    /* ============================================================
-     * TILT C: Pitch NOSE UP
-     *
-     * Expected: NN increases FRONT motors (FL, FR).
-     * More front thrust = negative pitch torque = nose goes DOWN = correct.
-     * ============================================================ */
+    /* ---- C: nose up → rear pair (RR, RL) up ---- */
     uart_write_string("\r\n========================================\r\n");
-    uart_write_string("TILT C: Pitch NOSE UP (~20 deg)\r\n");
-    uart_write_string("  Lift the FRONT so the nose rises.\r\n");
-    uart_write_string("  Return to FLAT first, then...\r\n");
-    uart_write_string("  Preparing in 3...");
-    delay_ms(1000);
-    uart_write_string("2...");
-    delay_ms(1000);
-    uart_write_string("1...");
-    delay_ms(1000);
-    uart_write_string("TILT NOSE UP AND HOLD\r\n\r\n");
+    uart_write_string("TILT C: NOSE UP (~20 deg)  — lift the FRONT\r\n");
+    uart_write_string("  Correct response: REAR motors (RR, RL) speed up\r\n");
+    n = tilt_response_phase(imu, gb, ab, base, 1, -1, d);
+    grade_pair(n, (d[2] + d[3]) / 2.0f - (d[0] + d[1]) / 2.0f,
+               "NOSE UP: rear motors speed up → lifts tail → corrects",
+               "NOSE UP: FRONT motors speed up → pushes nose further up → PITCH INVERTED",
+               "pitch never went below -10 deg (nose up is NEGATIVE pitch)");
 
-    float sum_pwm_c[4] = {0};
-    int count_c = 0;
-
-    for (int i = 0; i < 300; i++) {
-        while (!(SYST_CSR & SYST_CSR_COUNTFLAG)) {}
-        imu_raw_t s;
-        imu_read_raw(imu, &s);
-        float gx = (float)ALIGN_GX(s.gx) * GYRO_RAW_TO_RADS - gb[0];
-        float gy = (float)ALIGN_GY(s.gy) * GYRO_RAW_TO_RADS - gb[1];
-        float gz = (float)ALIGN_GZ(s.gz) * GYRO_RAW_TO_RADS - gb[2];
-        float ax = (float)ALIGN_AX(s.ax) * accel_raw_to_g   - ab[0];
-        float ay = (float)ALIGN_AY(s.ay) * accel_raw_to_g   - ab[1];
-        float az = (float)ALIGN_AZ(s.az) * accel_raw_to_g   - ab[2];
-        ahrs_update(gx, gy, gz, ax, ay, az, 0.01f);
-
-        float roll  = ahrs_get_roll();
-        float pitch = ahrs_get_pitch();
-
-        float obs[12];
-        obs[0] = clampf(gx / OBS_MAX_GYRO_RADS, -1.0f, 1.0f);
-        obs[1] = clampf(gy / OBS_MAX_GYRO_RADS, -1.0f, 1.0f);
-        obs[2] = clampf(gz / OBS_MAX_GYRO_RADS, -1.0f, 1.0f);
-        obs[3] = clampf(ax / 2.0f, -1.0f, 1.0f);
-        obs[4] = clampf(ay / 2.0f, -1.0f, 1.0f);
-        obs[5] = clampf(az / 2.0f, -1.0f, 1.0f);
-        obs[6] = clampf(roll  * OBS_ANGLE_SCALE, -1.0f, 1.0f);
-        obs[7] = clampf(pitch * OBS_ANGLE_SCALE, -1.0f, 1.0f);
-        obs[8] = 0.0f; obs[9] = 0.0f; obs[10] = 0.0f; obs[11] = 0.0f;
-
-        float nn_out[4];
-        nn_forward(obs, nn_out);
-        float pwm[4];
-        for (int k = 0; k < 4; k++) {
-            float cmd = clampf(NN_HOVER_THROTTLE + clampf(nn_out[k], -1.0f, 1.0f) * NN_ACTION_SCALE, 0.0f, 1.0f);
-            pwm[k] = 1000.0f + cmd * 1000.0f;
-        }
-
-        if (pitch > 10.0f) {
-            for (int k = 0; k < 4; k++) sum_pwm_c[k] += pwm[k];
-            count_c++;
-        }
-
-        if (i % 30 == 0) {
-            uart_write_string("  R=");
-            print_float3(roll);
-            uart_write_string(" P=");
-            print_float3(pitch);
-            uart_write_string("  FL:");
-            uart_write_uint32((uint32_t)(pwm[0]+0.5f));
-            uart_write_string(" FR:");
-            uart_write_uint32((uint32_t)(pwm[1]+0.5f));
-            uart_write_string(" RR:");
-            uart_write_uint32((uint32_t)(pwm[2]+0.5f));
-            uart_write_string(" RL:");
-            uart_write_uint32((uint32_t)(pwm[3]+0.5f));
-            uart_write_string("\r\n");
-        }
-    }
-
-    if (count_c > 10) {
-        float avg[4];
-        for (int k = 0; k < 4; k++) avg[k] = sum_pwm_c[k] / (float)count_c;
-        float front_avg = (avg[0] + avg[1]) / 2.0f;
-        float rear_avg  = (avg[2] + avg[3]) / 2.0f;
-
-        uart_write_string("\r\n  Nose-up avg (");
-        uart_write_uint32(count_c);
-        uart_write_string(" samples with P>10):\r\n");
-        for (int k = 0; k < 4; k++) {
-            uart_write_string("    ");
-            uart_write_string(mnames[k]);
-            uart_write_string(": ");
-            uart_write_uint32((uint32_t)(avg[k]+0.5f));
-            uart_write_string(" us\r\n");
-        }
-        uart_write_string("  Front (FL+FR) avg: ");
-        uart_write_uint32((uint32_t)(front_avg+0.5f));
-        uart_write_string("   Rear (RR+RL) avg: ");
-        uart_write_uint32((uint32_t)(rear_avg+0.5f));
-        uart_write_string("\r\n");
-
-        if (front_avg > rear_avg + 20.0f)
-            print_pass("NOSE UP: Front gets more thrust → pushes nose DOWN → corrects");
-        else if (rear_avg > front_avg + 20.0f)
-            print_fail("NOSE UP: REAR gets more thrust → pushes nose FURTHER UP → INVERTED!");
-        else
-            uart_write_string("  [WARN] No clear front/rear asymmetry. Tilt more?\r\n");
-    } else {
-        uart_write_string("  [WARN] Not enough tilted samples. Pitch never exceeded +10 deg.\r\n");
-    }
-
-    /* ---- Summary ---- */
     print_banner("TEST 8 COMPLETE");
-    uart_write_string("If any FAIL appeared, the motor mapping or axis signs\r\n");
-    uart_write_string("are wrong. The NN correction goes to the wrong side,\r\n");
-    uart_write_string("causing the 'compounding errors' behavior.\r\n\r\n");
-    uart_write_string("Most likely fix: swap motor wires or fix NN_TO_MOTOR[].\r\n");
-    uart_write_string("The motor that SHOULD get more thrust is printed above.\r\n");
-    uart_write_string("Compare against which PHYSICAL motor is at that position.\r\n");
+    uart_write_string("A FAIL on one axis only (roll OR pitch) means that axis's\r\n");
+    uart_write_string("sign is inverted (ALIGN_xx in fc_config.h). If test 3 passes\r\n");
+    uart_write_string("but this fails, suspect NN_TO_MOTOR[] / motor wiring.\r\n");
 }
 
 
@@ -2195,164 +2001,70 @@ static void test8_tilt_response(imu_type_t imu)
  *
  *  ████████ ███████ ███████ ████████  █████
  *     ██    ██      ██         ██    ██   ██
- *     ██    █████   ███████    ██     ████
- *     ██    ██           ██    ██    ██   ██
+ *     ██    █████   ███████    ██     ██████
+ *     ██    ██           ██    ██         ██
  *     ██    ███████ ███████    ██     █████
  *
- *  IIR FILTER LAG TEST
+ *  ACTION FILTER LAG TEST
  *
- *  Purpose: Same as test 8, but WITH the adaptive IIR filter in
- *           the loop. Shows how much the filter delays corrections.
- *           If ALPHA_SLOW=0.08 eats the first few degrees of
- *           correction, the drone tilts further before the filter
- *           lets the correction through — causing the "compounding"
- *           feel even when the direction is correct.
+ *  Purpose: Show how far the filtered NN output (what reaches the
+ *           motors) trails the raw NN output during a real tilt.
  *
- *  Procedure: Tilt right ~20 deg and hold. Test runs for 5 seconds.
- *           Shows both raw NN output and post-IIR output side by side.
+ *  Filter: fixed-alpha EMA from fc_config.h (alpha 0.3, identical to
+ *  training). At 100 Hz its time constant is ~28 ms; during a steady
+ *  ramp the filtered value trails the raw value by ~2.3 ticks (23 ms).
+ *  (The old adaptive filter sat at alpha 0.08 for small changes —
+ *   a ~120 ms time constant.)
  *
+ *  Informational — prints the largest lag seen, no PASS/FAIL.
  * ============================================================ */
 static void test9_iir_lag(imu_type_t imu)
 {
-    print_banner("TEST 9: IIR Filter Lag Test");
-    uart_write_string("Shows raw NN output vs post-IIR filtered output.\r\n");
-    uart_write_string("If the filter adds too much lag, corrections arrive\r\n");
-    uart_write_string("too late and the drone tilts further before correcting.\r\n\r\n");
+    print_banner("TEST 9: Action Filter Lag");
+    uart_write_string("Raw NN output vs filtered output (alpha ");
+    print_float3(ACTION_FILTER_ALPHA);
+    uart_write_string(", same as training).\r\n\r\n");
 
-    /* Calibrate */
-    ahrs_init();
-    systick_init_100hz();
+    float gb[3], ab[3];
+    calibrate_level(imu, gb, ab);
 
-    float cal_gx = 0, cal_gy = 0, cal_gz = 0;
-    float cal_ax = 0, cal_ay = 0, cal_az = 0;
-    int cal_n = 0;
-
-    uart_write_string("  Calibrating (2 sec, keep FLAT)...\r\n");
-    for (int i = 0; i < 200; i++) {
-        while (!(SYST_CSR & SYST_CSR_COUNTFLAG)) {}
-        imu_raw_t s;
-        imu_read_raw(imu, &s);
-        float gx = (float)ALIGN_GX(s.gx) * GYRO_RAW_TO_RADS;
-        float gy = (float)ALIGN_GY(s.gy) * GYRO_RAW_TO_RADS;
-        float gz = (float)ALIGN_GZ(s.gz) * GYRO_RAW_TO_RADS;
-        float ax = (float)ALIGN_AX(s.ax) * accel_raw_to_g;
-        float ay = (float)ALIGN_AY(s.ay) * accel_raw_to_g;
-        float az = (float)ALIGN_AZ(s.az) * accel_raw_to_g;
-        ahrs_update(gx, gy, gz, ax, ay, az, 0.01f);
-        if (i >= 50) {
-            cal_gx += gx; cal_gy += gy; cal_gz += gz;
-            cal_ax += ax; cal_ay += ay; cal_az += az;
-            cal_n++;
-        }
-    }
-    float gb[3] = {0}, ab[3] = {0};
-    if (cal_n > 0) {
-        float inv = 1.0f / (float)cal_n;
-        gb[0] = cal_gx*inv; gb[1] = cal_gy*inv; gb[2] = cal_gz*inv;
-        ab[0] = cal_ax*inv; ab[1] = cal_ay*inv; ab[2] = cal_az*inv - 1.0f;
-    }
-
-    ahrs_init();
-    for (int i = 0; i < 100; i++) {
-        while (!(SYST_CSR & SYST_CSR_COUNTFLAG)) {}
-        imu_raw_t s;
-        imu_read_raw(imu, &s);
-        float gx = (float)ALIGN_GX(s.gx) * GYRO_RAW_TO_RADS - gb[0];
-        float gy = (float)ALIGN_GY(s.gy) * GYRO_RAW_TO_RADS - gb[1];
-        float gz = (float)ALIGN_GZ(s.gz) * GYRO_RAW_TO_RADS - gb[2];
-        float ax = (float)ALIGN_AX(s.ax) * accel_raw_to_g   - ab[0];
-        float ay = (float)ALIGN_AY(s.ay) * accel_raw_to_g   - ab[1];
-        float az = (float)ALIGN_AZ(s.az) * accel_raw_to_g   - ab[2];
-        ahrs_update(gx, gy, gz, ax, ay, az, 0.01f);
-    }
-
-    uart_write_string("  Now tilt RIGHT ~20 deg and hold.\r\n");
-    uart_write_string("  Preparing in 3...");
-    delay_ms(1000);
-    uart_write_string("2...");
-    delay_ms(1000);
-    uart_write_string("1...");
-    delay_ms(1000);
+    uart_write_string("  Tilt RIGHT ~20 deg during the countdown and hold.\r\n");
+    countdown_tracking(imu, gb, ab);
     uart_write_string("TILT NOW\r\n\r\n");
 
-    /* IIR filter state — starts at zero like main.c */
     float nn_smoothed[4] = {0, 0, 0, 0};
+    float max_lag = 0.0f;
 
-    uart_write_string("  Roll   | Raw NN (FR)  | IIR out (FR) | Alpha | Lag(us)\r\n");
-    uart_write_string("  -------+--------------+--------------+-------+--------\r\n");
+    uart_write_string("  Roll    | Raw FR   | Filtered FR | Lag(us)\r\n");
+    uart_write_string("  --------+----------+-------------+--------\r\n");
 
     for (int i = 0; i < 500; i++) {
-        while (!(SYST_CSR & SYST_CSR_COUNTFLAG)) {}
-        imu_raw_t s;
-        imu_read_raw(imu, &s);
-        float gx = (float)ALIGN_GX(s.gx) * GYRO_RAW_TO_RADS - gb[0];
-        float gy = (float)ALIGN_GY(s.gy) * GYRO_RAW_TO_RADS - gb[1];
-        float gz = (float)ALIGN_GZ(s.gz) * GYRO_RAW_TO_RADS - gb[2];
-        float ax = (float)ALIGN_AX(s.ax) * accel_raw_to_g   - ab[0];
-        float ay = (float)ALIGN_AY(s.ay) * accel_raw_to_g   - ab[1];
-        float az = (float)ALIGN_AZ(s.az) * accel_raw_to_g   - ab[2];
-        ahrs_update(gx, gy, gz, ax, ay, az, 0.01f);
+        float nn[4], roll, pitch;
+        nn_tick(imu, gb, ab, nn, &roll, &pitch);
+        action_filter_step(nn_smoothed, nn);
 
-        float roll = ahrs_get_roll();
-        float pitch = ahrs_get_pitch();
+        float lag_us = (nn[1] - nn_smoothed[1]) * NN_ACTION_SCALE * 1000.0f;
+        /* ignore the first 0.2 s while the filter starts from zero */
+        if (i >= 20 && FABSF(lag_us) > max_lag) max_lag = FABSF(lag_us);
 
-        float obs[12];
-        obs[0] = clampf(gx / OBS_MAX_GYRO_RADS, -1.0f, 1.0f);
-        obs[1] = clampf(gy / OBS_MAX_GYRO_RADS, -1.0f, 1.0f);
-        obs[2] = clampf(gz / OBS_MAX_GYRO_RADS, -1.0f, 1.0f);
-        obs[3] = clampf(ax / 2.0f, -1.0f, 1.0f);
-        obs[4] = clampf(ay / 2.0f, -1.0f, 1.0f);
-        obs[5] = clampf(az / 2.0f, -1.0f, 1.0f);
-        obs[6] = clampf(roll  * OBS_ANGLE_SCALE, -1.0f, 1.0f);
-        obs[7] = clampf(pitch * OBS_ANGLE_SCALE, -1.0f, 1.0f);
-        obs[8] = 0; obs[9] = 0; obs[10] = 0; obs[11] = 0;
-
-        float nn_out[4];
-        nn_forward(obs, nn_out);
-        for (int k = 0; k < 4; k++)
-            nn_out[k] = clampf(nn_out[k], -1.0f, 1.0f);
-
-        /* Save raw FR output before IIR */
-        float raw_fr = nn_out[1];
-
-        /* Apply IIR — same as main.c */
-        float alpha_used = 0;
-        for (int k = 0; k < 4; k++) {
-            float diff = nn_out[k] - nn_smoothed[k];
-            float adiff = diff < 0.0f ? -diff : diff;
-            float alpha = adiff >= ACTION_SNAP_THRESH
-                            ? ACTION_ALPHA_FAST : ACTION_ALPHA_SLOW;
-            if (k == 1) alpha_used = alpha;  /* track FR's alpha */
-            nn_smoothed[k] += alpha * diff;
-        }
-        float iir_fr = nn_smoothed[1];
-
-        /* Compute PWM difference (lag in µs) */
-        float raw_pwm = (NN_HOVER_THROTTLE + raw_fr * NN_ACTION_SCALE) * 1000.0f;
-        float iir_pwm = (NN_HOVER_THROTTLE + iir_fr * NN_ACTION_SCALE) * 1000.0f;
-        float lag_us = raw_pwm - iir_pwm;
-
-        /* Print at 10 Hz */
         if (i % 10 == 0) {
             uart_write_string("  ");
             print_float3(roll);
             uart_write_string(" | ");
-            print_float3(raw_fr);
+            print_float3(nn[1]);
+            uart_write_string("   | ");
+            print_float3(nn_smoothed[1]);
             uart_write_string("      | ");
-            print_float3(iir_fr);
-            uart_write_string("      | ");
-            print_float3(alpha_used);
-            uart_write_string(" | ");
             print_float3(lag_us);
             uart_write_string("\r\n");
         }
     }
 
-    uart_write_string("\r\n  Key: if 'Lag' stays large (>50us) and Alpha stays at 0.08,\r\n");
-    uart_write_string("  the IIR filter is suppressing corrections. The drone will\r\n");
-    uart_write_string("  feel sluggish and tilt further before correcting.\r\n\r\n");
-    uart_write_string("  If Alpha switches to 0.60 quickly, the filter is working\r\n");
-    uart_write_string("  as intended — fast tracking for real corrections.\r\n");
+    uart_write_string("\r\n  Largest |lag| after start-up: ");
+    print_float3(max_lag);
+    uart_write_string(" us\r\n");
+    uart_write_string("  Roll should go POSITIVE for right-side-down. With alpha 0.3\r\n");
+    uart_write_string("  the filtered value catches up within ~7 ticks (70 ms).\r\n");
 }
 
 
@@ -2364,27 +2076,20 @@ static void test9_iir_lag(imu_type_t imu)
  *     ██    ██           ██    ██     ██ ██  ██
  *     ██    ███████ ███████    ██     ██  ██████
  *
- *  MOTOR WIRE VERIFICATION (MOTORS SPIN!)
+ *  MOTOR WIRE VERIFICATION (MOTORS SPIN!)  — opt-in: TESTS=10
  *
  *  ** REMOVE PROPELLERS BEFORE RUNNING THIS TEST **
  *
- *  Purpose: You tilt the board, and the test SPINS the motor
- *           that the NN says should be strongest. You physically
- *           verify: is the motor that spins on the correct side?
+ *  You tilt the board; the test pulses the motor whose NN output rose
+ *  the MOST compared with the level baseline. You verify it is on the
+ *  LOW side (the side that must be lifted):
+ *    right side down → FR or RR
+ *    nose down       → FL or FR   (front)
+ *    nose up         → RR or RL   (rear)
  *
- *  This is the DEFINITIVE motor wiring test. Test 8 proved the
- *  NN computes the right correction. This test proves the
- *  correction reaches the right physical motor.
- *
- *  Procedure:
- *    1. REMOVE ALL PROPS
- *    2. Tilt right → the motor on the right side should pulse
- *    3. Tilt nose down → a rear motor should pulse
- *    4. Tilt nose up → a front motor should pulse
- *
- *  The test prints which nn output / motor index it's firing
- *  AND which physical position it SHOULD be. You watch and verify.
- *
+ *  (The old version picked the largest ABSOLUTE output — RL wins even at
+ *   level because of the NN's built-in imbalance — and expected the rear
+ *   to pulse for nose-down, which is physically backwards.)
  * ============================================================ */
 
 /* NN to motor index mapping — same as main.c */
@@ -2400,79 +2105,27 @@ static void test10_motor_wire_verify(imu_type_t imu)
     print_banner("TEST 10: Motor Wire Verification");
     uart_write_string("** REMOVE ALL PROPELLERS BEFORE CONTINUING **\r\n");
     uart_write_string("** MOTORS WILL SPIN IN THIS TEST **\r\n\r\n");
-    uart_write_string("Tilt the board → the NN picks the strongest motor →\r\n");
-    uart_write_string("that motor pulses briefly. Verify it's on the correct side.\r\n\r\n");
-    uart_write_string("Starting in 5 seconds (remove props NOW)...\r\n");
+    uart_write_string("Starting in 5 seconds (unplug the battery NOW to skip)...\r\n");
     delay_ms(5000);
 
-    /* Init motors */
     motor_init();
     delay_ms(2000);  /* ESC arming */
 
-    /* Calibrate IMU */
-    ahrs_init();
-    systick_init_100hz();
+    float gb[3], ab[3], base[4];
+    calibrate_level(imu, gb, ab);
+    uart_write_string("  Measuring LEVEL baseline (1 sec, keep FLAT)...\r\n");
+    level_baseline(imu, gb, ab, 100, base);
 
-    float cal_gx = 0, cal_gy = 0, cal_gz = 0;
-    float cal_ax = 0, cal_ay = 0, cal_az = 0;
-    int cal_n = 0;
-
-    uart_write_string("  Calibrating (2 sec, keep FLAT)...\r\n");
-    for (int i = 0; i < 200; i++) {
-        while (!(SYST_CSR & SYST_CSR_COUNTFLAG)) {}
-        imu_raw_t s;
-        imu_read_raw(imu, &s);
-        float gx = (float)ALIGN_GX(s.gx) * GYRO_RAW_TO_RADS;
-        float gy = (float)ALIGN_GY(s.gy) * GYRO_RAW_TO_RADS;
-        float gz = (float)ALIGN_GZ(s.gz) * GYRO_RAW_TO_RADS;
-        float ax = (float)ALIGN_AX(s.ax) * accel_raw_to_g;
-        float ay = (float)ALIGN_AY(s.ay) * accel_raw_to_g;
-        float az = (float)ALIGN_AZ(s.az) * accel_raw_to_g;
-        ahrs_update(gx, gy, gz, ax, ay, az, 0.01f);
-        if (i >= 50) {
-            cal_gx += gx; cal_gy += gy; cal_gz += gz;
-            cal_ax += ax; cal_ay += ay; cal_az += az;
-            cal_n++;
-        }
-    }
-    float gb[3] = {0}, ab[3] = {0};
-    if (cal_n > 0) {
-        float inv = 1.0f / (float)cal_n;
-        gb[0] = cal_gx*inv; gb[1] = cal_gy*inv; gb[2] = cal_gz*inv;
-        ab[0] = cal_ax*inv; ab[1] = cal_ay*inv; ab[2] = cal_az*inv - 1.0f;
-    }
-
-    ahrs_init();
-    for (int i = 0; i < 100; i++) {
-        while (!(SYST_CSR & SYST_CSR_COUNTFLAG)) {}
-        imu_raw_t s;
-        imu_read_raw(imu, &s);
-        ahrs_update(
-            (float)ALIGN_GX(s.gx) * GYRO_RAW_TO_RADS - gb[0],
-            (float)ALIGN_GY(s.gy) * GYRO_RAW_TO_RADS - gb[1],
-            (float)ALIGN_GZ(s.gz) * GYRO_RAW_TO_RADS - gb[2],
-            (float)ALIGN_AX(s.ax) * accel_raw_to_g   - ab[0],
-            (float)ALIGN_AY(s.ay) * accel_raw_to_g   - ab[1],
-            (float)ALIGN_AZ(s.az) * accel_raw_to_g   - ab[2],
-            0.01f);
-    }
-
-    static const char *nn_names[4] = {"FL(nn0)", "FR(nn1)", "RR(nn2)", "RL(nn3)"};
-
-    /* Run 3 tilt phases */
     static const struct {
         const char *label;
         const char *instruction;
         int         axis;          /* 0=roll, 1=pitch */
-        float       threshold;     /* positive or negative trigger */
+        float       threshold;     /* trigger: angle beyond this (sign matters) */
         const char *expected_side;
     } phases[3] = {
-        {"TILT RIGHT",    "Tilt RIGHT side down ~20 deg", 0, +15.0f,
-         "RIGHT side (FR or RR)"},
-        {"NOSE DOWN",     "Tilt NOSE DOWN ~20 deg",       1, -15.0f,
-         "REAR (RR or RL)"},
-        {"NOSE UP",       "Tilt NOSE UP ~20 deg",         1, +15.0f,
-         "FRONT (FL or FR)"},
+        {"RIGHT SIDE DOWN", "Tilt RIGHT side down ~20 deg", 0, +15.0f, "RIGHT side (FR or RR)"},
+        {"NOSE DOWN",       "Tilt NOSE DOWN ~20 deg",       1, +15.0f, "FRONT (FL or FR)"},
+        {"NOSE UP",         "Tilt NOSE UP ~20 deg",         1, -15.0f, "REAR (RR or RL)"},
     };
 
     for (int p = 0; p < 3; p++) {
@@ -2482,115 +2135,69 @@ static void test10_motor_wire_verify(imu_type_t imu)
         uart_write_string(phases[p].instruction);
         uart_write_string("\r\n  Expected motor: ");
         uart_write_string(phases[p].expected_side);
-        uart_write_string("\r\n  Preparing in 3...");
-        delay_ms(1000);
-        uart_write_string("2...");
-        delay_ms(1000);
-        uart_write_string("1...");
-        delay_ms(1000);
-        uart_write_string("GO\r\n\r\n");
+        uart_write_string("\r\n");
+        countdown_tracking(imu, gb, ab);
+        uart_write_string("GO (8 s window)\r\n\r\n");
 
         int fired = 0;
-
-        for (int i = 0; i < 400 && !fired; i++) {
-            while (!(SYST_CSR & SYST_CSR_COUNTFLAG)) {}
-            imu_raw_t s;
-            imu_read_raw(imu, &s);
-            float gx = (float)ALIGN_GX(s.gx) * GYRO_RAW_TO_RADS - gb[0];
-            float gy = (float)ALIGN_GY(s.gy) * GYRO_RAW_TO_RADS - gb[1];
-            float gz = (float)ALIGN_GZ(s.gz) * GYRO_RAW_TO_RADS - gb[2];
-            float ax = (float)ALIGN_AX(s.ax) * accel_raw_to_g   - ab[0];
-            float ay = (float)ALIGN_AY(s.ay) * accel_raw_to_g   - ab[1];
-            float az = (float)ALIGN_AZ(s.az) * accel_raw_to_g   - ab[2];
-            ahrs_update(gx, gy, gz, ax, ay, az, 0.01f);
-
-            float roll  = ahrs_get_roll();
-            float pitch = ahrs_get_pitch();
+        for (int i = 0; i < 800 && !fired; i++) {
+            float nn[4], roll, pitch;
+            nn_tick(imu, gb, ab, nn, &roll, &pitch);
             float angle = (phases[p].axis == 0) ? roll : pitch;
 
-            /* Print at 5 Hz */
-            if (i % 20 == 0) {
-                uart_write_string("  R=");
-                print_float3(roll);
-                uart_write_string(" P=");
-                print_float3(pitch);
+            if (i % 50 == 0) {
+                uart_write_string("  R=");  print_float3(roll);
+                uart_write_string(" P=");   print_float3(pitch);
                 uart_write_string("  (waiting for ");
                 print_float3(phases[p].threshold);
                 uart_write_string(" deg)\r\n");
             }
 
-            /* Check if threshold exceeded */
-            int triggered = 0;
-            if (phases[p].threshold > 0 && angle > phases[p].threshold) triggered = 1;
-            if (phases[p].threshold < 0 && angle < phases[p].threshold) triggered = 1;
+            int triggered = (phases[p].threshold > 0) ? (angle > phases[p].threshold)
+                                                      : (angle < phases[p].threshold);
+            if (!triggered) continue;
 
-            if (triggered) {
-                /* Run NN to find strongest motor */
-                float obs[12];
-                obs[0] = clampf(gx / OBS_MAX_GYRO_RADS, -1.0f, 1.0f);
-                obs[1] = clampf(gy / OBS_MAX_GYRO_RADS, -1.0f, 1.0f);
-                obs[2] = clampf(gz / OBS_MAX_GYRO_RADS, -1.0f, 1.0f);
-                obs[3] = clampf(ax / 2.0f, -1.0f, 1.0f);
-                obs[4] = clampf(ay / 2.0f, -1.0f, 1.0f);
-                obs[5] = clampf(az / 2.0f, -1.0f, 1.0f);
-                obs[6] = clampf(roll  * OBS_ANGLE_SCALE, -1.0f, 1.0f);
-                obs[7] = clampf(pitch * OBS_ANGLE_SCALE, -1.0f, 1.0f);
-                obs[8] = 0; obs[9] = 0; obs[10] = 0; obs[11] = 0;
+            /* Motor whose output ROSE the most relative to level */
+            int strongest = 0;
+            for (int k = 1; k < 4; k++)
+                if (nn[k] - base[k] > nn[strongest] - base[strongest]) strongest = k;
+            int motor_idx = TEST_NN_TO_MOTOR[strongest];
 
-                float nn_out[4];
-                nn_forward(obs, nn_out);
-
-                /* Find the motor with highest NN output */
-                int strongest = 0;
-                for (int k = 1; k < 4; k++) {
-                    if (nn_out[k] > nn_out[strongest]) strongest = k;
-                }
-
-                int motor_idx = TEST_NN_TO_MOTOR[strongest];
-
-                uart_write_string("\r\n  ** TRIGGERED at ");
-                print_float3(angle);
-                uart_write_string(" deg **\r\n");
-                uart_write_string("  NN outputs: ");
-                for (int k = 0; k < 4; k++) {
-                    uart_write_string(nn_names[k]);
-                    uart_write_string("=");
-                    print_float3(nn_out[k]);
-                    uart_write_string("  ");
-                }
-                uart_write_string("\r\n");
-                uart_write_string("  Strongest: ");
-                uart_write_string(nn_names[strongest]);
-                uart_write_string(" → motor_set(");
-                uart_write_uint32(motor_idx);
-                uart_write_string(")\r\n");
-                uart_write_string("  Expected position: ");
-                uart_write_string(phases[p].expected_side);
-                uart_write_string("\r\n\r\n");
-
-                /* PULSE that motor at 30% for 500ms, 3 times */
-                uart_write_string("  >>> PULSING MOTOR NOW — watch which one spins <<<\r\n");
-                for (int pulse = 0; pulse < 3; pulse++) {
-                    motor_set(motor_idx, 0.30f);
-                    delay_ms(400);
-                    motor_all_stop();
-                    delay_ms(300);
-                }
-                uart_write_string("  >>> DONE — was it on the ");
-                uart_write_string(phases[p].expected_side);
-                uart_write_string("? <<<\r\n");
-
-                fired = 1;
+            uart_write_string("\r\n  ** TRIGGERED at ");
+            print_float3(angle);
+            uart_write_string(" deg **\r\n  Change vs level:");
+            for (int k = 0; k < 4; k++) {
+                uart_write_string("  ");
+                uart_write_string(MOTOR_NAMES[k]);
+                uart_write_char(' ');
+                print_float3(nn[k] - base[k]);
             }
+            uart_write_string("\r\n  Largest increase: ");
+            uart_write_string(MOTOR_NAMES[strongest]);
+            uart_write_string(" → motor_set(");
+            uart_write_uint32((uint32_t)motor_idx);
+            uart_write_string(")\r\n  Expected position: ");
+            uart_write_string(phases[p].expected_side);
+            uart_write_string("\r\n\r\n");
+
+            uart_write_string("  >>> PULSING MOTOR NOW — watch which one spins <<<\r\n");
+            for (int pulse = 0; pulse < 3; pulse++) {
+                motor_set(motor_idx, 0.30f);
+                delay_ms(400);
+                motor_all_stop();
+                delay_ms(300);
+            }
+            uart_write_string("  >>> DONE — was it on the ");
+            uart_write_string(phases[p].expected_side);
+            uart_write_string("? <<<\r\n");
+            fired = 1;
         }
 
-        if (!fired) {
-            uart_write_string("  [WARN] Tilt threshold not reached in 4 seconds.\r\n");
-        }
+        if (!fired)
+            uart_write_string("  [WARN] Tilt threshold not reached in 8 seconds.\r\n");
 
-        /* Return to flat between phases */
-        uart_write_string("\r\n  Return board to FLAT.\r\n");
-        delay_ms(3000);
+        uart_write_string("\r\n  Return board to FLAT (3 sec)...\r\n");
+        track_ticks(imu, gb, ab, 300);
     }
 
     motor_all_stop();
@@ -2598,11 +2205,9 @@ static void test10_motor_wire_verify(imu_type_t imu)
     print_banner("TEST 10 COMPLETE");
     uart_write_string("For each tilt, verify the pulsing motor is at the\r\n");
     uart_write_string("expected position on the frame.\r\n\r\n");
-    uart_write_string("If the wrong motor pulsed:\r\n");
+    uart_write_string("If the wrong motor pulsed but test 8 passed:\r\n");
     uart_write_string("  1. Note which nn output → which motor index → which pin\r\n");
-    uart_write_string("  2. Swap the ESC wires so the correct physical motor\r\n");
-    uart_write_string("     is connected to the correct pin\r\n");
-    uart_write_string("  3. OR fix NN_TO_MOTOR[] in main.c\r\n");
+    uart_write_string("  2. Swap ESC signal wires, OR fix NN_TO_MOTOR[] in main.c\r\n");
 }
 
 
@@ -2614,214 +2219,88 @@ static void test10_motor_wire_verify(imu_type_t imu)
  *     ██    ██           ██    ██     ██  ██
  *     ██    ███████ ███████    ██     ██  ██
  *
- *  IIR LIMIT-CYCLE STRESS TEST  (pure computation — no hardware)
+ *  ACTION FILTER MATHS  (pure computation — no hardware)
  *
- *  Purpose: Determine whether the adaptive IIR filter
- *           (ALPHA_SLOW / ALPHA_FAST / SNAP_THRESH) can generate
- *           a self-sustaining PWM oscillation when its input
- *           carries noise near the snap threshold.
+ *  Verifies the on-chip action_filter_step() (fc_config.h):
+ *    A: step 0 → 0.5 reaches 90 % in exactly 7 ticks
+ *       (alpha 0.3: 1 - 0.7^7 = 0.918 ≥ 0.9, 1 - 0.7^6 = 0.882 < 0.9)
+ *    B: matches the training formula  s = 0.3*a + 0.7*s  on a long
+ *       pseudo-random sequence (max difference < 1e-5)
+ *    C: chatter attenuation — a ±0.08 square wave at 25 Hz (vibration-
+ *       like) is reported in µs before and after the filter (info)
  *
- *  This is the root-cause test for motor pulsing that passes all
- *  other tests: bench stable → in flight with vibration noise
- *  the NN output straddling SNAP_THRESH causes alpha to alternate
- *  FAST/SLOW every tick → motor command steps ±N µs at 10-50 Hz.
- *
- *  Three synthetic input scenarios:
- *    A: small noise (±0.05 around 0.10) — never crosses threshold
- *       Expected: ALPHA_SLOW throughout, <10 PWM swings > 5 µs
- *    B: on-threshold noise (±0.08 around 0.15) — straddles SNAP_THRESH
- *       Expected: limit cycle if threshold too close to noise floor
- *    C: large step 0 → +0.5 — verifies FAST path actually tracks
- *       Expected: converges within ~10 ticks
- *
- *  Pass metric: PWM toggles > 5 µs in 500 ticks
- *    A,B < 10 toggles: PASS
- *    A,B >= 10:        FAIL → raise ACTION_SNAP_THRESH to 0.25+
- *
+ *  (Replaces the old adaptive-filter limit-cycle test; the adaptive
+ *   filter was removed from main.c.)
  * ============================================================ */
 static void test11_iir_threshold_stress(void)
 {
-    print_banner("TEST 11: IIR Limit-Cycle Stress Test");
-    uart_write_string("Feeds synthetic NN outputs into the IIR filter.\r\n");
-    uart_write_string("Detects limit cycles that cause motor pulsing.\r\n");
-    uart_write_string("No hardware needed — runs immediately (~2 sec).\r\n\r\n");
+    print_banner("TEST 11: Action Filter Maths");
+    uart_write_string("  ACTION_FILTER_ALPHA = ");
+    print_float3(ACTION_FILTER_ALPHA);
+    uart_write_string("  (training uses 0.300)\r\n\r\n");
 
-    uart_write_string("  Current parameters:\r\n");
-    uart_write_string("    ALPHA_SLOW  = "); print_float3(ACTION_ALPHA_SLOW);  uart_write_string("\r\n");
-    uart_write_string("    ALPHA_FAST  = "); print_float3(ACTION_ALPHA_FAST);  uart_write_string("\r\n");
-    uart_write_string("    SNAP_THRESH = "); print_float3(ACTION_SNAP_THRESH); uart_write_string("\r\n\r\n");
-
-    #define IIR11_TICKS      500
-    #define IIR11_MIN_SWING  5.0f   /* µs — swing larger than this = visible pulse */
-
-    /* ────────────────────────────────────────────────────────────
-     * SCENARIO A: small noise — square wave 0.05 → 0.15 at 20 Hz
-     *   Amplitude 0.05 centered at 0.10.  The difference (nn - smoothed)
-     *   should stay below SNAP_THRESH almost always → ALPHA_SLOW dominates
-     *   and the output barely moves.  Zero/few PWM toggles expected.
-     * ──────────────────────────────────────────────────────────── */
-    uart_write_string("Scenario A: small noise  (0.05↔0.15, amp=0.05, center=0.10)\r\n");
-    uart_write_string("  Expected: <10 PWM swings, ALPHA_SLOW throughout\r\n\r\n");
+    /* ---- A: step response ---- */
     {
-        float smoothed  = 0.0f;
-        float prev_pwm  = -1.0f;
-        int   toggles   = 0;
-        int   fast_ticks = 0;
-
-        for (int i = 0; i < IIR11_TICKS; i++) {
-            /* 20 Hz square wave: 5-tick high / 5-tick low */
-            float nn    = (i % 10 < 5) ? 0.15f : 0.05f;
-            float diff  = nn - smoothed;
-            float adiff = diff < 0.0f ? -diff : diff;
-            float alpha = adiff >= ACTION_SNAP_THRESH
-                            ? ACTION_ALPHA_FAST : ACTION_ALPHA_SLOW;
-            if (alpha >= ACTION_ALPHA_FAST) fast_ticks++;
-            smoothed += alpha * diff;
-
-            float pwm = 1000.0f + (NN_HOVER_THROTTLE + smoothed * NN_ACTION_SCALE) * 1000.0f;
-            if (prev_pwm >= 0.0f) {
-                float swing = pwm - prev_pwm;
-                if (swing < 0.0f) swing = -swing;
-                if (swing > IIR11_MIN_SWING) toggles++;
-            }
-            prev_pwm = pwm;
-
-            if (i % 100 == 0) {
-                uart_write_string("  ["); uart_write_uint32(i);
-                uart_write_string("] nn="); print_float3(nn);
-                uart_write_string(" iir="); print_float3(smoothed);
-                uart_write_string(" pwm="); uart_write_uint32((uint32_t)(pwm + 0.5f));
-                uart_write_string(" a="); print_float3(alpha);
+        float s[4] = {0, 0, 0, 0}, in[4] = {0.5f, 0.5f, 0.5f, 0.5f};
+        int ticks90 = -1;
+        uart_write_string("Scenario A: step 0 → 0.5\r\n");
+        for (int t = 1; t <= 20; t++) {
+            action_filter_step(s, in);
+            if (t <= 8) {
+                uart_write_string("  tick ");
+                uart_write_uint32((uint32_t)t);
+                uart_write_string(": ");
+                print_float3(s[0]);
                 uart_write_string("\r\n");
             }
+            if (ticks90 < 0 && s[0] >= 0.45f) ticks90 = t;
         }
-
-        uart_write_string("\r\n  Toggles>"); uart_write_uint32((uint32_t)IIR11_MIN_SWING);
-        uart_write_string("us: "); uart_write_uint32(toggles);
-        uart_write_string("   FAST-alpha ticks: "); uart_write_uint32(fast_ticks);
-        uart_write_string("\r\n");
-        if (toggles < 10)
-            print_pass("Scenario A: stable — small noise absorbed by ALPHA_SLOW");
-        else
-            print_fail("Scenario A: pulsing — noise floor is crossing SNAP_THRESH");
+        uart_write_string("  90% reached at tick ");
+        uart_write_int32(ticks90);
+        uart_write_string(" (expect 7 = 70 ms)\r\n");
+        if (ticks90 == 7) print_pass("Scenario A: step response matches alpha 0.3");
+        else              print_fail("Scenario A: step response does not match alpha 0.3");
     }
 
-    uart_write_string("\r\n");
-
-    /* ────────────────────────────────────────────────────────────
-     * SCENARIO B: on-threshold noise — square wave 0.07 → 0.23 at 20 Hz
-     *   Amplitude 0.08 centered at 0.15 (= SNAP_THRESH).
-     *   The input alternately pushes diff above and then below the
-     *   threshold, causing alpha to flip FAST↔SLOW every few ticks.
-     *   Classic limit-cycle condition for adaptive IIR filters.
-     * ──────────────────────────────────────────────────────────── */
-    uart_write_string("Scenario B: on-threshold noise  (0.07↔0.23, amp=0.08, center=0.15)\r\n");
-    uart_write_string("  This is the vibration scenario in flight.\r\n");
-    uart_write_string("  Expected: FAIL if SNAP_THRESH too close to noise floor\r\n\r\n");
+    /* ---- B: identical to training formula ---- */
     {
-        float smoothed   = 0.0f;
-        float prev_pwm   = -1.0f;
-        int   toggles    = 0;
-        int   fast_ticks = 0;
-        int   alpha_flips = 0;
-        float prev_alpha = -1.0f;
-
-        for (int i = 0; i < IIR11_TICKS; i++) {
-            float nn    = (i % 10 < 5) ? 0.23f : 0.07f;
-            float diff  = nn - smoothed;
-            float adiff = diff < 0.0f ? -diff : diff;
-            float alpha = adiff >= ACTION_SNAP_THRESH
-                            ? ACTION_ALPHA_FAST : ACTION_ALPHA_SLOW;
-            if (alpha >= ACTION_ALPHA_FAST) fast_ticks++;
-            if (prev_alpha >= 0.0f && alpha != prev_alpha) alpha_flips++;
-            prev_alpha = alpha;
-            smoothed += alpha * diff;
-
-            float pwm = 1000.0f + (NN_HOVER_THROTTLE + smoothed * NN_ACTION_SCALE) * 1000.0f;
-            if (prev_pwm >= 0.0f) {
-                float swing = pwm - prev_pwm;
-                if (swing < 0.0f) swing = -swing;
-                if (swing > IIR11_MIN_SWING) toggles++;
-            }
-            prev_pwm = pwm;
-
-            if (i % 100 == 0) {
-                uart_write_string("  ["); uart_write_uint32(i);
-                uart_write_string("] nn="); print_float3(nn);
-                uart_write_string(" iir="); print_float3(smoothed);
-                uart_write_string(" pwm="); uart_write_uint32((uint32_t)(pwm + 0.5f));
-                uart_write_string(" a="); print_float3(alpha);
-                uart_write_string("\r\n");
-            }
+        float s[4] = {0, 0, 0, 0};
+        float ref = 0.0f, worst = 0.0f;
+        uint32_t lcg = 12345U;
+        for (int t = 0; t < 2000; t++) {
+            lcg = lcg * 1664525U + 1013904223U;
+            float a = ((float)(lcg >> 8) / 8388608.0f) - 1.0f;   /* [-1, 1) */
+            float in[4] = {a, a, a, a};
+            action_filter_step(s, in);
+            ref = 0.3f * a + 0.7f * ref;                          /* drone_env.py */
+            float e = FABSF(s[0] - ref);
+            if (e > worst) worst = e;
         }
-
-        uart_write_string("\r\n  Toggles>"); uart_write_uint32((uint32_t)IIR11_MIN_SWING);
-        uart_write_string("us: "); uart_write_uint32(toggles);
-        uart_write_string("   FAST-ticks: "); uart_write_uint32(fast_ticks);
-        uart_write_string("   Alpha-flips: "); uart_write_uint32(alpha_flips);
-        uart_write_string("\r\n");
-        if (toggles < 10)
-            print_pass("Scenario B: stable — no limit cycle at snap threshold");
-        else {
-            print_fail("LIMIT CYCLE CONFIRMED — on-threshold noise causes pulsing");
-            uart_write_string("  Fix: raise ACTION_SNAP_THRESH (try 0.25) in main.c\r\n");
-            uart_write_string("       or reduce ALPHA_SLOW (try 0.05) to damp the cycle.\r\n");
-        }
+        uart_write_string("\r\nScenario B: 2000 random inputs vs training formula\r\n");
+        uart_write_string("  max |firmware - training| = ");
+        print_float3(worst * 1e6f);
+        uart_write_string("e-6\r\n");
+        if (worst < 1e-5f) print_pass("Scenario B: identical to training filter");
+        else               print_fail("Scenario B: differs from training filter");
     }
 
-    uart_write_string("\r\n");
-
-    /* ────────────────────────────────────────────────────────────
-     * SCENARIO C: large step 0 → +0.5 at t=5 ticks
-     *   Verifies the FAST path actually provides rapid convergence
-     *   when a real correction event arrives.
-     * ──────────────────────────────────────────────────────────── */
-    uart_write_string("Scenario C: large step 0.0 → +0.5  (should converge in <15 ticks)\r\n\r\n");
+    /* ---- C: chatter attenuation (informational) ---- */
     {
-        float smoothed = 0.0f;
-        int   ticks_to_converge = -1;
-
-        for (int i = 0; i < 80; i++) {
-            float nn    = (i < 5) ? 0.0f : 0.5f;
-            float diff  = nn - smoothed;
-            float adiff = diff < 0.0f ? -diff : diff;
-            float alpha = adiff >= ACTION_SNAP_THRESH
-                            ? ACTION_ALPHA_FAST : ACTION_ALPHA_SLOW;
-            smoothed += alpha * diff;
-
-            float err = smoothed - 0.5f;
-            if (err < 0.0f) err = -err;
-            if (ticks_to_converge < 0 && i >= 5 && err < 0.05f)
-                ticks_to_converge = i - 5;
-
-            if (i % 10 == 0 || i == 5) {
-                uart_write_string("  ["); uart_write_uint32(i);
-                uart_write_string("] iir="); print_float3(smoothed);
-                uart_write_string(" err="); print_float3(smoothed - 0.5f);
-                uart_write_string(" a="); print_float3(alpha);
-                uart_write_string("\r\n");
-            }
+        float s[4] = {0.15f, 0.15f, 0.15f, 0.15f};
+        float lo = 1e9f, hi = -1e9f;
+        for (int t = 0; t < 400; t++) {
+            float a = ((t / 2) % 2) ? 0.23f : 0.07f;   /* 25 Hz square, ±0.08 */
+            float in[4] = {a, a, a, a};
+            action_filter_step(s, in);
+            if (t >= 100) { if (s[0] < lo) lo = s[0]; if (s[0] > hi) hi = s[0]; }
         }
-
-        if (ticks_to_converge >= 0 && ticks_to_converge <= 15) {
-            uart_write_string("  Converged in "); uart_write_uint32(ticks_to_converge);
-            uart_write_string(" ticks after step\r\n");
-            print_pass("Scenario C: FAST path working — large corrections track quickly");
-        } else if (ticks_to_converge < 0) {
-            print_fail("Scenario C: did not converge — FAST path may not be triggering");
-        } else {
-            uart_write_string("  Converged in "); uart_write_uint32(ticks_to_converge);
-            uart_write_string(" ticks (slow)\r\n");
-            print_fail("Scenario C: convergence too slow — raise ALPHA_FAST");
-        }
+        uart_write_string("\r\nScenario C: ±0.08 square wave at 25 Hz\r\n");
+        uart_write_string("  input  peak-to-peak = ");
+        print_float3(0.16f * NN_ACTION_SCALE * 1000.0f);
+        uart_write_string(" us\r\n  output peak-to-peak = ");
+        print_float3((hi - lo) * NN_ACTION_SCALE * 1000.0f);
+        uart_write_string(" us  (info)\r\n");
     }
-
-    /* Summary */
-    uart_write_string("\r\n---- IIR TUNING GUIDE ----\r\n");
-    uart_write_string("  If Scenario B FAILED: raise SNAP_THRESH from 0.15 → 0.25.\r\n");
-    uart_write_string("  If motors still pulse: lower ALPHA_SLOW from 0.08 → 0.05.\r\n");
-    uart_write_string("  If drone feels sluggish after fix: lower ALPHA_SLOW to 0.10.\r\n");
-    uart_write_string("  Nuclear option: remove adaptive IIR, use fixed ALPHA = 0.20.\r\n");
 }
 
 
@@ -3014,8 +2493,9 @@ static void test12_loop_jitter(imu_type_t imu, int baro_ok)
  *  The KD term differentiates altitude at 25 Hz. In flight,
  *  motor downwash oscillates the local pressure heavily —
  *  the vvel estimate can swing ±0.5 m/s even when stationary.
- *  At Kd=0.08 that's ±40 µs throttle oscillation at 25 Hz
- *  (same as a ~5% PWM step). Exactly the period of pulsing.
+ *  With ALT_KD = 0.02 (fc_config.h, same as main.c) that's ±10 µs of
+ *  throttle oscillation at 25 Hz. (The harness used to simulate 0.08,
+ *  four times the real firmware gain.)
  *
  *  Procedure: Board flat and still for 5 seconds.
  *
@@ -3037,7 +2517,7 @@ static void test13_baro_throttle_noise(imu_type_t imu, int baro_ok)
         uart_write_string("    alt_throttle_adj range: < ±0.010 (~±10 us)  PASS\r\n");
         uart_write_string("    alt_throttle_adj range: > ±0.050 (~±50 us)  FAIL\r\n");
         uart_write_string("  In flight with prop downwash, vvel noise is 10-20x worse.\r\n");
-        uart_write_string("  Fix: reduce ALT_KD (try 0.02), or increase VVEL_ALPHA in baro.c.\r\n");
+        uart_write_string("  Fix: reduce ALT_KD in fc_config.h, or VVEL_ALPHA in baro.c.\r\n");
         return;
     }
 
@@ -3168,8 +2648,8 @@ static void test13_baro_throttle_noise(imu_type_t imu, int baro_ok)
         print_fail("Baro throttle noise > 50 us — direct cause of motor pulsing");
         uart_write_string("  The ALT_KD term is amplifying baro vvel noise.\r\n");
         uart_write_string("  Fixes in order of priority:\r\n");
-        uart_write_string("    1. Reduce ALT_KD:       0.08 → 0.02\r\n");
-        uart_write_string("    2. Reduce VVEL_ALPHA:   0.3  → 0.1 in baro.c\r\n");
+        uart_write_string("    1. Reduce ALT_KD in fc_config.h (currently 0.02)\r\n");
+        uart_write_string("    2. Reduce VVEL_ALPHA in baro.c (currently 0.1)\r\n");
         uart_write_string("    3. Increase BARO_DECIMATION: 4 → 8 in baro.c (12.5 Hz)\r\n");
     }
 
@@ -3351,13 +2831,17 @@ static void test14_throttle_staircase(imu_type_t imu)
     uart_write_string("\r\n---- THROTTLE STAIRCASE RESULTS ----\r\n\r\n");
     uart_write_string("  1. HOVER POINT: find the PWM where your scale showed\r\n");
     uart_write_string("     thrust = takeoff weight. Firmware budget:\r\n");
-    uart_write_string("       base (NN_HOVER_THROTTLE)  = 1323 us\r\n");
-    uart_write_string("       + P-alt loop cap (+0.10)  = 1423 us MAX SUSTAINED\r\n");
-    uart_write_string("     hover PWM <= 1370 us  → healthy margin      PASS\r\n");
-    uart_write_string("     hover PWM 1370-1423   → marginal, will sag  WARN\r\n");
-    uart_write_string("     hover PWM  > 1423 us  → CANNOT HOVER. Set\r\n");
-    uart_write_string("       NN_HOVER_THROTTLE = (hover_us - 1000)/1000 in\r\n");
-    uart_write_string("       weights.h AND retrain/re-verify.           FAIL\r\n\r\n");
+    {
+        uint32_t base = (uint32_t)(1000.0f + NN_HOVER_THROTTLE * 1000.0f + 0.5f);
+        uint32_t cap  = base + (uint32_t)(ALT_ADJ_MAX * 1000.0f + 0.5f);
+        uart_write_string("       base (NN_HOVER_THROTTLE)  = "); uart_write_uint32(base);
+        uart_write_string(" us\r\n       + P-alt loop cap          = "); uart_write_uint32(cap);
+        uart_write_string(" us MAX SUSTAINED\r\n");
+        uart_write_string("     hover PWM within ~25 us of base → healthy   PASS\r\n");
+        uart_write_string("     hover PWM well above base, below cap → sags WARN\r\n");
+        uart_write_string("     hover PWM above cap → CANNOT HOVER: fix the thrust\r\n");
+        uart_write_string("       curve in fc-nn/drone_env.py and retrain.  FAIL\r\n\r\n");
+    }
 
     uart_write_string("  2. VIBRATION at hover power: az_std = ");
     print_float3(az_std_hover);
@@ -3382,6 +2866,708 @@ static void test14_throttle_staircase(imu_type_t imu)
 /* ============================================================
  * MAIN
  * ============================================================ */
+
+/* ============================================================
+ * TEST 15: RC link + arming logic (motors NEVER driven)
+ *
+ * Runs main.c's exact RC path — rc_input_poll → crsf decoder → rc_update —
+ * for 60 s and prints what the flight firmware would decide, 5× per second:
+ *
+ *   LQ  link quality      CH1..6  channel µs (what Betaflight showed)
+ *   mode / ARMED / blocked-by    cmd roll/pitch/alt setpoints
+ *
+ * Things to do while it runs (radio ON, battery optional, props OFF):
+ *   1. Move each stick and switch; check channel order and direction:
+ *        roll stick RIGHT → CH1 up, pitch stick FORWARD → CH2 up,
+ *        throttle UP → CH3 up, ARM switch → CH5, MODE switch → CH6.
+ *   2. Arm with throttle low, board level → "ARMED". Disarm → "disarmed".
+ *   3. Arm with throttle high → refused (thr), and it must NOT arm when
+ *      you then lower the throttle — only after an OFF→ON cycle.
+ *   4. STICK mode: throttle stick moves "alt" between 0.20 and 0.60 m.
+ *      Lean commands are OFF (RC_STICK_LEAN_ENABLE 0) — cmd R/P stay 0.0.
+ *      (With it set to 1: full right stick → cmd roll +8.0, forward → pitch +8.0.)
+ *   5. While "ARMED", switch the radio OFF → "FAILSAFE" within 0.25 s.
+ * ============================================================ */
+static void print_block_reasons(int b)
+{
+    if (!b) { uart_write_string("-"); return; }
+    if (b & RC_BLOCK_NO_LINK)      uart_write_string("link ");
+    if (b & RC_BLOCK_NOT_CAL)      uart_write_string("cal ");
+    if (b & RC_BLOCK_THROTTLE)     uart_write_string("thr ");
+    if (b & RC_BLOCK_TILT)         uart_write_string("tilt ");
+    if (b & RC_BLOCK_MODE_LAND)    uart_write_string("land ");
+    if (b & RC_BLOCK_SWITCH_CYCLE) uart_write_string("cycle-arm-switch ");
+}
+
+static void test15_rc_link(imu_type_t imu)
+{
+    print_banner("TEST 15: RC Link + Arming Logic (motors OFF)");
+    uart_write_string("ExpressLRS / CRSF on USART2 (RX2=PA3), 420000 baud.\r\n");
+    uart_write_string("Motors are never driven in this test. Radio ON.\r\n");
+    uart_write_string("Move sticks + switches, arm/disarm, try arming with throttle up,\r\n");
+    uart_write_string("then switch the radio OFF while ARMED to see the failsafe.\r\n");
+    uart_write_string(RC_STICK_LEAN_ENABLE ? "Stick lean commands: ENABLED (max 8 deg)\r\n\r\n"
+                                           : "Stick lean commands: disabled (STICK mode = throttle -> altitude only)\r\n\r\n");
+
+    static crsf_t     c;
+    static rc_state_t rc;
+    crsf_init(&c);
+    rc_init(&rc);
+    rc_input_init();
+    ahrs_init();
+
+    uint32_t link_age = RC_LINK_TIMEOUT_TICKS;
+    uint32_t max_gap_ticks = 0, gap = 0, link_ticks = 0;
+    unsigned arm_events = 0, kills = 0;
+    int was_armed = 0;
+
+    for (int tick = 0; tick < 6000; tick++) {          /* 60 s at 100 Hz */
+        while (!(SYST_CSR & SYST_CSR_COUNTFLAG)) {}
+
+        imu_raw_t smp;
+        imu_read_raw(imu, &smp);
+        ahrs_update((float)ALIGN_GX(smp.gx) * GYRO_RAW_TO_RADS,
+                    (float)ALIGN_GY(smp.gy) * GYRO_RAW_TO_RADS,
+                    (float)ALIGN_GZ(smp.gz) * GYRO_RAW_TO_RADS,
+                    (float)ALIGN_AX(smp.ax) * accel_raw_to_g,
+                    (float)ALIGN_AY(smp.ay) * accel_raw_to_g,
+                    (float)ALIGN_AZ(smp.az) * accel_raw_to_g, 0.01f);
+
+        if (rc_input_poll(&c) > 0) {
+            if (link_age < RC_LINK_TIMEOUT_TICKS && gap > max_gap_ticks) max_gap_ticks = gap;
+            link_age = 0; gap = 0;
+        } else {
+            gap++;
+            if (link_age < RC_LINK_TIMEOUT_TICKS) link_age++;
+        }
+        int link_ok = link_age < RC_LINK_TIMEOUT_TICKS;
+        link_ticks += (uint32_t)link_ok;
+
+        rc_inputs_t in;
+        in.link_ok    = link_ok;
+        in.roll       = crsf_to_unit(c.ch[RC_CH_ROLL]);
+        in.pitch      = crsf_to_unit(c.ch[RC_CH_PITCH]);
+        in.throttle   = crsf_to_unit(c.ch[RC_CH_THROTTLE]);
+        in.yaw        = crsf_to_unit(c.ch[RC_CH_YAW]);
+        in.arm_sw     = crsf_to_unit(c.ch[RC_CH_ARM]);
+        in.mode_sw    = crsf_to_unit(c.ch[RC_CH_MODE]);
+        in.calibrated = tick >= 200;                  /* like main.c's 2 s settle */
+        in.roll_deg   = ahrs_get_roll();
+        in.pitch_deg  = ahrs_get_pitch();
+        rc_update(&rc, &in, 0.01f);
+
+        if (rc.armed && !was_armed) {
+            arm_events++;
+            uart_write_string(">>> ARMED (flight firmware would start the 0.5 s ramp)\r\n");
+        }
+        if (!rc.armed && was_armed) {
+            if (rc.last_disarm == RC_DISARM_FAILSAFE) uart_write_string(">>> FAILSAFE: link lost -> motors OFF\r\n");
+            else { kills++; uart_write_string(">>> DISARMED by switch -> motors OFF this tick\r\n"); }
+        }
+        was_armed = rc.armed;
+
+        if (tick % 20 == 0 && uart_tx_free() > 300U) {
+            uart_write_string(link_ok ? "LINK ok  LQ " : "NO LINK  LQ ");
+            uart_write_uint32(c.lq);
+            uart_write_string(" | CH");
+            for (int k = 0; k < 6; k++) {
+                uart_write_char(' ');
+                uart_write_uint32(crsf_to_us(c.ch[k]));
+            }
+            uart_write_string(" | ");
+            uart_write_string(rc_mode_name(rc.mode));
+            uart_write_string(rc.armed ? " ARMED   " : " disarmed");
+            uart_write_string(" | block: ");
+            print_block_reasons(rc.block);
+            uart_write_string("| cmd R ");  print_float3(rc.cmd_roll_deg);
+            uart_write_string(" P ");       print_float3(rc.cmd_pitch_deg);
+            uart_write_string(" alt ");     print_float3(rc.target_alt);
+            uart_write_string(" | att R "); print_float3(in.roll_deg);
+            uart_write_string(" P ");       print_float3(in.pitch_deg);
+            uart_write_string("\r\n");
+        }
+    }
+
+    uart_write_string("\r\n---- TEST 15 SUMMARY ----\r\n");
+    uart_write_string("  RC frames:      "); uart_write_uint32(c.rc_frames);
+    uart_write_string("  (~"); uart_write_uint32(c.rc_frames / 60U); uart_write_string(" Hz)\r\n");
+    uart_write_string("  CRC errors:     "); uart_write_uint32(c.crc_errors);
+    uart_write_string("   UART overruns: "); uart_write_uint32(rc_input_overruns());
+    uart_write_string("\r\n  Link up:        "); uart_write_uint32(link_ticks / 100U);
+    uart_write_string(" of 60 s   longest gap while linked: ");
+    uart_write_uint32(max_gap_ticks * 10U); uart_write_string(" ms\r\n");
+    uart_write_string("  Arms: "); uart_write_uint32(arm_events);
+    uart_write_string("   switch disarms: "); uart_write_uint32(kills);
+    uart_write_string("   failsafes: "); uart_write_uint32(rc.failsafe_count);
+    uart_write_string("\r\n");
+    int ok = c.rc_frames > 0 && c.crc_errors * 100U <= c.rc_frames;
+    uart_write_string(ok ? "  [PASS] receiver decoded, CRC errors <= 1%\r\n"
+                         : "  [FAIL] no RC frames (check wiring RX2=PA3, receiver bound/powered) or >1% CRC errors\r\n");
+    uart_write_string("  Manually confirm: channel directions, arm refused with throttle up,\r\n"
+                      "  disarm instant, failsafe fired when the radio was switched off.\r\n");
+}
+
+/* ============================================================
+ * TEST 16: Thrust ramp on a kitchen scale — drone NOT tied down
+ * ============================================================
+ *
+ * Finds the real hover PWM without ballast. The drone stands free on
+ * the scale; as the throttle rises the scale reading DROPS:
+ *     thrust(g) = reading at 1000 us  -  reading at this step
+ * Stop when the scale shows ~25-30 % of its 1000 us reading (the drone
+ * is then carrying ~70-75 % of its weight). Hover = extrapolate the
+ * last few points to reading 0.
+ *
+ * First a 5-step radio check (bytes on RX2, CRSF frames, link health,
+ * channel values, ARM switch ON->OFF) prints PASS/FAIL + likely cause and
+ * stops the test at the first failure. motor_init() is only called after
+ * all five pass, so a broken radio can never leave the motors enabled.
+ *
+ * The radio ARM switch is then a dead-man switch:
+ *   - motors only spin after ARM goes OFF -> ON while the link is up
+ *   - ARM OFF, link lost (250 ms), tilt > 10 deg, tipping rate,
+ *     or liftoff (accel z) -> ALL MOTORS OFF THE SAME 10 ms TICK
+ *
+ * Profile: 1000 us, then +25 us every 4 s up to T16_MAX_US
+ * (default 1500; make flash-test TESTS=16 T16_MAX=1600 to go higher),
+ * then a gentle ramp back down. Each line is printed when its step
+ * STARTS, so a phone video of screen + scale pairs them up.
+ *
+ * Setup: battery in, props on, drone standing on a light ~25 cm stand
+ * (box/pot) on the scale, props overhanging it, a slack safety string
+ * to something heavy that is NOT on the scale. Stand back.
+ * ============================================================ */
+#ifndef T16_MAX_US
+#define T16_MAX_US          1500
+#endif
+#define T16_STEP_US           25
+#define T16_STEP_TICKS       400     /* 4 s per step                       */
+#define T16_WAIT_TICKS     18000     /* 3 min to flip the ARM switch       */
+#define T16_TILT_STOP_DEG   10.0f
+#define T16_RATE_STOP_RADS   0.5f    /* filtered roll/pitch rate            */
+/* Liftoff check: 0.5 s average of az must rise this far above the at-rest
+ * value. Was 0.12 g with a 0.2 s EMA — tripped at 1200 us with the drone
+ * still on the scale: prop vibration (~0.2 g std) sampled at 100 Hz
+ * aliases into slow swings the short filter passes. A GENTLE liftoff
+ * (thrust just above weight) adds only a few hundredths of a g and can't
+ * be seen by the accel at all; this only catches a violent jump. The
+ * ARM switch + safety string are the real protection. */
+#define T16_LIFT_STOP_G      0.35f
+#define T16_LIFT_AVG_TICKS     50
+
+/* One 10 ms tick of test 16 bookkeeping: IMU → AHRS, drain the receiver,
+ * age the link. Returns 1 while a valid RC frame arrived within 250 ms. */
+static int t16_tick(imu_type_t imu, crsf_t *c, uint32_t *link_age)
+{
+    float g[3], a[3];
+    wait_tick();
+    read_body(imu, NULL, NULL, g, a);
+    ahrs_update(g[0], g[1], g[2], a[0], a[1], a[2], 0.01f);
+    if (rc_input_poll(c) > 0) *link_age = 0;
+    else if (*link_age < RC_LINK_TIMEOUT_TICKS) (*link_age)++;
+    return *link_age < RC_LINK_TIMEOUT_TICKS;
+}
+
+/* CRSF unit threshold → µs (crsf_to_us maps -1..+1 to 988..2012 µs) */
+#define T16_ARM_ON_US  ((uint32_t)(1500.0f + RC_ARM_ON_THRESHOLD * 512.0f))
+
+/* ============================================================
+ * Radio pre-flight for test 16. Five steps, each printed PASS/FAIL with
+ * the likely cause, stopping at the first failure:
+ *   1. bytes arriving on RX2      (receiver powered + wired)
+ *   2. valid CRSF frames          (protocol / baud / inversion right)
+ *   3. frame rate, CRC, LQ        (link healthy)
+ *   4. channel values sane
+ *   5. ARM switch: ON then OFF on CH(RC_CH_ARM+1), crossing the threshold
+ * ============================================================ */
+static int t16_radio_checks(imu_type_t imu, crsf_t *c, uint32_t *link_age)
+{
+    uart_write_string("---- RADIO CHECKS (motors disabled — no signal to the ESCs) ----\r\n");
+    uart_write_string("  Radio transmitter ON. Battery in (some boards only power the\r\n"
+                      "  receiver from the battery, not from USB).\r\n\r\n");
+
+    /* ── 1 + 2: wait up to 20 s for bytes, then frames ── */
+    int t;
+    for (t = 0; t < 2000; t++) {
+        t16_tick(imu, c, link_age);
+        if (c->rc_frames >= 10) break;
+        if (t % 200 == 0) {
+            uart_write_string("  listening on RX2 (PA3)... bytes ");
+            uart_write_uint32(rc_input_bytes());
+            uart_write_string("  RC frames ");
+            uart_write_uint32(c->rc_frames);
+            uart_write_string("\r\n");
+        }
+    }
+    uart_write_string("\r\n  Step 1  bytes from receiver: ");
+    uart_write_uint32(rc_input_bytes());
+    uart_write_string("\r\n");
+    if (rc_input_bytes() == 0) {
+        print_fail("Step 1: NOTHING received on RX2 in 20 s");
+        uart_write_string("    Likely: receiver not powered (LED off? plug the battery in),\r\n"
+                          "    receiver TX wire not on the FC's RX2 pad (PA3) — TX goes to RX,\r\n"
+                          "    or receiver not bound / transmitter off (ELRS sends nothing\r\n"
+                          "    until it is connected: receiver LED should be SOLID).\r\n");
+        return 0;
+    }
+    print_pass("Step 1: receiver is sending bytes");
+
+    uart_write_string("  Step 2  valid RC frames ");
+    uart_write_uint32(c->rc_frames);
+    uart_write_string(", other frames ");
+    uart_write_uint32(c->other_frames);
+    uart_write_string(", CRC errors ");
+    uart_write_uint32(c->crc_errors);
+    uart_write_string(", junk bytes ");
+    uart_write_uint32(c->bad_headers);
+    uart_write_string(", overruns ");
+    uart_write_uint32(rc_input_overruns());
+    uart_write_string("\r\n");
+    if (c->rc_frames < 10) {
+        print_fail("Step 2: bytes arrive but they are not CRSF RC frames");
+        uart_write_string("    Likely: receiver outputs another protocol (SBUS/PPM) or a\r\n"
+                          "    different baud — in the ELRS receiver config set serial\r\n"
+                          "    protocol = CRSF, 420000 baud. Mostly 'junk bytes' = wrong\r\n"
+                          "    baud/protocol; mostly 'CRC errors' = noisy wiring/ground.\r\n");
+        return 0;
+    }
+    print_pass("Step 2: CRSF RC frames decode");
+
+    /* ── 3: link health over 2 s ── */
+    uint32_t f0 = c->rc_frames, e0 = c->crc_errors, drops = 0;
+    for (t = 0; t < 200; t++)
+        if (!t16_tick(imu, c, link_age)) drops++;
+    uint32_t rate = (c->rc_frames - f0) / 2U;
+    uint32_t errs = c->crc_errors - e0;
+    uart_write_string("  Step 3  RC frames/s ");
+    uart_write_uint32(rate);
+    uart_write_string(", CRC errors in 2 s ");
+    uart_write_uint32(errs);
+    uart_write_string(", LQ ");
+    if (c->other_frames) { uart_write_uint32(c->lq); uart_write_string(" %"); }
+    else uart_write_string("(no link-stats frames)");
+    uart_write_string(", link dropouts ");
+    uart_write_uint32(drops);
+    uart_write_string(" ticks\r\n");
+    if (rate < 25U || drops > 0U) {
+        print_fail("Step 3: link too slow or dropping out");
+        uart_write_string("    Need >= 25 frames/s with no gaps > 250 ms. Check the packet\r\n"
+                          "    rate in the ELRS Lua script, antenna, and that the radio is\r\n"
+                          "    not in failsafe / range-test / low-power mode.\r\n");
+        return 0;
+    }
+    if (errs * 20U > (c->rc_frames - f0)) {
+        print_fail("Step 3: more than 5 % CRC errors — noisy wiring");
+        uart_write_string("    Shorten/twist the receiver wires, check the ground wire.\r\n");
+        return 0;
+    }
+    if (c->other_frames && c->lq < 50U) {
+        print_fail("Step 3: link quality below 50 %");
+        uart_write_string("    Move the radio closer / check the receiver antenna.\r\n");
+        return 0;
+    }
+    print_pass("Step 3: link healthy");
+
+    /* ── 4: channel values ── */
+    uart_write_string("  Step 4  CH1-8 (us):");
+    int bad = 0;
+    for (int k = 0; k < 8; k++) {
+        uint32_t us = crsf_to_us(c->ch[k]);
+        uart_write_char(' ');
+        uart_write_uint32(us);
+        if (k < 4 && (us < 950U || us > 2050U)) bad = 1;
+    }
+    uart_write_string("\r\n");
+    if (bad) {
+        print_fail("Step 4: stick channels outside 950-2050 us");
+        uart_write_string("    Radio model / mixer misconfigured.\r\n");
+        return 0;
+    }
+    print_pass("Step 4: channel values in range");
+
+    /* ── 5: ARM switch, 60 s: must go ON then OFF on the ARM channel ── */
+    uart_write_string("\r\n  Step 5  ARM switch is expected on CH");
+    uart_write_uint32(RC_CH_ARM + 1);
+    uart_write_string(" (ON = above ");
+    uart_write_uint32(T16_ARM_ON_US);
+    uart_write_string(" us).\r\n"
+                      "          Flip ARM ON, then OFF. (60 s; don't move other switches)\r\n");
+    uint16_t lo[CRSF_NUM_CHANNELS], hi[CRSF_NUM_CHANNELS];
+    for (int k = 0; k < CRSF_NUM_CHANNELS; k++) lo[k] = hi[k] = crsf_to_us(c->ch[k]);
+    int seen_on = 0, seen_off_after_on = 0;
+    for (t = 0; t < 6000 && !seen_off_after_on; t++) {
+        if (!t16_tick(imu, c, link_age)) {
+            print_fail("Step 5: radio link lost during the switch check");
+            return 0;
+        }
+        for (int k = 0; k < CRSF_NUM_CHANNELS; k++) {
+            uint16_t us = crsf_to_us(c->ch[k]);
+            if (us < lo[k]) lo[k] = us;
+            if (us > hi[k]) hi[k] = us;
+        }
+        int arm_on = crsf_to_unit(c->ch[RC_CH_ARM]) > RC_ARM_ON_THRESHOLD;
+        if (arm_on) seen_on = 1;
+        else if (seen_on) seen_off_after_on = 1;
+
+        if (t % 50 == 0) {
+            uart_write_string("    CH");
+            uart_write_uint32(RC_CH_ARM + 1);
+            uart_write_string(" = ");
+            uart_write_uint32(crsf_to_us(c->ch[RC_CH_ARM]));
+            uart_write_string(arm_on ? " us  ARM ON " : " us  ARM off");
+            uart_write_string("   | AUX CH5-12:");
+            for (int k = 4; k < 12; k++) { uart_write_char(' '); uart_write_uint32(crsf_to_us(c->ch[k])); }
+            uart_write_string(seen_on ? "   -> now flip OFF\r\n" : "   -> flip ON\r\n");
+        }
+    }
+    if (seen_off_after_on) {
+        print_pass("Step 5: ARM switch turns ON and OFF");
+        return 1;
+    }
+
+    /* diagnose */
+    print_fail("Step 5: ARM switch not seen going ON then OFF");
+    uint32_t arm_lo = lo[RC_CH_ARM], arm_hi = hi[RC_CH_ARM];
+    uart_write_string("    CH");
+    uart_write_uint32(RC_CH_ARM + 1);
+    uart_write_string(" ranged ");
+    uart_write_uint32(arm_lo);
+    uart_write_string(" - ");
+    uart_write_uint32(arm_hi);
+    uart_write_string(" us\r\n");
+    int moved_other = -1;
+    for (int k = 4; k < CRSF_NUM_CHANNELS; k++)
+        if (k != RC_CH_ARM && hi[k] - lo[k] > 400 &&
+            (moved_other < 0 || hi[k] - lo[k] > hi[moved_other] - lo[moved_other]))
+            moved_other = k;
+    if (arm_hi - arm_lo < 200U && moved_other >= 0) {
+        uart_write_string("    Your switch is on CH");
+        uart_write_uint32((uint32_t)moved_other + 1U);
+        uart_write_string(" (it moved ");
+        uart_write_uint32(lo[moved_other]);
+        uart_write_string(" - ");
+        uart_write_uint32(hi[moved_other]);
+        uart_write_string(" us). Set RC_CH_ARM = ");
+        uart_write_uint32((uint32_t)moved_other);
+        uart_write_string(" in fc_config.h,\r\n    or move the switch to CH");
+        uart_write_uint32(RC_CH_ARM + 1);
+        uart_write_string(" (AUX1) in the radio's mixer.\r\n");
+    } else if (arm_hi - arm_lo < 200U) {
+        uart_write_string("    No AUX channel moved at all. The switch is not assigned to any\r\n"
+                          "    channel in the radio model's mixer (or the wrong model is selected).\r\n");
+    } else if (!seen_on) {
+        uart_write_string("    CH moves but never reaches ON. Set the switch's output to 100 %\r\n"
+                          "    (should read ~2000 us), or use a 2-position switch.\r\n");
+    } else {
+        uart_write_string("    Went ON but never back OFF within 60 s.\r\n");
+    }
+    return 0;
+}
+
+static void test16_thrust_ramp(imu_type_t imu)
+{
+    print_banner("TEST 16: Thrust Ramp on a Scale (free-standing, ARM = dead-man)");
+    uart_write_string("** PROPS ON. Drone free on the scale, slack safety string. STAND BACK. **\r\n");
+    uart_write_string("  1. Battery in, radio ON. Radio checks run first (motors disabled).\r\n");
+    uart_write_string("  2. Step 5 asks you to flip ARM ON then OFF — that tests the kill.\r\n");
+    uart_write_string("  3. At READY: start filming, flip ARM ON -> ramp (+25 us every 4 s).\r\n");
+    uart_write_string("  4. When the scale reads ~30 % of its starting value: ARM OFF.\r\n");
+    uart_write_string("     ARM OFF / radio lost / tilt / liftoff = motors off instantly.\r\n");
+    uart_write_string("  Ceiling this build: ");
+    uart_write_uint32(T16_MAX_US);
+    uart_write_string(" us\r\n\r\n");
+
+    static crsf_t c;
+    crsf_init(&c);
+    rc_input_init();
+    ahrs_init();
+    /* motor_init() is NOT called until every radio check passes: until
+     * then the motor pins send no pulses at all, so the ESCs cannot spin. */
+
+    uint32_t link_age = RC_LINK_TIMEOUT_TICKS;
+    if (!t16_radio_checks(imu, &c, &link_age)) {
+        uart_write_string("\r\n  ==> RADIO CHECK FAILED — test 16 stopped. Motors were never enabled.\r\n"
+                          "      Fix the step marked [FAIL] above and rerun.\r\n");
+        return;
+    }
+
+    /* ── ESC arming, then wait for ARM OFF -> ON to start ── */
+    uart_write_string("\r\n  Enabling motor outputs at 1000 us (ESCs beep = armed). 3 s...\r\n");
+    motor_init();
+    int seen_off = 0, started = 0;
+    for (int t = 0; t < T16_WAIT_TICKS; t++) {
+        int link_ok = t16_tick(imu, &c, &link_age);
+        if (!link_ok) {
+            motor_all_stop();
+            uart_write_string("  [FAIL] radio link lost while waiting to start — stopped.\r\n");
+            return;
+        }
+        int arm_on = crsf_to_unit(c.ch[RC_CH_ARM]) > RC_ARM_ON_THRESHOLD;
+        if (!arm_on) seen_off = 1;
+        if (t == 300)
+            uart_write_string("  READY. Start filming. Flip ARM ON to start the ramp"
+                              " (flip it OFF first if it is already ON).\r\n");
+        if (t >= 300 && seen_off && arm_on) { started = 1; break; }
+        if (t > 300 && t % 300 == 0) {
+            uart_write_string(arm_on ? "  waiting: ARM is ON — flip OFF then ON\r\n"
+                                     : "  waiting: ARM OFF — flip ON to start\r\n");
+        }
+    }
+    if (!started) {
+        motor_all_stop();
+        uart_write_string("\r\n  Not started within 3 min — skipped (motors never spun).\r\n");
+        return;
+    }
+    uart_write_string("  ARM ON -> ramp starting.\r\n");
+
+    /* ── Phase 2: 1 s at 1000 us to take the at-rest reference ── */
+    float az_ref = 0.0f;
+    for (int i = 0; i < 100; i++) {
+        float g[3], a[3];
+        wait_tick();
+        read_body(imu, NULL, NULL, g, a);
+        ahrs_update(g[0], g[1], g[2], a[0], a[1], a[2], 0.01f);
+        rc_input_poll(&c);
+        az_ref += a[2];
+    }
+    az_ref /= 100.0f;
+    float roll_ref = ahrs_get_roll(), pitch_ref = ahrs_get_pitch();
+    float rate_f = 0.0f;
+    static float az_buf[T16_LIFT_AVG_TICKS];
+    float az_sum = az_ref * (float)T16_LIFT_AVG_TICKS;
+    int az_i = 0;
+    for (int k = 0; k < T16_LIFT_AVG_TICKS; k++) az_buf[k] = az_ref;
+    float trip_val = 0.0f;
+    link_age = 0;
+
+    uart_write_string("\r\n  PWM(us) | step | az_std(g) | gyr_std(rad/s) | max az shift(g) | max tilt(deg)   <- read the scale now\r\n");
+    uart_write_string("  --------+------+-----------+----------------+-----------------+--------------\r\n");
+    uart_write_string("  (auto-stop limits: az shift > 0.35 g, tilt > 10 deg, rate > 0.5 rad/s)\r\n");
+
+    const char *stop_reason = NULL;
+    uint32_t last_pwm = 1000U;
+
+    /* ── Phase 3: staircase ── */
+    for (uint32_t pwm = 1000U; pwm <= T16_MAX_US && !stop_reason; pwm += T16_STEP_US) {
+        for (int m = 0; m < 4; m++) motor_set(m, (float)(pwm - 1000U) / 1000.0f);
+        last_pwm = pwm;
+
+        uart_write_string("    ");
+        uart_write_uint32(pwm);
+        uart_write_string("  | ");
+        uart_write_uint32((pwm - 1000U) / T16_STEP_US + 1U);
+        uart_write_string("   | ");
+
+        float s_az = 0, s_az2 = 0, s_g = 0, s_g2 = 0;
+        float max_shift = 0.0f, max_tilt = 0.0f;
+        int n = 0;
+        for (int i = 0; i < T16_STEP_TICKS; i++) {
+            float g[3], a[3];
+            wait_tick();
+            read_body(imu, NULL, NULL, g, a);
+            ahrs_update(g[0], g[1], g[2], a[0], a[1], a[2], 0.01f);
+
+            /* dead-man: link + ARM switch, checked every tick */
+            if (rc_input_poll(&c) > 0) link_age = 0;
+            else if (link_age < RC_LINK_TIMEOUT_TICKS) link_age++;
+            if (link_age >= RC_LINK_TIMEOUT_TICKS)                     stop_reason = "RADIO LINK LOST";
+            else if (!(crsf_to_unit(c.ch[RC_CH_ARM]) > RC_ARM_ON_THRESHOLD)) stop_reason = "ARM switch OFF";
+
+            /* tipping / liftoff */
+            float dr = ahrs_get_roll() - roll_ref, dp = ahrs_get_pitch() - pitch_ref;
+            float rate = FABSF(g[0]) > FABSF(g[1]) ? FABSF(g[0]) : FABSF(g[1]);
+            rate_f += 0.1f  * (rate - rate_f);
+            az_sum += a[2] - az_buf[az_i];
+            az_buf[az_i] = a[2];
+            az_i = (az_i + 1) % T16_LIFT_AVG_TICKS;
+            float shift = az_sum / (float)T16_LIFT_AVG_TICKS - az_ref;
+            float tilt  = FABSF(dr) > FABSF(dp) ? FABSF(dr) : FABSF(dp);
+            if (shift > max_shift) max_shift = shift;
+            if (tilt  > max_tilt)  max_tilt  = tilt;
+            if (!stop_reason) {
+                if (tilt > T16_TILT_STOP_DEG) {
+                    stop_reason = "TILT > 10 deg (tipping, or AHRS upset by vibration)"; trip_val = tilt;
+                } else if (rate_f > T16_RATE_STOP_RADS) {
+                    stop_reason = "ROLL/PITCH RATE (tipping)"; trip_val = rate_f;
+                } else if (shift > T16_LIFT_STOP_G) {
+                    stop_reason = "LIFTOFF (0.5 s avg accel z jumped)"; trip_val = shift;
+                }
+            }
+
+            if (stop_reason) { motor_all_stop(); break; }
+
+            s_az += a[2]; s_az2 += a[2] * a[2];
+            s_g  += g[0] + g[1] + g[2];
+            s_g2 += g[0] * g[0] + g[1] * g[1] + g[2] * g[2];
+            n++;
+        }
+
+        if (n > 1) {
+            float az_m = s_az / (float)n, g_m = s_g / (float)(3 * n);
+            float az_v = s_az2 / (float)n - az_m * az_m;
+            float g_v  = s_g2 / (float)(3 * n) - g_m * g_m;
+            float az_sd, g_sd;
+            if (az_v < 0.0f) az_v = 0.0f;
+            if (g_v  < 0.0f) g_v  = 0.0f;
+            __asm__ volatile ("vsqrt.f32 %0, %1" : "=t"(az_sd) : "t"(az_v));
+            __asm__ volatile ("vsqrt.f32 %0, %1" : "=t"(g_sd)  : "t"(g_v));
+            print_float3(az_sd);
+            uart_write_string("     | ");
+            print_float3(g_sd);
+            uart_write_string("          | ");
+            print_float3(max_shift);
+            uart_write_string("          | ");
+            print_float3(max_tilt);
+        }
+        if (stop_reason) uart_write_string("   (cut short)");
+        uart_write_string("\r\n");
+    }
+
+    /* ── Phase 4: finished the ceiling normally → ramp down gently ── */
+    if (!stop_reason) {
+        for (uint32_t pwm = last_pwm; pwm > 1000U; pwm -= 5U) {
+            for (int m = 0; m < 4; m++) motor_set(m, (float)(pwm - 1000U) / 1000.0f);
+            wait_tick();
+        }
+    }
+    motor_all_stop();
+
+    uart_write_string("\r\n---- TEST 16 RESULTS ----\r\n  Motors OFF. ");
+    if (stop_reason) {
+        uart_write_string("Stopped by: ");
+        uart_write_string(stop_reason);
+        uart_write_string(" at ");
+        uart_write_uint32(last_pwm);
+        uart_write_string(" us");
+        if (trip_val != 0.0f) {
+            uart_write_string("  (value ");
+            print_float3(trip_val);
+            uart_write_string(")");
+        }
+        uart_write_string("\r\n");
+    } else {
+        uart_write_string("Reached the ");
+        uart_write_uint32(T16_MAX_US);
+        uart_write_string(" us ceiling.\r\n  If the scale was still above ~30 % there, hover is ABOVE ");
+        uart_write_uint32(T16_MAX_US);
+        uart_write_string(" us. Rerun with a higher T16_MAX to find it.\r\n");
+    }
+    uart_write_string("  thrust(g) = reading@1000us - reading@step;  hover = where reading -> 0.\r\n"
+                      "  This weights.h: base ");
+    uart_write_uint32((uint32_t)(1000.0f + NN_HOVER_THROTTLE * 1000.0f + 0.5f));
+    uart_write_string(" us, firmware can sustain at most ");
+    uart_write_uint32((uint32_t)(1000.0f + (NN_HOVER_THROTTLE + ALT_ADJ_MAX) * 1000.0f + 0.5f));
+    uart_write_string(" us.\r\n"
+                      "  Measured 2026-11-21: hover ~1372 us (W 1110 g) — experiments/bench-2026-11-21.\r\n"
+                      "  az_std at the top steps vs 0.22 g trained noise = vibration check.\r\n");
+}
+
+/* ============================================================
+ * TEST 17: RC channel finder (motors NEVER driven)
+ *
+ * Prints every channel live and announces each switch/button change, so
+ * you can see which physical switch drives which channel and choose ARM.
+ * Runs 90 s. Radio ON, receiver powered (battery in if USB doesn't power
+ * it). Leave the sticks alone and flip one switch at a time.
+ * ============================================================ */
+static void test17_rc_channel_finder(imu_type_t imu)
+{
+    print_banner("TEST 17: RC Channel Finder (motors OFF)");
+    uart_write_string("Flip ONE switch / press ONE button at a time and watch for '>>> CHn'.\r\n");
+    uart_write_string("Currently configured: ARM = CH");
+    uart_write_uint32(RC_CH_ARM + 1);
+    uart_write_string(", MODE = CH");
+    uart_write_uint32(RC_CH_MODE + 1);
+    uart_write_string("  (fc_config.h, RC_CH_ARM = channel - 1)\r\n\r\n");
+
+    static crsf_t c;
+    crsf_init(&c);
+    rc_input_init();
+    uint32_t link_age = RC_LINK_TIMEOUT_TICKS;
+
+    uint16_t lo[CRSF_NUM_CHANNELS], hi[CRSF_NUM_CHANNELS], rep[CRSF_NUM_CHANNELS];
+    int have_ref = 0, was_linked = 0;
+
+    for (int t = 0; t < 9000; t++) {                 /* 90 s */
+        int link_ok = t16_tick(imu, &c, &link_age);
+        if (link_ok && !have_ref) {
+            for (int k = 0; k < CRSF_NUM_CHANNELS; k++)
+                lo[k] = hi[k] = rep[k] = crsf_to_us(c.ch[k]);
+            have_ref = 1;
+            uart_write_string(">>> RADIO LINK UP — starting positions recorded\r\n");
+        }
+        if (!link_ok && was_linked) uart_write_string(">>> RADIO LINK LOST\r\n");
+        was_linked = link_ok;
+
+        if (!have_ref) {
+            if (t % 200 == 0) {
+                uart_write_string("  no RC frames yet... bytes received ");
+                uart_write_uint32(rc_input_bytes());
+                uart_write_string(", frames ");
+                uart_write_uint32(c.rc_frames);
+                uart_write_string(rc_input_bytes() ? "  (bytes but no frames: receiver not CRSF/420000?)\r\n"
+                                                   : "  (nothing: receiver powered? wired to RX2/PA3? bound?)\r\n");
+            }
+            continue;
+        }
+
+        /* announce changes: switches/buttons jump; 300 us hysteresis */
+        for (int k = 0; k < CRSF_NUM_CHANNELS; k++) {
+            uint16_t us = crsf_to_us(c.ch[k]);
+            if (us < lo[k]) lo[k] = us;
+            if (us > hi[k]) hi[k] = us;
+            int d = (int)us - (int)rep[k];
+            if ((d > 300 || d < -300) && uart_tx_free() > 120U) {
+                uart_write_string(">>> CH");
+                uart_write_uint32((uint32_t)k + 1U);
+                uart_write_string(k < 4 ? " (stick)" : "");
+                uart_write_string(" changed ");
+                uart_write_uint32(rep[k]);
+                uart_write_string(" -> ");
+                uart_write_uint32(us);
+                uart_write_string(" us");
+                if (k == RC_CH_ARM) uart_write_string("   <- this is the channel used as ARM now");
+                uart_write_string("\r\n");
+                rep[k] = us;
+            }
+        }
+
+        if (t % 100 == 0 && uart_tx_free() > 300U) {
+            uart_write_string(link_ok ? "  LQ " : "  NO LINK  LQ ");
+            uart_write_uint32(c.lq);
+            uart_write_string(" | sticks CH1-4:");
+            for (int k = 0; k < 4; k++) { uart_write_char(' '); uart_write_uint32(crsf_to_us(c.ch[k])); }
+            uart_write_string(" | CH5-12:");
+            for (int k = 4; k < 12; k++) { uart_write_char(' '); uart_write_uint32(crsf_to_us(c.ch[k])); }
+            uart_write_string("\r\n");
+        }
+    }
+
+    uart_write_string("\r\n---- TEST 17 SUMMARY: range seen on each channel ----\r\n");
+    if (!have_ref) {
+        print_fail("never received RC frames — see the hints printed above");
+        return;
+    }
+    for (int k = 0; k < CRSF_NUM_CHANNELS; k++) {
+        uart_write_string("  CH");
+        uart_write_uint32((uint32_t)k + 1U);
+        uart_write_string(k < 9 ? " : " : ": ");
+        uart_write_uint32(lo[k]);
+        uart_write_string(" - ");
+        uart_write_uint32(hi[k]);
+        uart_write_string(" us");
+        if (hi[k] - lo[k] < 50) uart_write_string("   (not moved)");
+        if (k == RC_CH_ARM)  uart_write_string("   <- ARM now");
+        if (k == RC_CH_MODE) uart_write_string("   <- MODE now");
+        uart_write_string("\r\n");
+    }
+    uart_write_string("\r\n  To make channel N the ARM switch: fc_config.h -> RC_CH_ARM = N-1\r\n"
+                      "  (or, better for ELRS, assign your arm switch to CH5/AUX1 in the radio mixer).\r\n"
+                      "  ARM = ON above ");
+    uart_write_uint32(T16_ARM_ON_US);
+    uart_write_string(" us, so pick a 2-position switch that reaches ~2000 us.\r\n");
+}
+
 int main(void)
 {
     /* ── 1. Clock ── */
@@ -3409,8 +3595,13 @@ int main(void)
     uart_write_string("\r\n\r\n");
     uart_write_string("########################################\r\n");
     uart_write_string("#   DRONE FC HARDWARE TEST HARNESS     #\r\n");
-    uart_write_string("#   Motors OFF — safe for bench use     #\r\n");
-    uart_write_string("########################################\r\n\r\n");
+    uart_write_string("########################################\r\n");
+    uart_write_string("Selected tests (TESTS=): " HARNESS_TESTS "\r\n");
+    if (test_selected(10) || test_selected(14) || test_selected(16))
+        uart_write_string("** MOTOR TESTS SELECTED (10/14/16) — motors WILL spin. **\r\n"
+                          "** Props off for 10; secured rig for 14; scale + radio for 16. Unplug battery to skip. **\r\n\r\n");
+    else
+        uart_write_string("Motor tests 10 and 14 are NOT selected — no motor output.\r\n\r\n");
 
     /* ── 4. SPI + IMU detect ── */
     delay_ms(100);
@@ -3420,7 +3611,7 @@ int main(void)
     uint8_t whoami = 0;
     imu_type_t imu = imu_detect(&whoami);
 
-    uart_write_string("IMU WHO_AM_I = 0x");
+    uart_write_string("IMU WHO_AM_I = ");
     uart_write_hex8(whoami);
     uart_write_string("\r\n");
 
@@ -3450,8 +3641,13 @@ int main(void)
     imu_init(imu);
     delay_ms(50);
 
-    /* ── 6. AHRS init ── */
+    /* ── 6. AHRS init + timers ──
+     * SysTick (100 Hz tick) and the DWT cycle counter are started here so
+     * any subset of tests can run on its own (tests used to rely on test 2
+     * having started SysTick). */
     ahrs_init();
+    systick_init_100hz();
+    dwt_init();
 
     /* ── 7. I2C + Barometer ── */
     i2c1_init();
@@ -3460,7 +3656,7 @@ int main(void)
     int baro_ok = (baro != BARO_NONE);
 
     if (baro_ok) {
-        uart_write_string("Barometer detected (id=0x");
+        uart_write_string("Barometer detected (id=");
         uart_write_hex8(baro_id);
         uart_write_string(")\r\n");
     } else {
@@ -3471,53 +3667,28 @@ int main(void)
      * RUN TESTS
      * ============================================================ */
 
-    /* TEST 1: Register readback — immediate */
-    test1_spi_readback(imu);
-
-    /* TEST 2: Static characterization — 5 seconds, board flat */
-    test2_static_imu(imu);
-
-    /* TEST 3: Dynamic axis alignment — ~30 seconds, interactive */
-    test3_dynamic_axis(imu);
-
-    /* TEST 4: AHRS convergence — ~20 seconds, interactive */
-    test4_ahrs_convergence(imu);
-
-    /* TEST 5: Observation vector ground truth — 5 seconds, board flat */
-    test5_obs_vector(imu, baro_ok);
-
-    /* TEST 6: NN inference validation — immediate, pure computation */
-    test6_nn_inference();
-
-    /* TEST 7: HIL closed loop — 10 seconds, board flat */
-    test7_hil_closed_loop(imu, baro_ok);
-
-    /* TEST 8: Live tilt → motor response — interactive */
-    test8_tilt_response(imu);
-
-    /* TEST 9: IIR filter lag — interactive, tilt right */
-    test9_iir_lag(imu);
-
-    /* TEST 10: Motor wire verification — PROPS OFF, motors spin */
-    test10_motor_wire_verify(imu);
-
-    /* TEST 11: IIR limit-cycle stress — immediate, pure computation */
-    test11_iir_threshold_stress();
-
-    /* TEST 12: Loop timing jitter & overrun detector — 5 seconds, board flat */
-    test12_loop_jitter(imu, baro_ok);
-
-    /* TEST 13: Baro throttle noise characterization — 8 sec, board flat */
-    test13_baro_throttle_noise(imu, baro_ok);
-
-    /* TEST 14: Throttle staircase — PROPS ON, DRONE STRAPPED DOWN.
-     * Measures the REAL hover PWM (vs the 1323 us the sim assumes) and
-     * vibration / AHRS integrity at flight power. Runs last: 15 s
-     * countdown gives you time to power off if the rig isn't ready. */
-    test14_throttle_staircase(imu);
+    /* Each test runs only if selected (see HARNESS_TESTS / make TESTS=).
+     * Motor tests 10 and 14 are excluded unless explicitly listed. */
+    if (test_selected(1))  test1_spi_readback(imu);              /* immediate */
+    if (test_selected(2))  test2_static_imu(imu);                /* 5 s, flat */
+    if (test_selected(3))  test3_dynamic_axis(imu);              /* interactive */
+    if (test_selected(4))  test4_ahrs_convergence(imu);          /* interactive */
+    if (test_selected(5))  test5_obs_vector(imu, baro_ok);       /* flat */
+    if (test_selected(6))  test6_nn_inference();                 /* immediate */
+    if (test_selected(7))  test7_hil_closed_loop(imu, baro_ok);  /* 10 s, flat */
+    if (test_selected(8))  test8_tilt_response(imu);             /* interactive */
+    if (test_selected(9))  test9_iir_lag(imu);                   /* interactive */
+    if (test_selected(10)) test10_motor_wire_verify(imu);        /* MOTORS SPIN, props off */
+    if (test_selected(11)) test11_iir_threshold_stress();        /* immediate */
+    if (test_selected(12)) test12_loop_jitter(imu, baro_ok);     /* 5 s, flat */
+    if (test_selected(13)) test13_baro_throttle_noise(imu, baro_ok); /* 8 s, flat */
+    if (test_selected(14)) test14_throttle_staircase(imu);       /* MOTORS SPIN, props on, secured */
+    if (test_selected(15)) test15_rc_link(imu);                  /* RC link, radio ON, motors OFF */
+    if (test_selected(16)) test16_thrust_ramp(imu);              /* MOTORS SPIN, props on, ARM = dead-man */
+    if (test_selected(17)) test17_rc_channel_finder(imu);        /* RC channel finder, motors OFF */
 
     /* ── Done ── */
-    print_banner("ALL TESTS COMPLETE");
+    print_banner("ALL SELECTED TESTS COMPLETE");
     uart_write_string("Review output above for PASS/FAIL.\r\n");
     uart_write_string("LED solid = done.\r\n");
 

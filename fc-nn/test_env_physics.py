@@ -26,7 +26,8 @@ import numpy as np
 import mujoco
 
 from drone_env import (
-    QuadrotorEnv, BASE_MASS, MAX_THRUST, HOVER_THROTTLE, ACTION_SCALE,
+    QuadrotorEnv, BASE_MASS, ACTION_SCALE,
+    LEGACY_MAX_THRUST as MAX_THRUST, LEGACY_HOVER_THROTTLE as HOVER_THROTTLE,  # legacy env, linear map
     KM_KF_RATIO, MOTOR_DIRS, GRAVITY, FRAMESKIP,
     GYRO_NOISE_STD, ACCEL_NOISE_STD, _quat_to_euler, _quat_rotate_vec,
 )
@@ -46,8 +47,10 @@ def check(cond, msg):
 
 
 def make_clean_env():
-    """Env with zero domain randomisation and known parameters."""
-    env = QuadrotorEnv(render_mode=None)
+    """Env with zero domain randomisation and known parameters.
+    Legacy mode: these checks start at z = 1 m via the altitude setpoint
+    (physics is identical in both modes; raw_step bypasses the contract)."""
+    env = QuadrotorEnv(render_mode=None, firmware_contract=False)
     env.reset(seed=0, options={"domain_randomization": False,
         "randomize_setpoints": False, "setpoint": {"alt_m": 1.0},
         "initial_rpy_deg": [0,0,0], "sensor_noise": False})

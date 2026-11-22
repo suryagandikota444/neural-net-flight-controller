@@ -6,9 +6,9 @@
  * (they are pure C99 with no ARM dependencies), so it proves the C forward
  * pass — loops, indexing, ReLU, weight layout — is bit-for-bit sane.
  *
- * It also replicates main.c's adaptive IIR smoother and residual mixer and
- * characterizes them, because filter lag and mixer clamping are part of the
- * control law whether you like it or not.
+ * It also checks the action filter (fc_config.h — the SAME code main.c and
+ * the harness compile) against the training filter in drone_env.py, and
+ * prints the mixer authority budget.
  *
  * Build & run:   make host-test
  *   (requires golden_vectors.h — generate with:
@@ -22,11 +22,7 @@
 #include "../nn.c"              /* the real flight code, weights.h included */
 #include "golden_vectors.h"
 
-/* ── Constants mirrored from main.c ─────────────────────────── */
-#define ACTION_ALPHA_SLOW   0.08f
-#define ACTION_ALPHA_FAST   0.60f
-#define ACTION_SNAP_THRESH  0.15f
-#define ALT_ADJ_MAX         0.10f
+#include "../fc_config.h"       /* action_filter_step, ALT_ADJ_MAX — shared with main.c */
 
 static int failures = 0;
 
@@ -35,19 +31,6 @@ static int failures = 0;
     } else    { printf("  \033[31m✗ FAIL\033[0m  "); failures++; } \
     printf(__VA_ARGS__); printf("\n");                  \
 } while (0)
-
-
-/* ── main.c's adaptive IIR, verbatim logic ──────────────────── */
-static void iir_step(float smoothed[4], const float raw[4])
-{
-    for (int k = 0; k < 4; k++) {
-        float diff  = raw[k] - smoothed[k];
-        float alpha = (diff < 0.0f ? -diff : diff) >= ACTION_SNAP_THRESH
-                        ? ACTION_ALPHA_FAST
-                        : ACTION_ALPHA_SLOW;
-        smoothed[k] += alpha * diff;
-    }
-}
 
 
 int main(void)
@@ -70,65 +53,71 @@ int main(void)
           "max |C - numpy| = %.2e (vector '%s'), tolerance 5e-4",
           worst, golden_names[worst_i]);
 
-    /* ── Test B: IIR noise attenuation (slow regime) ────────── */
-    printf("\nB. Adaptive IIR — noise regime (|delta| < %.2f):\n",
-           ACTION_SNAP_THRESH);
+    /* ── Test B: filter == training filter ───────────────────── */
+    printf("\nB. Action filter vs training (drone_env.py: s = 0.3*a + 0.7*s):\n");
     {
-        /* white noise amplitude 0.10 — below snap threshold */
         float sm[4] = {0}, in[4];
+        float ref = 0.0f, worst_f = 0.0f;
         srand(1234);
-        double in_var = 0, out_var = 0;
-        int n = 5000;
-        for (int t = 0; t < n; t++) {
-            for (int k = 0; k < 4; k++)
-                in[k] = 0.10f * (2.0f * rand() / (float)RAND_MAX - 1.0f);
-            iir_step(sm, in);
-            in_var  += in[0] * in[0];
-            out_var += sm[0] * sm[0];
+        for (int t = 0; t < 5000; t++) {
+            float a = 2.0f * rand() / (float)RAND_MAX - 1.0f;
+            for (int k = 0; k < 4; k++) in[k] = a;
+            action_filter_step(sm, in);
+            ref = 0.3f * a + 0.7f * ref;
+            float d = fabsf(sm[0] - ref);
+            if (d > worst_f) worst_f = d;
         }
-        float atten = (float)sqrt(in_var / (out_var + 1e-12));
-        CHECK(atten > 3.0f,
-              "noise attenuation = %.1fx (want > 3x)", atten);
+        CHECK(fabsf(ACTION_FILTER_ALPHA - 0.3f) < 1e-6f && worst_f < 1e-5f,
+              "alpha = %.3f, max |firmware - training| = %.1e over 5000 steps",
+              ACTION_FILTER_ALPHA, worst_f);
     }
 
-    /* ── Test C: IIR step latency (fast regime) ─────────────── */
-    printf("\nC. Adaptive IIR — step response (|delta| > snap):\n");
+    /* ── Test C: step response ──────────────────────────────── */
+    printf("\nC. Action filter — step response:\n");
     {
         float sm[4] = {0};
         float in[4] = {0.5f, 0.5f, 0.5f, 0.5f};
         int t90 = -1;
         for (int t = 1; t <= 100; t++) {
-            iir_step(sm, in);
+            action_filter_step(sm, in);
             if (t90 < 0 && sm[0] >= 0.45f) t90 = t;
         }
-        CHECK(t90 > 0 && t90 <= 6,
-              "reaches 90%% of a 0.5 step in %d ticks = %d ms (want <= 60 ms)",
+        CHECK(t90 == 7,
+              "reaches 90%% of a step in %d ticks = %d ms (alpha 0.3 → 7 ticks)",
               t90, t90 * 10);
     }
 
-    /* ── Test D: IIR *sub-threshold* lag — the trap ─────────── */
-    printf("\nD. Adaptive IIR — SUB-threshold tracking lag:\n");
+    /* ── Test D: small corrections are NOT slowed down ──────── */
+    printf("\nD. Action filter — small (0.10) correction, same speed as training:\n");
     {
-        /* A genuine but gentle correction of 0.10 amplitude never crosses
-         * SNAP_THRESH, so it gets the SLOW alpha. Compare with the fixed
-         * alpha=0.3 EMA the network was TRAINED against (drone_env.py
-         * TRAIN_ACTION_ALPHA). If the deployed filter is much slower than
-         * the trained one, the NN's learned timing is wrong. */
-        float sm_fw = 0.0f, sm_tr = 0.0f;
-        int t90_fw = -1, t90_tr = -1;
+        /* The old adaptive filter used alpha 0.08 for changes < 0.15,
+         * making small corrections ~4x slower than training. With one
+         * fixed alpha, a small step must settle exactly as fast as a big one. */
+        float sm[4] = {0}, in[4] = {0.10f, 0.10f, 0.10f, 0.10f};
+        int t90 = -1;
         for (int t = 1; t <= 200; t++) {
-            sm_fw += ((0.10f - sm_fw) >= ACTION_SNAP_THRESH
-                      ? ACTION_ALPHA_FAST : ACTION_ALPHA_SLOW) * (0.10f - sm_fw);
-            sm_tr += 0.30f * (0.10f - sm_tr);
-            if (t90_fw < 0 && sm_fw >= 0.09f) t90_fw = t;
-            if (t90_tr < 0 && sm_tr >= 0.09f) t90_tr = t;
+            action_filter_step(sm, in);
+            if (t90 < 0 && sm[0] >= 0.09f) t90 = t;
         }
-        printf("     firmware filter t90 = %d ms, trained filter t90 = %d ms\n",
-               t90_fw * 10, t90_tr * 10);
-        CHECK(t90_fw <= 2 * t90_tr,
-              "deployed lag within 2x of trained lag (%d vs %d ms) "
-              "— MISMATCH means the NN flies with a filter it never trained on",
-              t90_fw * 10, t90_tr * 10);
+        CHECK(t90 == 7,
+              "small step reaches 90%% in %d ms (training: 70 ms)", t90 * 10);
+    }
+
+    /* ── Test F: axis alignment is a real rotation ──────────── */
+    printf("\nF. IMU axis alignment (fc_config.h) is a proper rotation:\n");
+    {
+        /* Gyro and accel sit on one die, so the SAME rotation must map both
+         * to the body frame, and a rotation has determinant +1. The old
+         * macros (accel x,-y,z / gyro -x,y,z) were a mirror image (det -1)
+         * and differed between the sensors — that was the pitch inversion. */
+        int A[3] = { ALIGN_AX(1), ALIGN_AY(1), ALIGN_AZ(1) };
+        int G[3] = { ALIGN_GX(1), ALIGN_GY(1), ALIGN_GZ(1) };
+        int same = (A[0] == G[0] && A[1] == G[1] && A[2] == G[2]);
+        int det  = A[0] * A[1] * A[2];
+        CHECK(same && det == 1 && A[2] == 1,
+              "accel signs (%+d,%+d,%+d), gyro signs (%+d,%+d,%+d), det %+d "
+              "(want identical, det +1, Z up)",
+              A[0], A[1], A[2], G[0], G[1], G[2], det);
     }
 
     /* ── Test E: mixer headroom arithmetic ──────────────────── */
